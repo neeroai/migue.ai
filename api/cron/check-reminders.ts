@@ -1,5 +1,7 @@
 export const config = { runtime: 'edge' };
 
+import { getSupabaseServerClient } from '../../lib/supabase';
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -8,7 +10,6 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 async function getDueReminders() {
-  const { getSupabaseServerClient } = await import('../../lib/supabase')
   const supabase = getSupabaseServerClient()
   const nowIso = new Date().toISOString()
   const { data, error } = await supabase
@@ -21,7 +22,6 @@ async function getDueReminders() {
 }
 
 async function getUserPhone(userId: string) {
-  const { getSupabaseServerClient } = await import('../../lib/supabase')
   const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('users')
@@ -58,7 +58,6 @@ async function sendWhatsAppText(to: string, body: string) {
 }
 
 async function markReminderSent(id: string) {
-  const { getSupabaseServerClient } = await import('../../lib/supabase')
   const supabase = getSupabaseServerClient()
   const { error } = await supabase
     .from('reminders')

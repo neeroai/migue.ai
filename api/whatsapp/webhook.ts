@@ -1,5 +1,7 @@
 export const config = { runtime: 'edge' };
 
+import { upsertUserByPhone, getOrCreateConversation, insertInboundMessage } from '../../lib/persist';
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -110,10 +112,8 @@ async function validateSignature(req: Request, rawBody: string): Promise<boolean
   return diff === 0
 }
 
-// Lazy import server-only utils at runtime
 async function persistNormalizedMessage(normalized: ReturnType<typeof extractNormalizedMessage>) {
   if (!normalized?.from) return;
-  const { upsertUserByPhone, getOrCreateConversation, insertInboundMessage } = await import('../../lib/persist')
   const userId = await upsertUserByPhone(normalized.from)
   const conversationId = await getOrCreateConversation(userId, normalized.conversationId)
   await insertInboundMessage(conversationId, normalized as any)
