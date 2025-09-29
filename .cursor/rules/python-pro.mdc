@@ -1,0 +1,134 @@
+---
+description: Experto en Python 3.12+ con características modernas, programación async, optimización de performance y prácticas de producción con herramientas del ecosistema 2024/2025
+globs:
+  - "**/*.py"
+  - "**/*.pyi"
+  - "**/requirements.txt"
+  - "**/pyproject.toml"
+  - "**/setup.py"
+  - "**/Pipfile"
+  - "**/poetry.lock"
+  - "**/uv.lock"
+applyIntelligently: true
+priority: high
+---
+
+# Modern Python Features
+rule: Usar Python 3.12+ features incluyendo improved error messages, performance optimizations, y type system enhancements
+rule: Implementar advanced async/await patterns con asyncio, aiohttp, y trio
+rule: Aplicar context managers y with statement para resource management
+rule: Usar dataclasses, Pydantic models, y modern data validation
+rule: Implementar pattern matching (structural pattern matching) y match statements
+rule: Aplicar type hints, generics, y Protocol typing para robust type safety
+rule: Usar descriptors, metaclasses, y advanced object-oriented patterns
+rule: Implementar generator expressions, itertools, y memory-efficient data processing
+
+# Modern Tooling & Development Environment
+rule: Usar uv para package management (2024's fastest Python package manager)
+rule: Aplicar ruff para code formatting y linting (replacing black, isort, flake8)
+rule: Configurar static type checking con mypy y pyright
+rule: Usar pyproject.toml para project configuration (modern standard)
+rule: Gestionar virtual environments con venv, pipenv, o uv
+rule: Implementar pre-commit hooks para code quality automation
+rule: Aplicar modern Python packaging y distribution practices
+rule: Gestionar dependency management y lock files
+
+# Testing & Quality Assurance
+rule: Implementar comprehensive testing con pytest y pytest plugins
+rule: Usar property-based testing con Hypothesis
+rule: Crear test fixtures, factories, y mock objects
+rule: Analizar coverage con pytest-cov y coverage.py
+rule: Realizar performance testing y benchmarking con pytest-benchmark
+rule: Implementar integration testing y test databases
+rule: Configurar continuous integration con GitHub Actions
+rule: Establecer code quality metrics y static analysis
+
+# Performance & Optimization
+rule: Usar profiling con cProfile, py-spy, y memory_profiler
+rule: Implementar performance optimization techniques y bottleneck identification
+rule: Aplicar async programming para I/O-bound operations
+rule: Usar multiprocessing y concurrent.futures para CPU-bound tasks
+rule: Optimizar memory usage y garbage collection understanding
+rule: Implementar caching strategies con functools.lru_cache y external caches
+rule: Optimizar database queries con SQLAlchemy y async ORMs
+rule: Optimizar NumPy, Pandas para data processing
+
+# Web Development & APIs
+rule: Usar FastAPI para high-performance APIs con automatic documentation
+rule: Implementar Django para full-featured web applications
+rule: Usar Flask para lightweight web services
+rule: Aplicar Pydantic para data validation y serialization
+rule: Usar SQLAlchemy 2.0+ con async support
+rule: Implementar background task processing con Celery y Redis
+rule: Configurar WebSocket support con FastAPI y Django Channels
+rule: Implementar authentication y authorization patterns
+
+# Data Science & Machine Learning
+rule: Usar NumPy y Pandas para data manipulation y analysis
+rule: Crear visualizations con Matplotlib, Seaborn, y Plotly
+rule: Implementar machine learning workflows con Scikit-learn
+rule: Usar Jupyter notebooks y IPython para interactive development
+rule: Diseñar data pipelines y ETL processes
+rule: Integrar con modern ML libraries (PyTorch, TensorFlow)
+rule: Implementar data validation y quality assurance
+rule: Optimizar performance para large datasets
+
+# DevOps & Production Deployment
+rule: Containerizar con Docker y multi-stage builds
+rule: Desplegar en Kubernetes y scaling strategies
+rule: Desplegar en cloud (AWS, GCP, Azure) con Python services
+rule: Implementar monitoring y logging con structured logging y APM tools
+rule: Gestionar configuration y environment variables
+rule: Aplicar security best practices y vulnerability scanning
+rule: Configurar CI/CD pipelines y automated testing
+rule: Implementar performance monitoring y alerting
+
+# Advanced Python Patterns
+rule: Implementar design patterns (Singleton, Factory, Observer, etc.)
+rule: Aplicar SOLID principles en Python development
+rule: Implementar dependency injection y inversion of control
+rule: Crear event-driven architecture y messaging patterns
+rule: Usar functional programming concepts y tools
+rule: Crear advanced decorators y context managers
+rule: Implementar metaprogramming y dynamic code generation
+rule: Diseñar plugin architectures y extensible systems
+
+# Code Quality & Standards
+rule: Seguir PEP 8 y modern Python idioms consistently
+rule: Priorizar code readability y maintainability
+rule: Usar type hints throughout para better code documentation
+rule: Implementar comprehensive error handling con custom exceptions
+rule: Escribir extensive tests con high coverage (>90%)
+rule: Usar Python's standard library antes de external dependencies
+rule: Enfocarse en performance optimization cuando sea necesario
+rule: Documentar code thoroughly con docstrings y examples
+
+# Modern Python Best Practices
+rule: Mantenerse actualizado con latest Python releases y ecosystem changes
+rule: Enfatizar security y best practices en production code
+rule: Usar pathlib para file operations en lugar de os.path
+rule: Implementar f-strings para string formatting
+rule: Usar dataclasses o Pydantic models para data structures
+rule: Aplicar walrus operator (:=) cuando sea apropiado
+rule: Usar structural pattern matching para complex conditional logic
+rule: Implementar proper logging con structlog o similar
+
+# Package Management & Dependencies
+rule: Migrar desde pip a uv para faster package management
+rule: Usar pyproject.toml como configuration standard
+rule: Gestionar dependencies con lock files
+rule: Implementar dependency pinning para reproducible builds
+rule: Usar virtual environments para isolation
+rule: Configurar pre-commit hooks para quality gates
+rule: Implementar automated dependency updates
+rule: Gestionar transitive dependencies cuidadosamente
+
+# Error Handling & Resilience
+rule: Implementar comprehensive error handling con custom exceptions
+rule: Usar context managers para resource cleanup
+rule: Aplicar retry patterns con exponential backoff
+rule: Implementar circuit breaker patterns
+rule: Crear graceful degradation strategies
+rule: Usar proper logging para debugging
+rule: Implementar health checks y monitoring
+rule: Crear error recovery mechanisms

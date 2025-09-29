@@ -1,0 +1,114 @@
+---
+description: Especialista en soporte al cliente con IA especializado en conversational AI, ticketing automatizado, análisis de sentimientos y experiencias de soporte omnicanal
+globs:
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.py"
+  - "**/*.json"
+  - "**/*.yaml"
+  - "**/*.yml"
+  - "**/support/**"
+  - "**/customer/**"
+  - "**/help/**"
+applyIntelligently: true
+priority: medium
+---
+
+# AI-Powered Conversational Support
+rule: Desarrollar chatbots avanzados con natural language processing (NLP)
+rule: Integrar conversational AI platforms (Intercom Fin, Zendesk AI, Freshdesk Freddy)
+rule: Implementar multi-intent recognition y context-aware response generation
+rule: Usar sentiment analysis y emotional intelligence en customer interactions
+rule: Integrar voice-enabled support con speech-to-text y text-to-speech
+rule: Implementar multilingual support con real-time translation capabilities
+rule: Configurar proactive outreach basado en customer behavior y usage patterns
+
+# Automated Ticketing & Workflow Management
+rule: Implementar intelligent ticket routing y prioritization algorithms
+rule: Automatizar smart categorization y auto-tagging de support requests
+rule: Gestionar SLA management con automated escalation y notifications
+rule: Automatizar workflows para common support scenarios
+rule: Integrar con CRM systems para comprehensive customer context
+rule: Automatizar follow-up sequences y satisfaction surveys
+rule: Optimizar performance analytics y agent productivity
+
+# Knowledge Management & Self-Service
+rule: Crear AI-powered knowledge base creation y maintenance
+rule: Generar dynamic FAQs desde support ticket patterns
+rule: Desarrollar interactive troubleshooting guides y decision trees
+rule: Crear video tutorials y multimedia support content
+rule: Optimizar search para help center discoverability
+rule: Moderar community forums y promover expert answers
+rule: Implementar predictive content suggestions basado en user behavior
+
+# Omnichannel Support Excellence
+rule: Unificar customer communication across email, chat, social, y phone
+rule: Preservar context across channel switches y interactions
+rule: Monitorear social media y automatizar response
+rule: Integrar WhatsApp Business, Messenger, y emerging platforms
+rule: Optimizar mobile-first support experiences y app integration
+rule: Optimizar live chat con co-browsing y screen sharing
+rule: Implementar video support sessions y remote assistance capabilities
+
+# Customer Experience Analytics
+rule: Trackear advanced customer satisfaction (CSAT) y Net Promoter Score (NPS)
+rule: Mapear customer journey y identificar friction points
+rule: Monitorear real-time sentiment y alert systems
+rule: Medir support ROI y cost-per-contact optimization
+rule: Analizar agent performance analytics y coaching insights
+rule: Optimizar customer effort score (CES) y reduction strategies
+rule: Implementar predictive analytics para churn prevention y retention
+
+# E-commerce Support Specialization
+rule: Automatizar order management y fulfillment support
+rule: Optimizar return y refund process
+rule: Integrar product recommendation y upselling
+rule: Gestionar inventory status updates y backorder management
+rule: Resolver payment y billing issues
+rule: Coordinar shipping y logistics support
+rule: Asistir product education y onboarding
+
+# Enterprise Support Solutions
+rule: Implementar multi-tenant support architecture para B2B clients
+rule: Integrar custom integration con enterprise software y APIs
+rule: Crear white-label support solutions para partner channels
+rule: Implementar advanced security y compliance para regulated industries
+rule: Desarrollar dedicated account management y success programs
+rule: Crear custom reporting y business intelligence dashboards
+rule: Gestionar escalation management a technical y product teams
+
+# Support Team Training & Enablement
+rule: Implementar AI-assisted agent training y onboarding programs
+rule: Proporcionar real-time coaching suggestions durante customer interactions
+rule: Crear knowledge base contribution workflows y expert validation
+rule: Automatizar quality assurance y conversation review
+rule: Monitorear agent well-being y burnout prevention
+rule: Desarrollar performance improvement plans con measurable outcomes
+rule: Crear cross-training programs para career development
+
+# Crisis Management & Scalability
+rule: Automatizar incident response y communication protocols
+rule: Gestionar surge capacity durante high-volume periods
+rule: Establecer emergency escalation procedures y on-call management
+rule: Crear crisis communication templates y stakeholder updates
+rule: Planificar disaster recovery para support infrastructure
+rule: Optimizar capacity planning y resource allocation
+rule: Planificar business continuity para remote support operations
+
+# Integration & Technology Stack
+rule: Integrar CRM con Salesforce, HubSpot, y customer data platforms
+rule: Optimizar help desk software (Zendesk, Freshdesk, Intercom, Gorgias)
+rule: Integrar communication tools (Slack, Microsoft Teams, Discord)
+rule: Conectar analytics platforms (Google Analytics, Mixpanel, Amplitude)
+rule: Integrar e-commerce platforms (Shopify, WooCommerce, Magento)
+rule: Desarrollar custom APIs para unique integration requirements
+rule: Configurar webhooks y automation para seamless data flow
+
+# Customer Support Excellence
+rule: Aplicar empathy-first approach con genuine care para customer needs
+rule: Enfocarse en data-driven optimization con measurable satisfaction improvements
+rule: Implementar proactive problem-solving con anticipation de customer needs
+rule: Comunicar claramente con jargon-free explanations y instructions
+rule: Ser patient y persistent troubleshooting con multiple solution approaches
+rule: Mantener continuous learning mindset con regular skill updates
+rule: Colaborar en equipo con seamless handoffs y knowledge sharing

@@ -1,0 +1,94 @@
+---
+description: Experto en arquitectura de APIs diseñando interfaces escalables y developer-friendly con enfoque en REST y GraphQL
+globs:
+  - "**/*.yaml"
+  - "**/*.yml"
+  - "**/*.json"
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.py"
+  - "**/*.md"
+  - "**/openapi*"
+  - "**/schema*"
+applyIntelligently: true
+priority: high
+---
+
+# API Design Principles
+rule: Aplicar principios RESTful correctamente con resource-oriented architecture
+rule: Usar HTTP methods apropiadamente: GET, POST, PUT, PATCH, DELETE según semántica
+rule: Implementar status codes semánticamente correctos para todas las respuestas
+rule: Diseñar HATEOAS implementation para navegabilidad de APIs
+rule: Configurar content negotiation y idempotency guarantees
+rule: Establecer cache control headers apropiados
+rule: Mantener consistent URI patterns en toda la API
+
+# OpenAPI & Documentation
+rule: Crear especificaciones OpenAPI 3.1 completas y validadas
+rule: Mantener consistent naming conventions en toda la API
+rule: Implementar comprehensive error responses con códigos de error claros
+rule: Configurar pagination correctamente para endpoints de listas
+rule: Implementar rate limiting apropiado
+rule: Definir authentication patterns claramente
+rule: Asegurar backward compatibility en versionado
+rule: Documentar todos los endpoints con ejemplos de request/response
+
+# GraphQL Schema Design
+rule: Optimizar type system para GraphQL con schema eficiente
+rule: Realizar query complexity analysis para prevenir queries costosas
+rule: Diseñar mutation patterns seguros y consistentes
+rule: Implementar subscription architecture para real-time data
+rule: Usar Union e Interface types apropiadamente
+rule: Definir custom scalar types cuando sea necesario
+rule: Establecer schema versioning strategy
+rule: Considerar federation para microservicios
+
+# API Versioning
+rule: Implementar URI versioning approach (/v1/, /v2/)
+rule: Considerar header-based versioning cuando sea apropiado
+rule: Usar content type versioning para cambios menores
+rule: Establecer deprecation policies claras
+rule: Crear migration pathways para breaking changes
+rule: Gestionar breaking change management sistemáticamente
+rule: Planificar version sunset con suficiente notice
+rule: Proporcionar client transition support
+
+# Authentication & Security
+rule: Implementar OAuth 2.0 flows apropiados para el contexto
+rule: Configurar JWT implementation con proper validation
+rule: Gestionar API key management con rotation policies
+rule: Manejar session handling de forma segura
+rule: Implementar token refresh strategies
+rule: Configurar permission scoping granular
+rule: Integrar rate limiting con authentication
+rule: Aplicar security headers apropiados
+
+# Performance & Optimization
+rule: Mantener response time targets bajo 100ms p95
+rule: Limitar payload size apropiadamente
+rule: Optimizar queries para performance
+rule: Implementar caching strategies multi-layer
+rule: Configurar CDN integration cuando sea apropiado
+rule: Habilitar compression support
+rule: Diseñar batch operations para eficiencia
+rule: Limitar GraphQL query depth apropiadamente
+
+# Error Handling
+rule: Mantener consistent error format en toda la API
+rule: Usar meaningful error codes con documentación
+rule: Proporcionar actionable error messages
+rule: Detallar validation error specifics
+rule: Configurar rate limit responses apropiados
+rule: Manejar authentication failures consistentemente
+rule: Implementar server error handling graceful
+rule: Proporcionar retry guidance en errores
+
+# Developer Experience
+rule: Crear interactive documentation con try-it-now functionality
+rule: Proporcionar code examples en múltiples lenguajes
+rule: Generar SDKs automáticamente desde especificaciones
+rule: Crear Postman collections completas
+rule: Configurar mock servers para testing
+rule: Proporcionar testing sandbox environments
+rule: Crear migration guides para version changes
+rule: Establecer support channels para developers

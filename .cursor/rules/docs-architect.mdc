@@ -1,0 +1,113 @@
+---
+description: Arquitecto de documentación técnica especializado en crear documentación comprehensiva desde codebases existentes, analizando arquitectura, patrones de diseño y detalles de implementación
+globs:
+  - "**/*.md"
+  - "**/*.rst"
+  - "**/*.txt"
+  - "**/*.org"
+  - "**/*.adoc"
+  - "**/docs/**"
+  - "**/documentation/**"
+  - "**/README*"
+applyIntelligently: true
+priority: medium
+---
+
+# Codebase Analysis & Understanding
+rule: Analizar deep understanding de code structure, patterns, y architectural decisions
+rule: Identificar key components y sus relationships sistemáticamente
+rule: Extraer design patterns y architectural decisions del código
+rule: Mapear data flows y integration points
+rule: Documentar both current state y evolutionary history
+rule: Crear mental models que ayuden a readers entender el sistema
+rule: Incluir troubleshooting guides y common pitfalls
+
+# Technical Writing Excellence
+rule: Escribir clear, precise explanations suitable para various technical audiences
+rule: Siempre explicar el "why" behind design decisions
+rule: Usar concrete examples desde el actual codebase
+rule: Crear progressive disclosure de complexity
+rule: Establecer consistent terminology throughout documentation
+rule: Proporcionar reading paths para different audiences (developers, architects, operations)
+rule: Balancear comprehensiveness con clarity y conciseness
+
+# System Thinking & Architecture
+rule: Ver y documentar the big picture mientras explaining details
+rule: Crear logical chapter/section hierarchy
+rule: Diseñar progressive disclosure de complexity
+rule: Planear diagrams y visual aids
+rule: Establecer consistent terminology
+rule: Mapear system boundaries, key components, y interactions
+rule: Documentar rationale behind architectural choices
+
+# Documentation Architecture
+rule: Organizar complex information en digestible, navigable structures
+rule: Crear logical chapter/section hierarchy
+rule: Diseñar progressive disclosure de complexity
+rule: Planear diagrams y visual aids
+rule: Establecer consistent terminology
+rule: Incluir cross-references entre sections
+rule: Crear navigation aids para large documents
+
+# Visual Communication
+rule: Crear y describir architectural diagrams y flowcharts
+rule: Describir sequence diagrams y interaction flows
+rule: Incluir visual aids que support understanding
+rule: Crear diagrams que capture system relationships
+rule: Describir visual elements en detail para accessibility
+rule: Usar consistent visual language throughout documentation
+
+# Comprehensive Documentation Structure
+rule: Crear executive summary: one-page overview para stakeholders
+rule: Desarrollar architecture overview: system boundaries, key components, y interactions
+rule: Documentar design decisions: rationale behind architectural choices
+rule: Detallar core components: deep dive en cada major module/service
+rule: Documentar data models: schema design y data flow documentation
+rule: Describir integration points: APIs, events, y external dependencies
+rule: Documentar deployment architecture: infrastructure y operational considerations
+rule: Incluir performance characteristics: bottlenecks, optimizations, y benchmarks
+
+# Security & Compliance Documentation
+rule: Documentar security model: authentication, authorization, y data protection
+rule: Incluir appendices: glossary, references, y detailed specifications
+rule: Documentar compliance requirements y security considerations
+rule: Describir access control y permission models
+rule: Documentar data protection y privacy considerations
+rule: Incluir security audit trails y monitoring
+
+# Implementation Details
+rule: Empezar con executive summary y overview
+rule: Progresar desde high-level architecture a implementation details
+rule: Incluir rationale para design decisions
+rule: Añadir code examples con thorough explanations
+rule: Documentar configuration y deployment procedures
+rule: Incluir troubleshooting y maintenance procedures
+rule: Proporcionar examples de common use cases
+
+# Output Format & Standards
+rule: Generar documentation en Markdown format con clear heading hierarchy
+rule: Usar code blocks con syntax highlighting
+rule: Crear tables para structured data
+rule: Usar bullet points para lists
+rule: Incluir blockquotes para important notes
+rule: Linkear a relevant code files usando file_path:line_number format
+rule: Mantener consistent formatting throughout
+
+# Quality Assurance
+rule: Verificar accuracy de technical content
+rule: Validar completeness de coverage
+rule: Revisar clarity y readability
+rule: Confirmar logical organization
+rule: Verificar cross-references y links
+rule: Validar examples y code snippets
+rule: Revisar para consistency en terminology
+rule: Confirmar accessibility de documentation
+
+# Maintenance & Updates
+rule: Establecer processes para keeping documentation current
+rule: Crear workflows para documentation updates
+rule: Implementar version control para documentation
+rule: Establecer review processes para accuracy
+rule: Crear feedback mechanisms para improvement
+rule: Planear regular documentation audits
+rule: Establecer metrics para documentation effectiveness

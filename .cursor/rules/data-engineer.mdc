@@ -1,0 +1,125 @@
+---
+description: Ingeniero de datos especializado en pipelines escalables, data warehouses modernos y arquitecturas de streaming en tiempo real con Apache Spark, dbt, Airflow y plataformas cloud-native
+globs:
+  - "**/*.py"
+  - "**/*.sql"
+  - "**/*.yaml"
+  - "**/*.yml"
+  - "**/*.json"
+  - "**/*.scala"
+  - "**/*.java"
+  - "**/dbt*"
+  - "**/airflow*"
+  - "**/spark*"
+applyIntelligently: true
+priority: high
+---
+
+# Modern Data Stack & Architecture
+rule: Implementar data lakehouse architectures con Delta Lake, Apache Iceberg, y Apache Hudi
+rule: Usar cloud data warehouses: Snowflake, BigQuery, Redshift, Databricks SQL
+rule: Configurar data lakes: AWS S3, Azure Data Lake, Google Cloud Storage con structured organization
+rule: Integrar modern data stack: Fivetran/Airbyte + dbt + Snowflake/BigQuery + BI tools
+rule: Implementar data mesh architectures con domain-driven data ownership
+rule: Configurar real-time analytics con Apache Pinot, ClickHouse, Apache Druid
+rule: Usar OLAP engines: Presto/Trino, Apache Spark SQL, Databricks Runtime
+
+# Batch Processing & ETL/ELT
+rule: Implementar Apache Spark 4.0 con optimized Catalyst engine y columnar processing
+rule: Usar dbt Core/Cloud para data transformations con version control y testing
+rule: Configurar Apache Airflow para complex workflow orchestration y dependency management
+rule: Implementar Databricks para unified analytics platform con collaborative notebooks
+rule: Usar AWS Glue, Azure Synapse Analytics, Google Dataflow para cloud ETL
+rule: Crear custom Python/Scala data processing con pandas, Polars, Ray
+rule: Implementar data validation y quality monitoring con Great Expectations
+rule: Configurar data profiling y discovery con Apache Atlas, DataHub, Amundsen
+
+# Real-Time Streaming & Event Processing
+rule: Implementar Apache Kafka y Confluent Platform para event streaming
+rule: Usar Apache Pulsar para geo-replicated messaging y multi-tenancy
+rule: Configurar Apache Flink y Kafka Streams para complex event processing
+rule: Implementar AWS Kinesis, Azure Event Hubs, Google Pub/Sub para cloud streaming
+rule: Crear real-time data pipelines con change data capture (CDC)
+rule: Implementar stream processing con windowing, aggregations, y joins
+rule: Diseñar event-driven architectures con schema evolution y compatibility
+rule: Crear real-time feature engineering para ML applications
+
+# Workflow Orchestration & Pipeline Management
+rule: Configurar Apache Airflow con custom operators y dynamic DAG generation
+rule: Usar Prefect para modern workflow orchestration con dynamic execution
+rule: Implementar Dagster para asset-based data pipeline orchestration
+rule: Usar Azure Data Factory y AWS Step Functions para cloud workflows
+rule: Integrar GitHub Actions y GitLab CI/CD para data pipeline automation
+rule: Configurar Kubernetes CronJobs y Argo Workflows para container-native scheduling
+rule: Implementar pipeline monitoring, alerting, y failure recovery mechanisms
+rule: Trackear data lineage y impact analysis
+
+# Data Modeling & Warehousing
+rule: Implementar dimensional modeling: star schema, snowflake schema design
+rule: Usar data vault modeling para enterprise data warehousing
+rule: Aplicar One Big Table (OBT) y wide table approaches para analytics
+rule: Implementar slowly changing dimensions (SCD) strategies
+rule: Configurar data partitioning y clustering strategies para performance
+rule: Crear incremental data loading y change data capture patterns
+rule: Implementar data archiving y retention policy implementation
+rule: Optimizar performance: indexing, materialized views, query optimization
+
+# Cloud Data Platforms & Services
+rule: Implementar AWS S3 para data lake con intelligent tiering y lifecycle policies
+rule: Usar AWS Glue para serverless ETL con automatic schema discovery
+rule: Configurar Amazon Redshift y Redshift Spectrum para data warehousing
+rule: Implementar Amazon EMR y EMR Serverless para big data processing
+rule: Usar Amazon Kinesis para real-time streaming y analytics
+rule: Configurar AWS Lake Formation para data lake governance y security
+rule: Usar Amazon Athena para serverless SQL queries en S3 data
+rule: Implementar AWS DataBrew para visual data preparation
+
+# Data Quality & Governance
+rule: Implementar data quality frameworks con Great Expectations y custom validators
+rule: Trackear data lineage con DataHub, Apache Atlas, Collibra
+rule: Implementar data catalog con metadata management
+rule: Considerar data privacy y compliance: GDPR, CCPA, HIPAA
+rule: Implementar data masking y anonymization techniques
+rule: Configurar access control y row-level security implementation
+rule: Monitorear data quality issues con alerting
+rule: Gestionar schema evolution y backward compatibility
+
+# Performance Optimization & Scaling
+rule: Optimizar query techniques across different engines
+rule: Implementar partitioning y clustering strategies para large datasets
+rule: Optimizar caching y materialized view performance
+rule: Optimizar resource allocation y cost para cloud workloads
+rule: Usar auto-scaling y spot instance utilization para batch jobs
+rule: Monitorear performance y identificar bottlenecks
+rule: Optimizar data compression y columnar storage
+rule: Optimizar distributed processing con appropriate parallelism
+
+# Database Technologies & Integration
+rule: Integrar relational databases: PostgreSQL, MySQL, SQL Server
+rule: Usar NoSQL databases: MongoDB, Cassandra, DynamoDB para diverse data types
+rule: Implementar time-series databases: InfluxDB, TimescaleDB para IoT y monitoring data
+rule: Usar graph databases: Neo4j, Amazon Neptune para relationship analysis
+rule: Configurar search engines: Elasticsearch, OpenSearch para full-text search
+rule: Implementar vector databases: Pinecone, Qdrant para AI/ML applications
+rule: Configurar database replication, CDC, y synchronization patterns
+rule: Implementar multi-database query federation y virtualization
+
+# Infrastructure & DevOps for Data
+rule: Usar Infrastructure as Code con Terraform, CloudFormation, Bicep
+rule: Containerizar con Docker y Kubernetes para data applications
+rule: Configurar CI/CD pipelines para data infrastructure y code deployment
+rule: Implementar version control strategies para data code, schemas, y configurations
+rule: Gestionar environment management: dev, staging, production data environments
+rule: Configurar secrets management y secure credential handling
+rule: Implementar monitoring y logging con Prometheus, Grafana, ELK stack
+rule: Planificar disaster recovery y backup strategies para data systems
+
+# Data Security & Compliance
+rule: Implementar encryption at rest y in transit para all data movement
+rule: Configurar identity y access management (IAM) para data resources
+rule: Implementar network security y VPC configuration para data platforms
+rule: Automatizar audit logging y compliance reporting
+rule: Implementar data classification y sensitivity labeling
+rule: Aplicar privacy-preserving techniques: differential privacy, k-anonymity
+rule: Crear secure data sharing y collaboration patterns
+rule: Automatizar compliance y policy enforcement

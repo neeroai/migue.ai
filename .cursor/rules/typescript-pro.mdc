@@ -1,0 +1,143 @@
+---
+description: Experto en TypeScript con tipos avanzados, generics y type safety estricta, manejando sistemas de tipos complejos, decoradores y patrones de nivel empresarial
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.d.ts"
+  - "**/tsconfig.json"
+  - "**/package.json"
+  - "**/*.js"
+  - "**/*.jsx"
+applyIntelligently: true
+priority: high
+---
+
+# Advanced Type System
+rule: Usar generics, conditional types, y mapped types para maximum type safety
+rule: Implementar utility types (Partial, Required, Pick, Omit, Record, etc.)
+rule: Crear custom utility types y advanced type manipulations
+rule: Aplicar conditional types con infer keyword para complex type operations
+rule: Usar template literal types para string manipulation
+rule: Implementar branded types para domain-specific types
+rule: Crear recursive types para complex data structures
+rule: Usar const assertions y readonly modifiers apropiadamente
+
+# Strict TypeScript Configuration
+rule: Habilitar strict mode con noImplicitAny, strictNullChecks, y strictFunctionTypes
+rule: Configurar noUncheckedIndexedAccess para safer array/object access
+rule: Usar exactOptionalPropertyTypes para precise optional property handling
+rule: Habilitar noImplicitReturns y noImplicitThis
+rule: Configurar noUnusedLocals y noUnusedParameters
+rule: Usar noFallthroughCasesInSwitch para exhaustive switch statements
+rule: Habilitar noPropertyAccessFromIndexSignature para safer property access
+rule: Configurar ES2022 target con modern JavaScript features
+
+# Type Inference & Optimization
+rule: Preferir type inference sobre explicit annotations cuando sea clear
+rule: Usar const assertions para literal type inference
+rule: Implementar type guards para runtime type checking
+rule: Usar discriminated unions para type-safe state management
+rule: Aplicar type narrowing con control flow analysis
+rule: Usar assertion functions para custom type guards
+rule: Implementar type predicates para complex type checking
+rule: Aplicar control flow analysis para automatic type narrowing
+
+# Decorators & Metadata Programming
+rule: Implementar class decorators para cross-cutting concerns
+rule: Usar method decorators para logging, validation, y caching
+rule: Aplicar property decorators para validation y serialization
+rule: Implementar parameter decorators para dependency injection
+rule: Usar experimental decorators con proper configuration
+rule: Aplicar reflection metadata para runtime type information
+rule: Implementar custom decorators con type safety
+rule: Usar decorator factories para reusable decorator logic
+
+# Module Systems & Organization
+rule: Usar ES modules con proper import/export syntax
+rule: Implementar namespace organization para large codebases
+rule: Crear barrel exports para clean import paths
+rule: Usar path mapping en tsconfig para absolute imports
+rule: Implementar module augmentation para extending third-party types
+rule: Usar declaration merging para extending existing interfaces
+rule: Crear ambient modules para global type definitions
+rule: Implementar module resolution strategies apropiadas
+
+# Integration with Modern Frameworks
+rule: Integrar con React usando proper component typing
+rule: Usar React hooks con proper type inference
+rule: Implementar generic components con type constraints
+rule: Aplicar proper event typing para DOM events
+rule: Usar Node.js types para server-side development
+rule: Integrar con Express.js con proper middleware typing
+rule: Implementar proper API typing con fetch/axios
+rule: Usar framework-specific type definitions
+
+# Error Handling & Resilience
+rule: Implementar proper error types y error handling patterns
+rule: Usar Result types para functional error handling
+rule: Crear custom exception classes con proper inheritance
+rule: Implementar error boundaries con type safety
+rule: Usar never type para exhaustive checking
+rule: Aplicar proper error propagation y handling
+rule: Crear error recovery mechanisms con type safety
+rule: Implementar logging con structured error types
+
+# Performance & Optimization
+rule: Optimizar build times con incremental compilation
+rule: Usar project references para monorepo optimization
+rule: Implementar lazy loading con proper type definitions
+rule: Aplicar tree shaking con proper module structure
+rule: Usar declaration files para external libraries
+rule: Optimizar bundle size con proper imports
+rule: Implementar code splitting con type safety
+rule: Usar source maps para debugging
+
+# Advanced Patterns & Architectures
+rule: Implementar dependency injection con type safety
+rule: Crear factory patterns con generic constraints
+rule: Usar builder patterns con method chaining
+rule: Implementar observer patterns con proper event typing
+rule: Crear strategy patterns con type-safe implementations
+rule: Usar adapter patterns para third-party integrations
+rule: Implementar facade patterns para complex subsystems
+rule: Crear proxy patterns con type-safe delegation
+
+# Testing & Quality Assurance
+rule: Crear Jest/Vitest tests con proper type assertions
+rule: Usar type-safe mocking con proper type definitions
+rule: Implementar test utilities con generic constraints
+rule: Crear test fixtures con proper typing
+rule: Usar assertion libraries con type safety
+rule: Implementar integration tests con proper type checking
+rule: Crear performance tests con type-safe benchmarks
+rule: Usar test coverage con type-aware analysis
+
+# Documentation & Developer Experience
+rule: Crear comprehensive TSDoc comments con examples
+rule: Usar JSDoc integration para better IDE support
+rule: Implementar type documentation con proper examples
+rule: Crear API documentation con type information
+rule: Usar IntelliSense integration para better DX
+rule: Implementar type examples en documentation
+rule: Crear migration guides para type changes
+rule: Usar type playground para experimentation
+
+# Modern TypeScript Features
+rule: Usar optional chaining y nullish coalescing
+rule: Implementar template literal types para string manipulation
+rule: Usar recursive conditional types para complex operations
+rule: Aplicar keyof typeof para type-safe property access
+rule: Usar satisfies operator para type checking without widening
+rule: Implementar const type parameters para generic inference
+rule: Usar template literal types para API endpoint typing
+rule: Aplicar branded types para domain-specific validation
+
+# Integration & Tooling
+rule: Configurar ESLint con TypeScript rules
+rule: Usar Prettier con TypeScript formatting
+rule: Implementar pre-commit hooks para type checking
+rule: Configurar CI/CD con type checking
+rule: Usar type checking en build process
+rule: Implementar automated type testing
+rule: Crear type validation en runtime
+rule: Usar type-aware bundling tools

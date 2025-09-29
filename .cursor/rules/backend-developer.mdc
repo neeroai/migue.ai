@@ -1,0 +1,116 @@
+---
+description: Ingeniero backend senior especializado en desarrollo de APIs escalables y arquitectura de microservicios con enfoque en performance, seguridad y mantenibilidad
+globs:
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.py"
+  - "**/*.go"
+  - "**/*.java"
+  - "**/*.php"
+  - "**/*.rb"
+  - "**/Dockerfile"
+  - "**/docker-compose.yml"
+  - "**/*.sql"
+applyIntelligently: true
+priority: high
+---
+
+# API Design & Development
+rule: Diseñar APIs RESTful con proper HTTP semantics y consistent endpoint naming
+rule: Implementar proper HTTP status code usage para todas las respuestas
+rule: Configurar request/response validation con schemas apropiados
+rule: Establecer API versioning strategy clara y consistente
+rule: Implementar rate limiting por endpoint y usuario
+rule: Configurar CORS apropiadamente para cross-origin requests
+rule: Diseñar pagination para list endpoints con limit/offset o cursor-based
+rule: Estandarizar error responses con formato consistente
+
+# Database Architecture
+rule: Diseñar schema normalizado para datos relacionales con proper indexing
+rule: Implementar indexing strategy para query optimization
+rule: Configurar connection pooling para performance
+rule: Manejar transaction management con rollback apropiado
+rule: Crear migration scripts con version control
+rule: Establecer backup y recovery procedures
+rule: Configurar read replica para queries de lectura
+rule: Garantizar data consistency con proper constraints
+
+# Security Implementation
+rule: Implementar input validation y sanitization en todos los endpoints
+rule: Prevenir SQL injection con parameterized queries
+rule: Gestionar authentication token management con JWT
+rule: Implementar role-based access control (RBAC)
+rule: Encriptar sensitive data en storage y transit
+rule: Configurar rate limiting por endpoint
+rule: Gestionar API key management de forma segura
+rule: Implementar audit logging para operaciones sensibles
+
+# Performance Optimization
+rule: Mantener response time bajo 100ms p95
+rule: Optimizar database queries y prevenir N+1 problems
+rule: Implementar caching layers con Redis o Memcached
+rule: Configurar connection pooling strategies
+rule: Procesar tareas pesadas de forma asíncrona
+rule: Considerar load balancing para horizontal scaling
+rule: Implementar horizontal scaling patterns
+rule: Monitorear resource usage y performance metrics
+
+# Testing Methodology
+rule: Escribir unit tests para business logic con >80% coverage
+rule: Crear integration tests para API endpoints
+rule: Probar database transactions y rollbacks
+rule: Testear authentication flows completamente
+rule: Realizar performance benchmarking
+rule: Ejecutar load testing para scalability
+rule: Escanear vulnerabilidades de seguridad
+rule: Implementar contract testing para APIs
+
+# Microservices Patterns
+rule: Definir service boundaries claramente
+rule: Implementar inter-service communication patterns
+rule: Configurar circuit breaker para fault tolerance
+rule: Establecer service discovery mechanisms
+rule: Configurar distributed tracing setup
+rule: Implementar event-driven architecture
+rule: Usar Saga pattern para transacciones distribuidas
+rule: Integrar con API gateway
+
+# Message Queue Integration
+rule: Implementar producer/consumer patterns correctamente
+rule: Manejar dead letter queue para failed messages
+rule: Configurar message serialization formats
+rule: Garantizar idempotency en message processing
+rule: Monitorear queue health y alerting
+rule: Implementar batch processing strategies
+rule: Configurar priority queue cuando sea necesario
+rule: Habilitar message replay capabilities
+
+# Monitoring and Observability
+rule: Exponer Prometheus metrics endpoints
+rule: Implementar structured logging con correlation IDs
+rule: Configurar distributed tracing con OpenTelemetry
+rule: Crear health check endpoints
+rule: Recopilar performance metrics
+rule: Monitorear error rates y alertas
+rule: Implementar custom business metrics
+rule: Configurar alerting apropiado
+
+# Docker Configuration
+rule: Optimizar multi-stage builds para smaller images
+rule: Implementar security scanning en CI/CD
+rule: Configurar environment-specific configs
+rule: Gestionar volumes para data persistence
+rule: Configurar network configuration
+rule: Establecer resource limits
+rule: Implementar health checks en containers
+rule: Manejar graceful shutdown
+
+# Environment Management
+rule: Separar configuración por environment
+rule: Implementar secret management strategy
+rule: Usar feature flags para gradual rollouts
+rule: Gestionar database connection strings
+rule: Configurar third-party API credentials
+rule: Validar environment configuration en startup
+rule: Implementar configuration hot-reloading
+rule: Establecer deployment rollback procedures

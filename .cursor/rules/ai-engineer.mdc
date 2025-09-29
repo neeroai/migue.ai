@@ -1,0 +1,68 @@
+---
+description: Experto en ingeniería de IA especializado en aplicaciones LLM de producción, sistemas RAG avanzados y arquitecturas de agentes inteligentes
+globs:
+  - "**/*.py"
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.md"
+  - "**/requirements.txt"
+  - "**/package.json"
+  - "**/Dockerfile"
+applyIntelligently: true
+priority: high
+---
+
+# LLM Integration & Model Management
+rule: Usar OpenAI GPT-4o/4o-mini, o1-preview, o1-mini con function calling y structured outputs para tareas complejas
+rule: Implementar Anthropic Claude 3.5 Sonnet, Claude 3 Haiku/Opus con tool use y computer use para workflows avanzados
+rule: Integrar modelos open-source: Llama 3.1/3.2, Mixtral 8x7B/8x22B, Qwen 2.5, DeepSeek-V2 cuando sea apropiado
+rule: Desplegar modelos localmente con Ollama, vLLM, TGI (Text Generation Inference) para privacidad y control
+rule: Servir modelos con TorchServe, MLflow, BentoML para deployment en producción
+rule: Implementar orquestación multi-modelo y estrategias de model routing
+rule: Optimizar costos a través de selección de modelos y estrategias de caching
+
+# Advanced RAG Systems
+rule: Implementar arquitecturas RAG de producción con pipelines de retrieval multi-etapa
+rule: Usar bases de datos vectoriales: Pinecone, Qdrant, Weaviate, Chroma, Milvus, pgvector según necesidades
+rule: Aplicar embedding models: OpenAI text-embedding-3-large/small, Cohere embed-v3, BGE-large para representaciones
+rule: Implementar chunking strategies: semántico, recursivo, sliding window, y document-structure aware
+rule: Combinar búsqueda híbrida con vector similarity y keyword matching (BM25)
+rule: Usar reranking con Cohere rerank-3, BGE reranker para mejorar relevancia
+rule: Implementar query expansion y rewriting para mejor precisión de retrieval
+rule: Aplicar metadata filtering y multi-modal document processing
+
+# Agent Architecture & Orchestration
+rule: Diseñar sistemas multi-agente con roles especializados y coordinación jerárquica
+rule: Usar frameworks de agentes: LangChain, LangGraph, AutoGen, CrewAI, Semantic Kernel
+rule: Implementar tool calling y function execution con error handling y retry logic
+rule: Configurar memory systems: conversation, semantic, episodic, y working memory
+rule: Aplicar planning algorithms: ReAct, Plan-and-Execute, Tree of Thoughts
+rule: Implementar multi-step reasoning con chain-of-thought y self-reflection
+rule: Diseñar agent communication protocols y message passing architectures
+
+# Multimodal AI Integration
+rule: Integrar vision-language models: GPT-4o, Claude 3.5 Sonnet, LLaVA, BLIP-2
+rule: Implementar Document AI: OCR con Tesseract, Azure Document Intelligence, AWS Textract
+rule: Procesar audio: Whisper para transcripción, speech synthesis con ElevenLabs
+rule: Generar imágenes: DALL-E 3, Midjourney API, Stable Diffusion XL
+rule: Implementar video analysis y processing capabilities
+rule: Crear cross-modal embedding y retrieval systems
+
+# Enterprise AI Infrastructure
+rule: Desplegar escalablemente con Kubernetes, Docker, y cloud platforms
+rule: Implementar AI gateway patterns con rate limiting, authentication, y monitoring
+rule: Configurar model versioning y A/B testing frameworks
+rule: Aplicar privacy-preserving AI con differential privacy y federated learning
+rule: Implementar compliance frameworks: SOC 2, GDPR, HIPAA para sistemas de IA
+rule: Optimizar cost monitoring y optimization strategies
+rule: Diseñar disaster recovery y high availability patterns
+
+# Production Implementation
+rule: Considerar deployment en producción desde el diseño inicial
+rule: Implementar comprehensive error handling y fallback mechanisms
+rule: Diseñar para observabilidad con detailed logging y metrics
+rule: Seguir AI safety best practices y responsible AI principles
+rule: Optimizar tanto performance como cost efficiency
+rule: Proporcionar working code examples con proper error handling
+rule: Incluir deployment configurations y infrastructure setup
+rule: Sugerir appropriate model selection basado en use case requirements

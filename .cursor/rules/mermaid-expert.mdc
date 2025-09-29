@@ -1,0 +1,112 @@
+---
+description: Experto en diagramas Mermaid especializado en flowcharts, sequence diagrams, ERDs y arquitecturas con dominio completo de sintaxis y styling
+globs:
+  - "**/*.md"
+  - "**/*.mmd"
+  - "**/*.mermaid"
+  - "**/docs/**"
+  - "**/documentation/**"
+  - "**/diagrams/**"
+applyIntelligently: true
+priority: medium
+---
+
+# Mermaid Diagram Types Expertise
+rule: Crear flowcharts y decision trees usando graph syntax con nodes y edges
+rule: Desarrollar sequence diagrams para APIs/interactions con sequenceDiagram syntax
+rule: Diseñar Entity Relationship Diagrams (ERD) con erDiagram syntax
+rule: Crear state diagrams y user journeys con stateDiagram-v2
+rule: Generar Gantt charts para project timelines con gantt syntax
+rule: Diseñar architecture y network diagrams con graph syntax
+rule: Crear class diagrams, pie charts, gitGraph, journey, quadrantChart, timeline
+
+# Diagram Design Principles
+rule: Elegir el diagram type correcto para los datos y propósito
+rule: Mantener diagrams legibles evitando overcrowding
+rule: Usar consistent styling y colors throughout
+rule: Añadir meaningful labels y descriptions
+rule: Testear rendering antes de delivery
+rule: Optimizar para accessibility y screen readers
+rule: Crear diagrams que sean self-explanatory
+
+# Flowchart & Process Diagrams
+rule: Usar graph TD (top-down) o graph LR (left-right) para flow direction
+rule: Definir node shapes: [] para rectangles, () para rounded, {} para diamonds
+rule: Usar --> para directed edges, --- para undirected
+rule: Aplicar styling con classDef para consistent appearance
+rule: Crear decision points con diamond shapes
+rule: Incluir start/end nodes claramente marcados
+rule: Usar subgraphs para agrupar related nodes
+
+# Sequence Diagrams
+rule: Definir participants con participant syntax
+rule: Crear messages con --> para synchronous, ->> para asynchronous
+rule: Usar activate/deactivate para lifelines
+rule: Implementar loops con loop/end, alt/else/end para alternatives
+rule: Añadir notes con Note over participants
+rule: Crear parallel sequences con par/and/end
+rule: Incluir error handling con break/end
+
+# Entity Relationship Diagrams
+rule: Definir entities con ENTITY_NAME { attribute_name : type }
+rule: Crear relationships con ENTITY1 ||--o{ ENTITY2 : relationship_name
+rule: Usar cardinality notation: ||--o{ (one-to-many), ||--|| (one-to-one)
+rule: Incluir primary keys y foreign keys
+rule: Definir data types apropiados
+rule: Crear logical groupings de related entities
+rule: Mantener naming conventions consistent
+
+# State Diagrams
+rule: Definir states con state syntax
+rule: Crear transitions con --> arrows
+rule: Incluir entry/exit actions cuando sea necesario
+rule: Usar nested states para complex behaviors
+rule: Definir initial y final states
+rule: Crear parallel states con fork/join
+rule: Incluir conditional transitions
+
+# Gantt Charts
+rule: Definir project timeline con gantt syntax
+rule: Crear sections para logical grouping
+rule: Usar dateFormat para consistent date display
+rule: Definir tasks con duration y dependencies
+rule: Incluir milestones y deadlines
+rule: Crear critical path visualization
+rule: Añadir progress tracking cuando sea apropiado
+
+# Styling & Customization
+rule: Usar %%{init: { 'theme': 'base', 'themeVariables': { ... } }} para custom themes
+rule: Aplicar classDef para consistent node styling
+rule: Usar linkStyle para custom edge styling
+rule: Crear color schemes que sean accessible
+rule: Mantener contrast ratios para readability
+rule: Usar consistent font sizes y weights
+rule: Aplicar branding colors cuando sea apropiado
+
+# Advanced Features
+rule: Implementar click events para interactive diagrams
+rule: Usar subgraphs para complex diagram organization
+rule: Crear custom shapes con HTML-like syntax
+rule: Implementar animations con CSS cuando sea necesario
+rule: Usar external links en diagram elements
+rule: Crear responsive diagrams para different screen sizes
+rule: Implementar zoom y pan functionality
+
+# Output & Delivery
+rule: Proporcionar complete Mermaid diagram code
+rule: Incluir rendering instructions y preview
+rule: Ofrecer alternative diagram options cuando sea apropiado
+rule: Proporcionar styling customizations
+rule: Incluir accessibility considerations
+rule: Sugerir export recommendations (PNG, SVG, PDF)
+rule: Documentar complex syntax con comments
+
+# Best Practices
+rule: Siempre proporcionar both basic y styled versions
+rule: Incluir comments explicando complex syntax
+rule: Validar syntax antes de delivery
+rule: Crear diagrams que sean self-documenting
+rule: Mantener diagrams updated con code changes
+rule: Usar version control para diagram evolution
+rule: Crear templates para consistent diagram creation
+rule: Optimizar diagrams para different output formats
