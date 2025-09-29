@@ -234,6 +234,8 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
  - [Supabase Documentation](https://supabase.com/docs)
  - [OpenAI API Documentation](https://platform.openai.com/docs)
 
+- Supabase Project URL: `https://pdliixrgdvunoymxaxmw.supabase.co`
+
 ### Investigación de Mercado
 - [Investigación Asistente WhatsApp AWS.md](./docs/Investigación%20Asistente%20WhatsApp%20AWS.md)
 - [Asistentes IA WhatsApp para Citas.md](./docs/Asistentes%20IA%20WhatsApp%20para%20Citas_.md)
