@@ -1,4 +1,23 @@
 -- migue.ai minimal schema for sessions and messages
+-- Extensions
+create extension if not exists pgcrypto;
+create extension if not exists pg_trgm;
+-- Optional: enable if/when migrating embeddings to pgvector
+-- create extension if not exists vector;
+
+-- Domain/Enums
+do $$ begin
+  create type msg_direction as enum ('inbound','outbound');
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create type conv_status as enum ('active','archived','closed');
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create type msg_type as enum ('text','image','audio','video','document','location','unknown');
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create type reminder_status as enum ('pending','sent','cancelled','failed');
+exception when duplicate_object then null; end $$;
 create table if not exists public.sessions (
   id uuid primary key default gen_random_uuid(),
   user_phone text not null,
@@ -8,7 +27,7 @@ create table if not exists public.sessions (
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   session_id uuid not null references public.sessions(id) on delete cascade,
-  direction text not null check (direction in ('inbound','outbound')),
+  direction msg_direction not null,
   content jsonb not null,
   created_at timestamptz not null default now()
 );
@@ -17,10 +36,11 @@ create table if not exists public.messages (
 alter table public.sessions enable row level security;
 alter table public.messages enable row level security;
 
--- Example RLS policies (adjust to your auth model)
--- Here we allow all for initial development; tighten later
-create policy if not exists "allow_all_sessions" on public.sessions for all using (true) with check (true);
-create policy if not exists "allow_all_messages" on public.messages for all using (true) with check (true);
+-- Note: CREATE POLICY does not support IF NOT EXISTS. Use drop-first pattern.
+drop policy if exists "allow_all_sessions" on public.sessions;
+create policy "allow_all_sessions" on public.sessions for all using (true) with check (true);
+drop policy if exists "allow_all_messages" on public.messages;
+create policy "allow_all_messages" on public.messages for all using (true) with check (true);
 
 -- =============================
 -- New architecture tables
@@ -31,25 +51,28 @@ create table if not exists public.users (
   phone_number text unique not null,
   name text,
   preferences jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint chk_phone_e164 check (phone_number ~ '^[+][1-9][0-9]{7,14}$')
 );
 
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
-  wa_conversation_id text,
-  status text default 'active',
-  created_at timestamptz not null default now()
+  wa_conversation_id varchar(64),
+  status conv_status default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists public.messages_v2 (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations(id) on delete cascade,
-  direction text not null check (direction in ('inbound','outbound')),
-  type text not null,
+  direction msg_direction not null,
+  type msg_type not null,
   content text,
   media_url text,
-  wa_message_id text,
+  wa_message_id varchar(64),
   timestamp timestamptz not null,
   created_at timestamptz not null default now()
 );
@@ -57,6 +80,9 @@ create table if not exists public.messages_v2 (
 create index if not exists idx_conversations_user on public.conversations(user_id);
 create index if not exists idx_messages_v2_conversation on public.messages_v2(conversation_id);
 create index if not exists idx_messages_v2_timestamp on public.messages_v2(timestamp);
+create index if not exists idx_conv_status on public.conversations(status);
+create index if not exists idx_users_phone on public.users(phone_number);
+create index if not exists idx_messages_v2_wa on public.messages_v2(wa_message_id);
 
 create table if not exists public.reminders (
   id uuid primary key default gen_random_uuid(),
@@ -64,11 +90,14 @@ create table if not exists public.reminders (
   title text not null,
   description text,
   scheduled_time timestamptz not null,
-  status text not null default 'pending',
-  created_at timestamptz not null default now()
+  status reminder_status not null default 'pending',
+  created_at timestamptz not null default now(),
+  send_token uuid
 );
 create index if not exists idx_reminders_user on public.reminders(user_id);
 create index if not exists idx_reminders_time on public.reminders(scheduled_time);
+create index if not exists idx_reminders_status_time on public.reminders(status, scheduled_time);
+create unique index if not exists uniq_reminders_send_token on public.reminders(send_token) where send_token is not null;
 
 create table if not exists public.documents (
   id uuid primary key default gen_random_uuid(),
@@ -90,6 +119,10 @@ create table if not exists public.embeddings (
 );
 create index if not exists idx_embeddings_doc on public.embeddings(document_id);
 create index if not exists idx_embeddings_chunk on public.embeddings(document_id, chunk_index);
+create index if not exists idx_documents_user on public.documents(user_id);
+create index if not exists idx_docs_metadata_gin on public.documents using gin (metadata);
+create index if not exists idx_embeddings_metadata_gin on public.embeddings using gin (metadata);
+create unique index if not exists uniq_document_user_path on public.documents(user_id, bucket, path);
 
 -- Enable RLS
 alter table public.users enable row level security;
@@ -100,11 +133,40 @@ alter table public.documents enable row level security;
 alter table public.embeddings enable row level security;
 
 -- Permissive policies for initial development (tighten later with auth)
-create policy if not exists "allow_all_users" on public.users for all using (true) with check (true);
-create policy if not exists "allow_all_conversations" on public.conversations for all using (true) with check (true);
-create policy if not exists "allow_all_messages_v2" on public.messages_v2 for all using (true) with check (true);
-create policy if not exists "allow_all_reminders" on public.reminders for all using (true) with check (true);
-create policy if not exists "allow_all_documents" on public.documents for all using (true) with check (true);
-create policy if not exists "allow_all_embeddings" on public.embeddings for all using (true) with check (true);
+drop policy if exists "allow_all_users" on public.users;
+create policy "allow_all_users" on public.users for all using (true) with check (true);
+drop policy if exists "allow_all_conversations" on public.conversations;
+create policy "allow_all_conversations" on public.conversations for all using (true) with check (true);
+drop policy if exists "allow_all_messages_v2" on public.messages_v2;
+create policy "allow_all_messages_v2" on public.messages_v2 for all using (true) with check (true);
+drop policy if exists "allow_all_reminders" on public.reminders;
+create policy "allow_all_reminders" on public.reminders for all using (true) with check (true);
+drop policy if exists "allow_all_documents" on public.documents;
+create policy "allow_all_documents" on public.documents for all using (true) with check (true);
+drop policy if exists "allow_all_embeddings" on public.embeddings;
+create policy "allow_all_embeddings" on public.embeddings for all using (true) with check (true);
+
+-- Business constraints & idempotency
+create unique index if not exists uniq_wa_message on public.messages_v2(wa_message_id);
+create unique index if not exists uniq_active_conversation_per_user on public.conversations(user_id) where status = 'active';
+
+-- Metadata conventions
+alter table public.documents add constraint if not exists chk_documents_metadata_is_object check (metadata is null or jsonb_typeof(metadata) = 'object');
+alter table public.embeddings add constraint if not exists chk_embeddings_metadata_is_object check (metadata is null or jsonb_typeof(metadata) = 'object');
+
+-- Updated_at trigger for key tables
+create or replace function set_updated_at() returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$ language plpgsql;
+
+drop trigger if exists t_users_updated on public.users;
+create trigger t_users_updated before update on public.users
+for each row execute function set_updated_at();
+
+drop trigger if exists t_conversations_updated on public.conversations;
+create trigger t_conversations_updated before update on public.conversations
+for each row execute function set_updated_at();
 
 
