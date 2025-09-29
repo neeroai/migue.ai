@@ -166,8 +166,10 @@ create unique index if not exists uniq_wa_conversation_id on public.conversation
 create unique index if not exists uniq_active_conversation_per_user on public.conversations(user_id) where status = 'active';
 
 -- Metadata conventions
-alter table public.documents add constraint if not exists chk_documents_metadata_is_object check (metadata is null or jsonb_typeof(metadata) = 'object');
-alter table public.embeddings add constraint if not exists chk_embeddings_metadata_is_object check (metadata is null or jsonb_typeof(metadata) = 'object');
+alter table public.documents drop constraint if exists chk_documents_metadata_is_object;
+alter table public.documents add constraint chk_documents_metadata_is_object check (metadata is null or jsonb_typeof(metadata) = 'object');
+alter table public.embeddings drop constraint if exists chk_embeddings_metadata_is_object;
+alter table public.embeddings add constraint chk_embeddings_metadata_is_object check (metadata is null or jsonb_typeof(metadata) = 'object');
 
 -- Messages business checks
 alter table public.messages_v2 drop constraint if exists chk_msg_content_or_media;
