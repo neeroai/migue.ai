@@ -1,0 +1,16 @@
+declare namespace NodeJS {
+  interface ProcessEnv {
+    WHATSAPP_TOKEN: string;
+    WHATSAPP_PHONE_ID: string;
+    WHATSAPP_VERIFY_TOKEN: string;
+    WHATSAPP_APP_SECRET: string;
+
+    SUPABASE_URL: string;
+    SUPABASE_KEY: string;
+
+    NODE_ENV?: 'development' | 'test' | 'production';
+    LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
+  }
+}
+
+export {};

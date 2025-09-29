@@ -212,3 +212,4 @@ out/
 .archive/
 
 .npm-cache/
+.vercel
