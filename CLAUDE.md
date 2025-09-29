@@ -161,6 +161,8 @@ git push origin main
 - ✅ Remove `functions.runtime` from `vercel.json` if present
 - ✅ Verify no Node.js-specific APIs (fs, path, etc.) in Edge Functions
 - ✅ Check env vars are set in Vercel Dashboard
+- ✅ Use **static imports** at top of file (NOT dynamic `await import()`)
+- ✅ Ensure `lib/` files are NOT gitignored (check .gitignore for Python/TypeScript conflicts)
 
 ### Database Connection Issues
 - Verify `SUPABASE_URL` and `SUPABASE_KEY` in env
@@ -192,3 +194,5 @@ For detailed information, see:
 - **Node.js**: 20.x required
 - **Module Type**: ESM (ES Modules)
 - **Testing**: Jest + Playwright + Supertest
+- **Deployment**: ✅ Production ready on Vercel (https://migue.app)
+- **Status**: Fase 2 - Core Features Development

@@ -276,9 +276,11 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 
 ## Roadmap y Fases
 
-### Fase 1: MVP (Mes 1-2)
-- [ ] Configuración básica de WhatsApp Business API y webhook en Vercel
-- [ ] Implementación de arquitectura Vercel Edge Functions + Supabase
+### Fase 1: MVP (Mes 1-2) ✅
+- [x] Configuración básica de WhatsApp Business API y webhook en Vercel
+- [x] Implementación de arquitectura Vercel Edge Functions + Supabase
+- [x] Deployment exitoso en producción (Vercel)
+- [x] Edge Functions con static imports funcionando correctamente
 - [ ] Funcionalidades básicas: texto, reconocimiento de intención con OpenAI
 - [ ] Integración con OpenAI para respuestas
 
@@ -322,7 +324,8 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 
 ---
 
-**Fecha de creación**: 2025-01-27  
-**Última actualización**: 2025-01-27  
-**Versión**: 1.0  
-**Estado**: En desarrollo - Fase 1
+**Fecha de creación**: 2025-01-27
+**Última actualización**: 2025-01-29
+**Versión**: 1.1
+**Estado**: En desarrollo - Fase 2 (Core Features)
+**Deployment**: ✅ Producción activa en Vercel
