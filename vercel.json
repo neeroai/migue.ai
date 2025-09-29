@@ -1,6 +1,17 @@
 {
+  "regions": ["iad1"],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "edge",
+      "regions": ["iad1"]
+    }
+  },
   "crons": [
-    { "path": "/api/cron/check-reminders", "schedule": "* * * * *" }
+    { "path": "/api/cron/check-reminders", "schedule": "0 9 * * *" }
+  ],
+  "routes": [
+    { "src": "/api/whatsapp/webhook", "headers": { "cache-control": "no-store" } },
+    { "src": "/api/whatsapp/send", "headers": { "cache-control": "no-store" } }
   ]
 }
 
