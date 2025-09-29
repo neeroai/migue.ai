@@ -26,7 +26,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ - Commented out: conflicts with TypeScript lib/ directory
+# Use specific Python paths instead:
+lib/__pycache__/
+lib/*.py[cod]
 lib64/
 parts/
 sdist/
