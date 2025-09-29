@@ -1,4 +1,6 @@
 {
+  "installCommand": "npm install",
+  "buildCommand": "echo 'No build required for Edge Functions'",
   "crons": [
     { "path": "/api/cron/check-reminders", "schedule": "0 9 * * *" }
   ],
