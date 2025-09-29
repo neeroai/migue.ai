@@ -15,7 +15,7 @@
     "skipLibCheck": true,
     "outDir": "dist"
   },
-  "include": ["vercel/**/*", "scripts/**/*", "types/**/*"]
+  "include": ["api/**/*", "lib/**/*", "types/**/*"]
 }
 
 

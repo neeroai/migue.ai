@@ -55,7 +55,7 @@ WhatsApp Business API → Vercel Edge Functions → Supabase → OpenAI API
 - ✅ **Análisis Competitivo**: Completado
 - ✅ **Documentación Técnica**: Completado
 - ✅ **Análisis de Arquitectura**: Completado
-- 🔄 **Fase 2**: Arquitectura técnica y diseño de APIs (En progreso)
+- 🔄 **Fase 2**: Desarrollo de funcionalidades core (En progreso)
 - ⏳ **Fase 3**: Desarrollo backend y frontend
 - ⏳ **Fase 4**: Testing, despliegue y monitoreo
 
@@ -63,26 +63,51 @@ WhatsApp Business API → Vercel Edge Functions → Supabase → OpenAI API
 
 ```
 migue.ai/
-├── docs/                           # Documentación
-│   ├── Investigación Asistente WhatsApp AWS.md
-│   ├── Asistentes IA WhatsApp para Citas_.md
-│   └── kapso.ai/                   # Análisis de Kapso.ai
-├── AGENTS.md                       # Guía principal del proyecto
-├── IMPLEMENTATION-PLAN.md          # Plan de implementación detallado
-├── ARCHITECTURE-BEST-PRACTICES-ANALYSIS.md  # Análisis de arquitectura Vercel+Supabase+OpenAI
-├── AWS-ALTERNATIVES-ANALYSIS.md             # Alternativas a AWS para el proyecto
-├── KAPSO-FEATURES-ANALYSIS.md               # Análisis de features de Kapso
+├── api/                            # Vercel Edge Functions
+│   ├── whatsapp/                   # Webhook and messaging
+│   │   ├── webhook.ts              # Message reception
+│   │   └── send.ts                 # Message sending
+│   └── cron/                       # Scheduled tasks
+│       └── check-reminders.ts      # Daily reminder checks
+├── lib/                            # Shared utilities
+│   ├── supabase.ts                 # Database client
+│   └── persist.ts                  # Data persistence
+├── types/                          # TypeScript definitions
+│   └── env.d.ts                    # Environment variables
+├── supabase/                       # Database schema
+│   ├── schema.sql                  # Tables and types
+│   └── security.sql                # RLS policies
+├── docs/                           # Documentation
+│   ├── setup.md                    # Setup instructions
+│   ├── architecture.md             # Architecture docs
+│   └── SUPABASE.md                 # Database docs
+├── .cursor/                        # IDE rules
+├── CLAUDE.md                       # Claude Code guide
+├── AGENTS.md                       # Project blueprint
 └── README.md                       # Este archivo
 ```
 
-## 💰 Modelo de Costos
+## 💰 Modelo de Costos Actualizado
 
-### Arquitectura sin AWS (Recomendada)
+### Costos Fijos (Mensual)
 - **Vercel Pro**: $20/mes (Edge Functions, Analytics, Cron)
 - **Supabase Pro**: $25/mes (PostgreSQL + Auth + Storage)
-- **OpenAI API**: $30-50/mes (GPT-4o/Whisper/Embeddings, uso estimado)
-- **Total**: $75-95/mes
-- **Ahorro**: 27-45% vs arquitectura con AWS
+- **Total Fijo**: $45/mes
+
+### Costos Variables
+- **OpenAI API**: $30-50/mes (estimado 10K usuarios activos)
+  - GPT-4o: $15/1M tokens input, $60/1M tokens output
+  - Whisper: $0.006/minuto de audio
+  - Embeddings: $0.13/1M tokens
+- **WhatsApp Templates**: $0.005-$0.08 por mensaje (fuera CSW)
+
+### Estrategia de Optimización
+- **Uso máximo de CSW**: 24h gratis por conversación
+- **Entry Point Window**: 72h gratis con Click-to-WhatsApp
+- **Caché de respuestas**: Reducir llamadas a OpenAI
+- **Template monitoring**: Rastrear costos de mensajes facturables
+
+**Total Estimado**: $75-120/mes (incluye WhatsApp y OpenAI)
 
 ## 🎯 Métricas de Éxito
 
@@ -98,30 +123,146 @@ migue.ai/
 - **Satisfacción**: > 4.5/5 en feedback
 - **Costo por usuario**: < $2/mes
 
-## 🚀 Próximos Pasos
+## 🚀 Quick Start
 
-1. **Configurar Vercel** y crear Webhook de WhatsApp en Edge Function
-2. **Configurar Supabase** (PostgreSQL, Auth, Storage, RLS)
-3. **Integrar OpenAI** (GPT-4o para chat, Whisper para audio, Embeddings para RAG)
-4. **Persistir contexto** de sesión en Supabase con políticas RLS
-5. **Configurar Vercel Cron** para recordatorios
-6. **Orquestar flujo**: WhatsApp → Vercel → Supabase/OpenAI → WhatsApp
+### 1. Instalación
+```bash
+npm install
+```
+
+### 2. Configuración de Variables
+Copia `.env.local.example` a `.env.local` y configura:
+```bash
+# WhatsApp Business API
+WHATSAPP_TOKEN=tu_token
+WHATSAPP_PHONE_ID=tu_phone_id
+WHATSAPP_VERIFY_TOKEN=tu_verify_token
+WHATSAPP_APP_SECRET=tu_app_secret
+
+# Supabase
+SUPABASE_URL=https://pdliixrgdvunoymxaxmw.supabase.co
+SUPABASE_KEY=tu_supabase_key
+SUPABASE_ANON_KEY=tu_anon_key
+
+# OpenAI
+OPENAI_API_KEY=tu_openai_key
+
+# Configuración
+TIMEZONE=America/Mexico_City
+NODE_ENV=development
+```
+
+### 3. Setup de Base de Datos
+```sql
+-- Ejecutar en Supabase SQL Editor
+\i supabase/schema.sql
+\i supabase/security.sql
+```
+
+### 4. Desarrollo
+```bash
+npm run dev        # Servidor de desarrollo
+npm run typecheck  # Verificación de tipos
+npm run build      # Build de producción
+```
+
+### 5. Endpoints Disponibles
+- `GET /api/whatsapp/webhook` - Verificación de webhook
+- `POST /api/whatsapp/webhook` - Recepción de mensajes
+- `POST /api/whatsapp/send` - Envío de mensajes
+- `GET /api/cron/check-reminders` - Cron diario (9 AM UTC)
+
+## 🗺️ Roadmap Detallado
+
+### Fase 1: MVP (Mes 1-2) ✅
+- [x] Configuración WhatsApp Business API
+- [x] Arquitectura Vercel + Supabase
+- [x] Schema de base de datos (sessions, messages)
+- [x] Variables de entorno configuradas
+- [ ] Integración OpenAI básica
+- [ ] Webhook funcional
+
+### Fase 2: Core Features (Mes 3-4) 🔄
+- [ ] Transcripción de audios (Whisper API)
+- [ ] Sistema de recordatorios (Vercel Cron)
+- [ ] Gestión de calendarios (Google Calendar)
+- [ ] RAG básico con embeddings + Supabase
+- [ ] Reconocimiento de intención con GPT-4o
+
+### Fase 3: Advanced (Mes 5-6) ⏳
+- [ ] Agente autónomo para reservas
+- [ ] Análisis avanzado de PDFs
+- [ ] Dashboard de monitoreo (métricas)
+- [ ] Integraciones múltiples (Outlook, Calendly)
+- [ ] Sistema de notificaciones push
+
+### Fase 4: Scale (Mes 7-8) ⏳
+- [ ] Optimización de costos WhatsApp
+- [ ] Monitoreo avanzado (alertas, KPIs)
+- [ ] Rate limiting y seguridad
+- [ ] Testing automatizado (e2e)
+- [ ] Preparación para producción
+
+## ⚙️ Configuración Actual
+
+### APIs Configuradas ✅
+- **WhatsApp Business API**: Token y Phone ID configurados
+- **Supabase**: https://pdliixrgdvunoymxaxmw.supabase.co
+- **OpenAI API**: GPT-4o, Whisper, Embeddings disponibles
+- **Vercel**: Edge Functions y Cron Jobs activos
+
+### Base de Datos 🗄️
+- **Tablas**: sessions, messages, reminders (schema.sql)
+- **Seguridad**: RLS habilitado en todas las tablas
+- **Extensiones**: pgcrypto, pg_trgm configuradas
+- **Tipos**: Enums personalizados para estados y direcciones
+
+## 🧪 Testing & Seguridad
+
+### Testing Strategy
+- **Unit Tests**: Jest/Vitest para lógica de negocio
+- **Integration Tests**: Supertest para APIs
+- **E2E Tests**: Playwright para flujos completos
+- **Coverage**: Mínimo 80% para módulos críticos
+
+### Security Features
+- **RLS**: Row Level Security en todas las tablas
+- **Webhook Validation**: Signature verification con APP_SECRET
+- **Input Sanitization**: Validación en todos los endpoints
+- **Environment**: Variables seguras en Vercel (nunca en código)
+- **Rate Limiting**: Middleware de Vercel Edge
 
 ## 📚 Documentación
 
-- [AGENTS.md](./AGENTS.md) - Guía principal del proyecto
-- [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) - Plan detallado de implementación
-- [ARCHITECTURE-BEST-PRACTICES-ANALYSIS.md](./ARCHITECTURE-BEST-PRACTICES-ANALYSIS.md) - Mejores prácticas de la arquitectura sin AWS
-- [AWS-ALTERNATIVES-ANALYSIS.md](./AWS-ALTERNATIVES-ANALYSIS.md) - Alternativas a AWS
+### Documentación Técnica
+- [CLAUDE.md](./CLAUDE.md) - Guía para Claude Code
+- [AGENTS.md](./AGENTS.md) - Blueprint del proyecto
+- [docs/setup.md](./docs/setup.md) - Instrucciones de setup
+- [docs/architecture.md](./docs/architecture.md) - Documentación de arquitectura
+- [docs/SUPABASE.md](./docs/SUPABASE.md) - Documentación de base de datos
+
+### APIs Externas
+- [WhatsApp Business API](https://developers.facebook.com/docs/whatsapp)
+- [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
+- [Supabase Documentation](https://supabase.com/docs)
+- [OpenAI API](https://platform.openai.com/docs)
 
 ## 🤝 Contribución
 
 Este proyecto sigue las mejores prácticas definidas en [AGENTS.md](./AGENTS.md). Para contribuir:
 
-1. Lee la documentación completa
-2. Sigue los estándares de desarrollo
-3. Mantén commits pequeños y seguros
-4. Documenta todas las suposiciones
+### Estándares de Desarrollo
+1. **Lectura completa**: Lee archivos completos antes de modificar
+2. **Commits pequeños**: Mantén cambios pequeños y seguros
+3. **Documentar suposiciones**: Registra decisiones en Issues/PRs
+4. **Testing**: Incluye tests para nuevo código
+5. **Seguridad**: Nunca commitear secretos
+
+### Límites de Código
+- Archivo: ≤ 300 LOC
+- Función: ≤ 50 LOC
+- Parámetros: ≤ 5
+- Complejidad ciclomática: ≤ 10
 
 ## 📄 Licencia
 
@@ -130,8 +271,9 @@ Este proyecto sigue las mejores prácticas definidas en [AGENTS.md](./AGENTS.md)
 ## 📞 Contacto
 
 - **Proyecto**: migue.ai Personal Assistant
-- **Estado**: En desarrollo - Fase 1 completada
-- **Última actualización**: 2025-01-27
+- **Estado**: En desarrollo - Fase 2 (Core Features)
+- **Versión**: 1.0
+- **Última actualización**: 2025-01-29
 
 ---
 

@@ -1,5 +1,11 @@
 # migue.ai - WhatsApp AI Assistant
 
+# Project-specific directories to ignore
+/docs
+.claude
+.cursor
+.bmad-core
+
 # Dependencies
 node_modules/
 npm-debug.log*

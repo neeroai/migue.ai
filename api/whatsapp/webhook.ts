@@ -75,7 +75,7 @@ function extractNormalizedMessage(body: any) {
 function hex(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   let out = ''
-  for (let i = 0; i < bytes.length; i++) out += bytes[i].toString(16).padStart(2, '0')
+  for (let i = 0; i < bytes.length; i++) out += bytes[i]!.toString(16).padStart(2, '0')
   return out
 }
 
@@ -99,6 +99,7 @@ async function validateSignature(req: Request, rawBody: string): Promise<boolean
   const parts = header.split('=')
   if (parts.length !== 2 || parts[0] !== 'sha256') return false
   const provided = parts[1]
+  if (!provided) return false
   const expected = await hmacSha256Hex(appSecret, rawBody)
   // constant-time like compare
   if (provided.length !== expected.length) return false

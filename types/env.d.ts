@@ -7,7 +7,11 @@ declare namespace NodeJS {
 
     SUPABASE_URL: string;
     SUPABASE_KEY: string;
+    SUPABASE_ANON_KEY?: string;
 
+    OPENAI_API_KEY: string;
+
+    TIMEZONE?: string;
     NODE_ENV?: 'development' | 'test' | 'production';
     LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
   }
