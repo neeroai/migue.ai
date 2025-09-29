@@ -2,8 +2,7 @@
   "regions": ["iad1"],
   "functions": {
     "api/**/*.ts": {
-      "runtime": "edge",
-      "regions": ["iad1"]
+      "runtime": "edge"
     }
   },
   "crons": [
