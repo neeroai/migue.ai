@@ -13,19 +13,17 @@ do $$ begin
   create type conv_status as enum ('active','archived','closed');
 exception when duplicate_object then null; end $$;
 do $$ begin
-  create type msg_type as enum ('text','image','audio','video','document','location','unknown');
+  create type msg_type as enum (
+    'text','image','audio','video','document','location',
+    'interactive','button','contacts','system','unknown'
+  );
 exception when duplicate_object then null; end $$;
 do $$ begin
   create type reminder_status as enum ('pending','sent','cancelled','failed');
 exception when duplicate_object then null; end $$;
 
--- Extend msg_type with additional values used by WhatsApp (idempotent)
-do $$ begin
-  begin execute 'alter type msg_type add value if not exists ' || quote_literal('interactive'); exception when others then null; end;
-  begin execute 'alter type msg_type add value if not exists ' || quote_literal('button');      exception when others then null; end;
-  begin execute 'alter type msg_type add value if not exists ' || quote_literal('contacts');    exception when others then null; end;
-  begin execute 'alter type msg_type add value if not exists ' || quote_literal('system');      exception when others then null; end;
-end $$;
+-- Removed ALTER TYPE inside same transaction to avoid
+-- "unsafe use of new value" errors in Supabase SQL editor
 
 -- Optional reusable domain for E.164 phones
 do $$ begin
