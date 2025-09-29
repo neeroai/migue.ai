@@ -1,17 +1,17 @@
 {
-  "version": 2,
-  "regions": ["iad1"],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "crons": [
     { "path": "/api/cron/check-reminders", "schedule": "0 9 * * *" }
   ],
-  "routes": [
-    { "src": "/api/whatsapp/webhook", "headers": { "cache-control": "no-store" } },
-    { "src": "/api/whatsapp/send", "headers": { "cache-control": "no-store" } }
+  "headers": [
+    {
+      "source": "/api/whatsapp/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
   ]
 }
 

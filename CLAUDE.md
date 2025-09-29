@@ -1,376 +1,194 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**migue.ai** - WhatsApp AI Assistant on Vercel Edge Functions + Supabase + OpenAI
 
-## Project Overview
+## Quick Reference
 
-migue.ai is a personal AI assistant that operates through WhatsApp Business API, providing advanced productivity features, appointment management, content analysis, and daily task automation. The project targets the Latin American market and combines the utility of Zapia with the technical sophistication of Martin.
-
-## Development Commands
-
-### Building and Type Checking
+### Essential Commands
 ```bash
-npm run build          # Compile TypeScript to dist/
-npm run typecheck      # Type check without emitting files
-npm run lint           # Type check without emitting (alias)
+npm run dev           # Start Vercel dev server
+npm run build         # Compile TypeScript
+npm run typecheck     # Type check without emit
+npm run test          # Run all tests (Jest + Playwright)
+npm run clean         # Clean build artifacts
 ```
 
-### Development and Deployment
-```bash
-npm run dev            # Start Vercel development server
-npm run start          # Start Vercel development server (alias)
-vercel dev             # Direct Vercel development command
-```
-
-### Testing
-```bash
-npm run test           # Run all tests with Jest
-npm run test:unit      # Run unit tests only
-npm run test:e2e       # Run e2e tests with Playwright
-npm run test:watch     # Run tests in watch mode
-npm run test:coverage  # Generate test coverage report
-```
-
-### Utilities
-```bash
-npm run clean          # Clean build artifacts (dist, .vercel, coverage)
-npm run setup          # Install dependencies and run type check
-npm install            # Install deps (runs playwright install automatically)
-```
-
-## Architecture Overview
-
-### Technology Stack
-- **Runtime**: Vercel Edge Functions (serverless, Node.js 20.x)
-- **Database**: Supabase PostgreSQL with RLS (Row Level Security)
-- **AI/LLM**: OpenAI API (GPT-4o, Whisper, Embeddings)
-- **Storage**: Supabase Storage for multimedia files
-- **Scheduling**: Vercel Cron Jobs for reminders
-- **Type System**: TypeScript 5.9.2 with strict configuration
-- **Testing**: Jest (unit), Playwright (e2e), Supertest (integration)
-- **Validation**: Zod for runtime type validation
-
-### Core Architecture Pattern
-```
-WhatsApp Business API → Vercel Edge Functions → Supabase → OpenAI API
-```
-
-### Message Processing Flow
-1. **Reception**: Webhook at Vercel Edge Function (orquestación)
-2. **Processing**: Intent recognition with OpenAI (NLP ligero)
-3. **Persistence**: Supabase with RLS (contexto de sesión)
-4. **Generation**: OpenAI API → Respuesta
-5. **Sending**: WhatsApp Business API delivery
-
-### Directory Structure
-```
-migue.ai/
-├── api/                    # Vercel Edge Functions
-│   ├── whatsapp/          # WhatsApp webhook and messaging
-│   └── cron/              # Scheduled tasks (daily reminders)
-├── lib/                   # Shared utilities
-│   ├── supabase.ts        # Supabase client configuration
-│   └── persist.ts         # Data persistence utilities
-├── types/                 # TypeScript type definitions
-│   └── env.d.ts          # Environment variable types
-├── docs/                  # Project documentation
-├── supabase/             # Database schema and migrations
-│   ├── schema.sql        # Tables, types, and extensions
-│   └── security.sql      # RLS policies
-├── tests/                # Test suites
-│   ├── unit/            # Unit tests (Jest)
-│   └── e2e/             # End-to-end tests (Playwright)
-├── .cursor/              # IDE rules and configuration
-├── jest.config.js        # Jest configuration
-├── jest.setup.js         # Jest global setup
-├── playwright.config.ts  # Playwright configuration
-└── .env.example          # Environment variables template
-```
-
-### Key API Endpoints
-- `/api/whatsapp/webhook` - Receives WhatsApp messages and verification
-- `/api/whatsapp/send` - Sends WhatsApp messages
-- `/api/cron/check-reminders` - Daily cron job (9 AM UTC)
+### Key Files
+- `api/whatsapp/webhook.ts` - Message reception & verification
+- `api/whatsapp/send.ts` - Message sending
+- `api/cron/check-reminders.ts` - Daily reminders (9 AM UTC)
+- `lib/supabase.ts` - Database client
+- `lib/persist.ts` - Data persistence helpers
+- `vercel.json` - Deployment config (crons + headers)
 
 ### Environment Variables
-Required environment variables are typed in `types/env.d.ts`:
-- `WHATSAPP_TOKEN` - WhatsApp Business API token
-- `WHATSAPP_PHONE_ID` - WhatsApp phone number ID
-- `WHATSAPP_VERIFY_TOKEN` - Webhook verification token
-- `WHATSAPP_APP_SECRET` - App secret for signature validation
-- `SUPABASE_URL` - Supabase project URL (https://pdliixrgdvunoymxaxmw.supabase.co)
-- `SUPABASE_KEY` - Supabase service role key
-- `SUPABASE_ANON_KEY` - Supabase public anon key for client operations
-- `OPENAI_API_KEY` - OpenAI API key for GPT-4o/Whisper/Embeddings
-- `TIMEZONE` - User timezone (e.g., America/Mexico_City)
-- `NODE_ENV` - Environment mode (development/production)
-- `LOG_LEVEL` - Logging level (debug/info/warn/error)
+See `.env.example` - Required: `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`
 
-## Code Architecture
+---
 
-### Edge Functions Pattern
-All API routes are Vercel Edge Functions with `export const config = { runtime: 'edge' }`. They use:
-- Strict TypeScript configuration with advanced type checking
-- Server-side Supabase client without session persistence
-- Environment variable validation at runtime
+## Development Rules
 
-### Database Access
-- Use `getSupabaseServerClient()` from `lib/supabase.ts` for server-side operations
-- All database access should respect Row Level Security (RLS) policies
-- Session context is stored in Supabase for conversation persistence
-
-### TypeScript Configuration
-- Target: ES2022 with bundler module resolution
-- Strict mode enabled with additional checks:
-  - `noUncheckedIndexedAccess: true` (requires array access validation)
-  - `exactOptionalPropertyTypes: true`
-- Includes: `api/**/*`, `lib/**/*`, `types/**/*`
-- Output directory: `dist/`
-
-## Key Features Implementation
-
-### WhatsApp Integration
-- Webhook verification and message handling in `/api/whatsapp/webhook.ts`
-- Message sending functionality in `/api/whatsapp/send.ts`
-- Cache control headers prevent caching for real-time messaging
-
-### Multimodal Content Processing
-- Audio transcription via OpenAI Whisper
-- PDF analysis using RAG with OpenAI embeddings
-- Image interpretation for product/information identification
-- Video summarization from YouTube content
-
-### Automation Features
-- Daily reminder checks via Vercel cron (9 AM UTC)
-- Appointment scheduling and management
-- Deferred message sending through WhatsApp
-- Real-time information search (news, weather, data)
-
-## Database Schema
-
-### Core Tables
-- `sessions` - User phone sessions with UUID primary keys
-- `messages` - Conversation history with direction enum (inbound/outbound)
-- `reminders` - Scheduled reminders with status tracking
-
-### Database Features
-- **Extensions**: pgcrypto, pg_trgm (optional: vector for embeddings)
-- **Types**: Custom enums for msg_direction, conv_status, msg_type, reminder_status
-- **Domains**: E.164 phone number validation
-- **Security**: RLS enabled on all tables
-
-### Message Types Supported
-- text, image, audio, video, document, location
-- interactive, button, contacts, system, unknown
-
-## Development Standards (from AGENTS.md)
-
-### Mandatory Rules
-- **Read Completely**: Read files from start to finish before modifications, including all call paths/references
-- **Small Changes**: Keep tasks, commits, and PRs small and safe
-- **Document Assumptions**: Register all assumptions in Issues/PRs/ADRs
-- **Security First**: Never commit secrets; validate inputs, encode outputs
-- **Intentional Naming**: Use names that reveal intention, avoid premature abstractions
+### IMPORTANT: Mandatory Standards
+- **Read Complete Files**: ALWAYS read files fully before modifications
+- **Small Changes**: Keep commits small and safe (≤300 LOC/file, ≤50 LOC/function)
+- **Security First**: NEVER commit secrets; validate inputs, encode outputs
+- **Test Coverage**: Minimum 80% for critical modules
+- **Edge Runtime**: ALL api routes MUST export `export const config = { runtime: 'edge' }`
 
 ### Code Limits (Enforced)
-- **File**: ≤ 300 LOC
-- **Function**: ≤ 50 LOC
-- **Parameters**: ≤ 5
-- **Cyclomatic Complexity**: ≤ 10
-- If exceeded, divide/refactor
+- File: ≤ 300 LOC
+- Function: ≤ 50 LOC
+- Parameters: ≤ 5
+- Cyclomatic Complexity: ≤ 10
 
-### Testing Requirements
-- **Coverage**: Minimum 80% for critical modules
-- **Deterministic**: Tests must be deterministic and independent
-- **Regression**: Bug fixes must include regression tests (write to fail first)
-- **Paths**: Include ≥1 happy path and ≥1 failure path in e2e tests
-- **Tools**: Jest for unit tests, Supertest for integration, Playwright for e2e
+If exceeded → divide/refactor immediately
 
-### Test Configuration Files
-- **jest.config.js**: ES modules support, coverage settings, test patterns
-- **jest.setup.js**: Global mocks, environment variables, test timeout
-- **playwright.config.ts**: Browser configs, base URL, parallel execution
-- **Test Structure**: `tests/unit/` for unit tests, `tests/e2e/` for end-to-end
+### TypeScript Strict Mode
+- Target: ES2022, module: ES2022, moduleResolution: bundler
+- `noUncheckedIndexedAccess: true` → validate array access with `!` when certain
+- `exactOptionalPropertyTypes: true` → handle all nullable types explicitly
+- NO `any` types - use proper typing or `unknown`
 
-### Security Guidelines
-- **No Secrets**: Never leave secrets in code/logs/tickets
-- **Input Validation**: Validate, normalize, and encode all inputs
-- **Least Privilege**: Apply principle of least privilege
-- **RLS**: Use Row Level Security for all database access
-- **Webhook Validation**: Implement proper signature validation for WhatsApp endpoints
+---
 
-### Clean Code Principles
-- **One Function, One Task**: Each function should do one thing
-- **Effects at Boundary**: Keep side effects at the boundary
-- **Guard Clauses**: Prefer guard clauses first
-- **Symbolize Constants**: No hardcoded values
-- **Input → Process → Return**: Structure code flow clearly
-- **Specific Errors**: Report failures with specific error messages
+## Code Style
 
-## Performance Requirements
+### Edge Functions Pattern
+```typescript
+export const config = { runtime: 'edge' };
 
-### Latency Targets
-- **Average Response**: < 1.5 seconds
-- **Maximum Response**: < 2 seconds
-- **Throughput**: 1000+ messages/hour
-- **Availability**: 99.9% uptime
-
-### Quality Metrics
-- **Intent Recognition**: > 95% accuracy
-- **Task Completion**: > 80% success rate
-- **Error Rate**: < 1%
-- **User Retention**: > 70% after 30 days
-
-## WhatsApp Cost Optimization
-
-### Pricing Strategy (Post-July 2025)
-- **Service Messages**: Free within Customer Service Window (CSW) - 24 hours
-- **Utility Templates**: Billable outside CSW
-- **Marketing Templates**: Always billable
-- **Entry Point Window**: 72h free with Click-to-WhatsApp
-
-### Cost Optimization Tactics
-- **Maximize CSW**: High utility to keep window active
-- **Minimize Templates**: Strategic use of asynchronous reminders
-- **Continuous Monitoring**: Track utility template costs
-- **Cache Responses**: Cache frequent responses to reduce OpenAI calls
-
-## Development Guidelines
-
-### Type Safety
-- All environment variables must be properly typed in `types/env.d.ts`
-- Use strict TypeScript configuration - handle all nullable types explicitly
-- Validate environment variables at runtime in Edge Functions
-
-### Database Operations
-- Always use RLS-compliant queries through the Supabase client
-- Store conversation context for session persistence
-- Use Supabase Storage for multimedia file handling
-
-### API Development
-- Implement proper webhook verification for WhatsApp endpoints using WHATSAPP_APP_SECRET
-- Use Edge Runtime for optimal performance and global distribution
-- Handle errors gracefully and provide meaningful responses
-- Follow the existing pattern of helper functions for common operations
-- Implement rate limiting with Vercel Edge Middleware
-- Use structured logging with request/correlation IDs
-- Consider timezones and DST in all time-related operations
-
-### OpenAI Integration
-- **GPT-4o**: Primary model for chat responses and intent recognition
-- **Whisper**: Audio transcription for WhatsApp voice messages
-- **Embeddings**: RAG implementation for document analysis
-- **Rate Limits**: Respect OpenAI API limits and implement timeouts
-- **Context Management**: Store conversation context in Supabase with RLS
-- **Prompt Optimization**: Optimize prompts for intent recognition and response generation
-
-## Quick Setup
-
-### Initial Setup
-```bash
-# Clone repository
-git clone <repository-url>
-cd migue.ai
-
-# Install dependencies (includes Playwright browsers)
-npm install
-
-# Copy environment template
-cp .env.example .env.local
-
-# Edit .env.local with your credentials
-# Required: WhatsApp, Supabase, and OpenAI keys
-
-# Verify TypeScript configuration
-npm run typecheck
-
-# Start development server
-npm run dev
+export default async function handler(req: Request): Promise<Response> {
+  // Edge-compatible code only (no Node.js APIs)
+  return new Response(JSON.stringify(data), {
+    headers: { 'content-type': 'application/json' }
+  });
+}
 ```
 
-### Database Setup
-1. Create a new Supabase project at https://supabase.com
-2. Execute `supabase/schema.sql` in Supabase SQL editor
-3. Execute `supabase/security.sql` for RLS policies
-4. Copy the URL and keys to `.env.local`
-5. Configure environment variables in Vercel for production
+### Database Access
+```typescript
+import { getSupabaseServerClient } from '../../lib/supabase';
+const supabase = getSupabaseServerClient(); // Server-side, no session
+// Always respect RLS policies
+```
 
-### Available Endpoints
-- `GET /api/whatsapp/webhook` - Webhook verification
-- `POST /api/whatsapp/webhook` - Message reception
-- `POST /api/whatsapp/send` - Message sending
-- `GET /api/cron/check-reminders` - Daily cron job (9 AM UTC)
+### Conventions
+- Use ES modules: `import`/`export` (NO `require`)
+- Destructure imports when possible
+- Guard clauses first (early returns)
+- One function = one task
+- Constants over magic numbers
+- Specific error messages
 
-## Project Resources
+---
 
-### Documentation Links
-- [AGENTS.md](./AGENTS.md) - Complete project blueprint and development standards
-- [docs/setup.md](./docs/setup.md) - Detailed setup instructions
-- [docs/architecture.md](./docs/architecture.md) - Architecture documentation
-- [docs/SUPABASE.md](./docs/SUPABASE.md) - Database documentation
+## Testing
 
-### External APIs
-- **WhatsApp Business API**: https://developers.facebook.com/docs/whatsapp
-- **Vercel Edge Functions**: https://vercel.com/docs/functions/edge-functions
-- **Supabase Documentation**: https://supabase.com/docs
-- **OpenAI API Documentation**: https://platform.openai.com/docs
+### Commands
+```bash
+npm run test:unit      # Jest unit tests
+npm run test:e2e       # Playwright e2e tests
+npm run test:coverage  # Coverage report
+npm run test:watch     # Watch mode
+```
 
-## Cursor Rules Integration
+### Requirements
+- ≥1 happy path + ≥1 failure path per e2e test
+- Deterministic and independent tests
+- Bug fixes MUST include regression test (write to fail first)
+- Use Jest for unit, Supertest for integration, Playwright for e2e
 
-This repository includes extensive Cursor IDE rules in `.cursor/rules/` covering various development roles and best practices. These rules provide context-aware assistance for frontend development, API design, TypeScript programming, and AI engineering specific to this project's architecture.
+---
 
-## Anti-Patterns to Avoid
+## Common Tasks
 
-- **Don't modify without context**: Never modify code without reading the complete file and understanding all references
-- **Don't expose secrets**: Never expose secrets in code, logs, or commits
-- **Don't ignore failures**: Never ignore failures or warnings
-- **Don't optimize prematurely**: Avoid unjustified optimization or abstraction
-- **Don't use broad exceptions**: Avoid excessive use of broad exception handling
+### Add New API Endpoint
+1. Create `api/<module>/<endpoint>.ts`
+2. Add `export const config = { runtime: 'edge' }`
+3. Implement handler with proper error handling
+4. Add unit tests in `tests/unit/`
+5. Update this file if needed (commands/routes)
+
+### Modify Database Schema
+1. Edit `supabase/schema.sql` (tables) or `supabase/security.sql` (RLS)
+2. Test in Supabase SQL Editor
+3. Update TypeScript types if needed
+4. Add migration notes in commit message
+
+### Deploy to Vercel
+```bash
+git add . && git commit -m "feat: description"
+git push origin main
+# Vercel auto-deploys main branch
+# Edge Functions detected automatically via export config
+```
+
+---
+
+## Vercel Configuration
+
+### IMPORTANT: Edge Functions Auto-Detection
+- Vercel detects Edge Functions via `export const config = { runtime: 'edge' }`
+- DO NOT specify `runtime` in `vercel.json` (causes deployment errors)
+- `vercel.json` should ONLY contain: crons, headers, redirects, rewrites
+
+### Current vercel.json Structure
+```json
+{
+  "crons": [
+    { "path": "/api/cron/check-reminders", "schedule": "0 9 * * *" }
+  ],
+  "headers": [
+    {
+      "source": "/api/whatsapp/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    }
+  ]
+}
+```
+
+---
 
 ## Troubleshooting
 
-### NVM Configuration Issue
-If you see the error about `.npmrc` and nvm incompatibility:
-```bash
-# Option 1: Use nvm with delete-prefix
-nvm use --delete-prefix v20.19.0 --silent
+### TypeScript Errors
+- **Array access**: Use `array[i]!` when certain index exists
+- **Nullable checks**: Validate before use: `if (value) { ... }`
+- **Type assertions**: Be explicit with `as Type` when needed
 
-# Option 2: Unset conflicting variables
-unset npm_config_prefix && unset npm_config_globalconfig
-```
+### Vercel Deployment Fails
+- ✅ Check all API routes export `export const config = { runtime: 'edge' }`
+- ✅ Remove `functions.runtime` from `vercel.json` if present
+- ✅ Verify no Node.js-specific APIs (fs, path, etc.) in Edge Functions
+- ✅ Check env vars are set in Vercel Dashboard
 
-### TypeScript Strict Mode Errors
-The project uses strict TypeScript configuration. Common fixes:
-- **Array access**: Use `!` operator when certain: `array[i]!`
-- **Nullable checks**: Always validate before use: `if (value) { ... }`
-- **Type assertions**: Be explicit with types when needed
+### Database Connection Issues
+- Verify `SUPABASE_URL` and `SUPABASE_KEY` in env
+- Use `getSupabaseServerClient()` for server-side operations
+- Check RLS policies in Supabase Dashboard
 
-### Edge Function Issues
-- Ensure all API routes export: `export const config = { runtime: 'edge' }`
-- Use Edge-compatible APIs (no Node.js specific modules)
-- Check environment variables are properly typed in `types/env.d.ts`
+### WhatsApp Webhook Not Working
+- Verify `WHATSAPP_VERIFY_TOKEN` matches Meta App config
+- Check webhook URL is correct: `https://your-domain.vercel.app/api/whatsapp/webhook`
+- Test with Postman using GET for verification, POST for messages
 
-## Dependencies
+---
 
-### Production Dependencies
-- `@supabase/supabase-js`: ^2.58.0 - Database client
-- `openai`: ^5.23.1 - OpenAI API client
-- `zod`: ^3.25.8 - Runtime type validation
+## References
 
-### Development Dependencies
-- `typescript`: ^5.9.2 - TypeScript compiler
-- `@types/node`: ^24.5.2 - Node.js type definitions
-- `vercel`: ^48.1.6 - Vercel CLI and dev server
-- `jest`: ^30.2.0 - Unit testing framework
-- `@types/jest`: ^30.0.0 - Jest type definitions
-- `playwright`: ^1.55.1 - E2E testing framework
-- `supertest`: ^7.1.4 - API integration testing
-- `dotenv-cli`: ^10.0.0 - Environment variable management
+For detailed information, see:
+- **[AGENTS.md](./AGENTS.md)** - Complete project blueprint & business context
+- **[docs/setup.md](./docs/setup.md)** - Detailed setup instructions
+- **[docs/architecture.md](./docs/architecture.md)** - Architecture deep-dive
+- **[docs/SUPABASE.md](./docs/SUPABASE.md)** - Database schema & RLS policies
+- **[WhatsApp API Docs](https://developers.facebook.com/docs/whatsapp)** - Official API reference
+- **[Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)** - Runtime documentation
 
-## Project Information
+---
 
-- **Version**: 1.0.0
+## Project Info
+- **Stack**: Vercel Edge + Supabase + OpenAI (GPT-4o/Whisper/Embeddings)
+- **TypeScript**: 5.9.2 (strict mode)
 - **Node.js**: 20.x required
-- **Package Manager**: npm 10.x
 - **Module Type**: ESM (ES Modules)
-- **Current Phase**: Core features development (Phase 2)
+- **Testing**: Jest + Playwright + Supertest
