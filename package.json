@@ -13,12 +13,14 @@
     "test:e2e": "playwright test",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "dev": "vercel dev",
-    "build": "tsc -p tsconfig.json",
-    "start": "vercel dev",
+    "dev": "next dev",
+    "dev:vercel": "vercel dev",
+    "build": "next build",
+    "build:api": "tsc -p tsconfig.json",
+    "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist .vercel coverage test-results",
+    "clean": "rm -rf dist .vercel coverage test-results out .next",
     "setup": "npm install && npm run typecheck",
     "postinstall": "playwright install"
   },
@@ -29,6 +31,7 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.5.2",
+    "@types/react": "19.1.15",
     "dotenv-cli": "^10.0.0",
     "jest": "^30.2.0",
     "playwright": "^1.55.1",
@@ -38,7 +41,15 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
+    "@tailwindcss/postcss": "^4.1.13",
+    "autoprefixer": "^10.4.21",
+    "lucide-react": "^0.544.0",
+    "next": "^15.5.4",
     "openai": "^5.23.1",
+    "postcss": "^8.5.6",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "tailwindcss": "^4.1.13",
     "zod": "^3.25.8"
   }
 }
