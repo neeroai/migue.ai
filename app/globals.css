@@ -1,5 +1,141 @@
 @import "tailwindcss";
 
+/* Tailwind v4 CSS-First Configuration */
+@theme {
+  /* ============================================ */
+  /* Primary Colors */
+  /* ============================================ */
+  --color-primary-50: #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-300: #A5B4FC;
+  --color-primary-400: #818CF8;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+  --color-primary-900: #312E81;
+
+  /* ============================================ */
+  /* Secondary Colors */
+  /* ============================================ */
+  --color-secondary-50: #EFF6FF;
+  --color-secondary-100: #DBEAFE;
+  --color-secondary-200: #BFDBFE;
+  --color-secondary-300: #93C5FD;
+  --color-secondary-400: #60A5FA;
+  --color-secondary-500: #3B82F6;
+  --color-secondary-600: #2563EB;
+  --color-secondary-700: #1D4ED8;
+  --color-secondary-800: #1E40AF;
+  --color-secondary-900: #1E3A8A;
+
+  /* ============================================ */
+  /* Accent Purple */
+  /* ============================================ */
+  --color-accent-purple-50: #F5F3FF;
+  --color-accent-purple-100: #EDE9FE;
+  --color-accent-purple-200: #DDD6FE;
+  --color-accent-purple-300: #C4B5FD;
+  --color-accent-purple-400: #A78BFA;
+  --color-accent-purple-500: #8B5CF6;
+  --color-accent-purple-600: #7C3AED;
+  --color-accent-purple-700: #6D28D9;
+  --color-accent-purple-800: #5B21B6;
+  --color-accent-purple-900: #4C1D95;
+
+  /* ============================================ */
+  /* Accent Blue */
+  /* ============================================ */
+  --color-accent-blue-50: #EFF6FF;
+  --color-accent-blue-100: #DBEAFE;
+  --color-accent-blue-200: #BFDBFE;
+  --color-accent-blue-300: #93C5FD;
+  --color-accent-blue-400: #60A5FA;
+  --color-accent-blue-500: #3B82F6;
+  --color-accent-blue-600: #2563EB;
+  --color-accent-blue-700: #1D4ED8;
+  --color-accent-blue-800: #1E40AF;
+  --color-accent-blue-900: #1E3A8A;
+
+  /* ============================================ */
+  /* Accent Green */
+  /* ============================================ */
+  --color-accent-green-50: #ECFDF5;
+  --color-accent-green-100: #D1FAE5;
+  --color-accent-green-200: #A7F3D0;
+  --color-accent-green-300: #6EE7B7;
+  --color-accent-green-400: #34D399;
+  --color-accent-green-500: #10B981;
+  --color-accent-green-600: #059669;
+  --color-accent-green-700: #047857;
+  --color-accent-green-800: #065F46;
+  --color-accent-green-900: #064E3B;
+
+  /* ============================================ */
+  /* Accent Orange */
+  /* ============================================ */
+  --color-accent-orange-50: #FFFBEB;
+  --color-accent-orange-100: #FEF3C7;
+  --color-accent-orange-200: #FDE68A;
+  --color-accent-orange-300: #FCD34D;
+  --color-accent-orange-400: #FBBF24;
+  --color-accent-orange-500: #F59E0B;
+  --color-accent-orange-600: #D97706;
+  --color-accent-orange-700: #B45309;
+  --color-accent-orange-800: #92400E;
+  --color-accent-orange-900: #78350F;
+
+  /* ============================================ */
+  /* Font Families */
+  /* ============================================ */
+  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* ============================================ */
+  /* Animations */
+  /* ============================================ */
+  --animate-fade-in: fadeIn 0.5s ease-in;
+  --animate-slide-up: slideUp 0.5s ease-out;
+  --animate-slide-down: slideDown 0.5s ease-out;
+}
+
+/* ============================================ */
+/* Keyframes */
+/* ============================================ */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ============================================ */
+/* Base Styles */
+/* ============================================ */
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -13,8 +149,20 @@
   }
 }
 
+/* ============================================ */
+/* Utilities */
+/* ============================================ */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Gradient backgrounds from tailwind.config.ts */
+  .bg-gradient-primary {
+    background-image: linear-gradient(135deg, #6366F1 0%, #3B82F6 100%);
+  }
+
+  .bg-gradient-accent {
+    background-image: linear-gradient(135deg, #A78BFA 0%, #60A5FA 100%);
   }
 }
