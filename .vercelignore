@@ -1,0 +1,101 @@
+# .vercelignore - Optimized Vercel Deployment
+# Excludes unnecessary files from deployment to reduce build time
+
+# ============================================
+# Documentation & README files
+# ============================================
+*.md
+!README.md
+AGENTS.md
+CLAUDE.md
+LANDING_PAGE.md
+
+# ============================================
+# Documentation directories
+# ============================================
+docs/
+.archive/
+
+# ============================================
+# IDE & Editor files
+# ============================================
+.bmad-core/
+.cursor/
+.claude/
+.vscode/
+.idea/
+
+# ============================================
+# Tests & Testing artifacts
+# ============================================
+tests/
+*.test.ts
+*.spec.ts
+test-results/
+coverage/
+playwright.config.ts
+jest.config.js
+jest.setup.js
+.nyc_output/
+
+# ============================================
+# Development & Build artifacts
+# ============================================
+.next/
+out/
+dist/
+node_modules/
+.cache/
+.parcel-cache/
+
+# ============================================
+# Git & Version Control
+# ============================================
+.git/
+.github/
+.gitignore
+
+# ============================================
+# Config files not needed at runtime
+# ============================================
+tsconfig.json
+.prettierrc
+.prettierrc.*
+.eslintrc
+.eslintrc.*
+.editorconfig
+
+# ============================================
+# Environment & Secrets (already in .gitignore)
+# ============================================
+.env
+.env.local
+.env.*.local
+
+# ============================================
+# OS & System files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# ============================================
+# Logs
+# ============================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Package manager files (Vercel handles these)
+# ============================================
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ============================================
+# MCP & Other configs
+# ============================================
+.mcp.json
