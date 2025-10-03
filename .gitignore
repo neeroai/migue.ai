@@ -1,10 +1,13 @@
 # migue.ai - WhatsApp AI Assistant
 
 # Project-specific directories to ignore
-.claude
 .cursor
 # .bmad-core  <- NEVER DELETE THIS DIRECTORY (contains essential config)
-docs/
+
+# .claude/ - Version control ROADMAP, phases, agents
+# BUT exclude private checkpoints and metrics
+.claude/checkpoints/
+.claude/metrics.md
 
 # Dependencies
 node_modules/

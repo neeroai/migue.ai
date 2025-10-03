@@ -1,31 +1,24 @@
 # CLAUDE.md
 
-**migue.ai** - WhatsApp AI Assistant on Vercel Edge Functions + Supabase + OpenAI
+**migue.ai** - WhatsApp AI Assistant on Vercel Edge + Supabase + OpenAI
 
 ## Quick Reference
 
 ### Essential Commands
 ```bash
-npm run dev           # Start Vercel dev server
-npm run build         # Compile TypeScript
-npm run typecheck     # Type check without emit
-npm run test          # Run all tests (Jest + Playwright)
-npm run clean         # Clean build artifacts
+npm run dev          # Start Vercel dev server
+npm run build        # Compile TypeScript
+npm run typecheck    # Type check without emit
+npm run test         # Run all tests
 ```
 
 ### Key Files
-- `app/api/whatsapp/webhook/route.ts` - Message reception & verification + AI processing
+- `app/api/whatsapp/webhook/route.ts` - Message reception & AI processing
 - `app/api/cron/check-reminders/route.ts` - Daily reminders (9 AM UTC)
-- `app/api/cron/follow-ups/route.ts` - Follow-up messages (every 6 hours)
-- `lib/whatsapp.ts` - WhatsApp API client (message sending, typing indicators)
+- `lib/whatsapp.ts` - WhatsApp API client (messages, typing, reactions)
+- `lib/openai.ts` - OpenAI client (GPT-4o, Whisper, Embeddings)
 - `lib/supabase.ts` - Database client
-- `lib/persist.ts` - Data persistence helpers
-- `lib/openai.ts` - OpenAI client (Edge-compatible)
-- `lib/intent.ts` - Intent classification with GPT-4o
-- `lib/response.ts` - Contextual response generation
-- `lib/context.ts` - Conversation history management
-- `types/schemas.ts` - Zod validation schemas for WhatsApp webhooks
-- `vercel.json` - Deployment config (crons + headers)
+- `types/schemas.ts` - Zod validation schemas
 
 ### Environment Variables
 See `.env.example` - Required: `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`
@@ -34,48 +27,32 @@ See `.env.example` - Required: `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`
 
 ## Development Rules
 
-### IMPORTANT: Mandatory Standards
-- **Read Complete Files**: ALWAYS read files fully before modifications
-- **Small Changes**: Keep commits small and safe (≤300 LOC/file, ≤50 LOC/function)
-- **Security First**: NEVER commit secrets; validate inputs, encode outputs
-- **Test Coverage**: Minimum 80% for critical modules
-- **Edge Runtime**: ALL API routes MUST export `export const runtime = 'edge'` (Next.js 15 format)
-- **App Router**: API routes MUST be in `app/api/` with `route.ts` files (Next.js 15 App Router)
+### MANDATORY Standards
+- **Read Files First**: ALWAYS read complete files before edits
+- **Small Changes**: ≤300 LOC/file, ≤50 LOC/function
+- **Security**: NEVER commit secrets; validate inputs
+- **Edge Runtime**: ALL routes export `export const runtime = 'edge'`
+- **App Router**: Routes in `app/api/` with `route.ts` files
 
-### Code Limits (Enforced)
-- File: ≤ 300 LOC
-- Function: ≤ 50 LOC
-- Parameters: ≤ 5
-- Cyclomatic Complexity: ≤ 10
+### Code Limits
+- File: ≤300 LOC | Function: ≤50 LOC | Parameters: ≤5 | Complexity: ≤10
 
-If exceeded → divide/refactor immediately
-
-### TypeScript Strict Mode
-- Target: ES2022, module: ES2022, moduleResolution: bundler
-- `noUncheckedIndexedAccess: true` → validate array access with `!` when certain
-- `exactOptionalPropertyTypes: true` → handle all nullable types explicitly
-- NO `any` types - use proper typing or `unknown`
+### TypeScript Strict
+- `noUncheckedIndexedAccess: true` → use `array[i]!` when certain
+- `exactOptionalPropertyTypes: true` → handle all nullable types
+- NO `any` types - use `unknown`
 
 ---
 
-## Code Style
+## Code Patterns
 
-### Next.js 15 API Route Pattern (App Router)
+### Next.js 15 API Route (Edge)
 ```typescript
 // app/api/example/route.ts
 export const runtime = 'edge';
 
 export async function GET(req: Request): Promise<Response> {
-  // Handle GET requests
   return new Response(JSON.stringify(data), {
-    headers: { 'content-type': 'application/json' }
-  });
-}
-
-export async function POST(req: Request): Promise<Response> {
-  // Handle POST requests
-  const body = await req.json();
-  return new Response(JSON.stringify(result), {
     headers: { 'content-type': 'application/json' }
   });
 }
@@ -83,255 +60,78 @@ export async function POST(req: Request): Promise<Response> {
 
 ### Database Access
 ```typescript
-import { getSupabaseServerClient } from '../../lib/supabase';
-const supabase = getSupabaseServerClient(); // Server-side, no session
-// Always respect RLS policies
+import { getSupabaseServerClient } from '@/lib/supabase';
+const supabase = getSupabaseServerClient();
 ```
 
 ### Conventions
-- Use ES modules: `import`/`export` (NO `require`)
-- Destructure imports when possible
+- ES modules only (`import`/`export`, NO `require`)
 - Guard clauses first (early returns)
 - One function = one task
-- Constants over magic numbers
 - Specific error messages
 
 ---
 
-## WhatsApp Interactive Features
+## WhatsApp Features
 
-### Interactive Buttons
-Send up to 3 buttons for guided user interactions.
+All features in `lib/whatsapp.ts` - Edge Runtime compatible:
+- **Interactive Buttons** - Up to 3 buttons: `sendInteractiveButtons(to, body, buttons)`
+- **Interactive Lists** - 4+ options: `sendInteractiveList(to, body, buttonLabel, rows)`
+- **Reactions** - Quick feedback: `reactWithCheck()`, `reactWithThinking()`, `sendReaction()`
+- **Typing Indicators** - Show processing: `createTypingManager(phone).startWithDuration(5)`
+- **Read Receipts** - Mark read: `markAsRead(messageId)`
 
-```typescript
-import { sendInteractiveButtons } from '@/lib/whatsapp';
-
-// Basic usage
-await sendInteractiveButtons(
-  '1234567890',
-  'Choose an option:',
-  [
-    { id: 'btn_1', title: 'Option 1' },
-    { id: 'btn_2', title: 'Option 2' },
-    { id: 'btn_3', title: 'Option 3' }
-  ]
-);
-
-// With optional header, footer, and reply-to
-await sendInteractiveButtons(
-  '1234567890',
-  'Do you accept the terms?',
-  [
-    { id: 'btn_accept', title: 'Accept' },
-    { id: 'btn_decline', title: 'Decline' }
-  ],
-  {
-    header: 'Terms & Conditions',
-    footer: 'Powered by migue.ai',
-    replyToMessageId: 'wamid.ORIGINAL_MSG_123'
-  }
-);
-```
-
-**Parameters:**
-- `to` (string): Phone number in WhatsApp format
-- `body` (string): Main message text
-- `buttons` (Array): Up to 3 buttons with `id` and `title` (max 20 chars)
-- `options` (optional):
-  - `header` (string): Header text
-  - `footer` (string): Footer text
-  - `replyToMessageId` (string): Reply to a specific message
-
-**Returns:** `Promise<string | null>` - Message ID or null on error
-
-### Interactive Lists
-Send selectable lists with multiple options (more than 3).
-
-```typescript
-import { sendInteractiveList } from '@/lib/whatsapp';
-
-// Basic usage
-await sendInteractiveList(
-  '1234567890',
-  'Select an option:',
-  'View Options',
-  [
-    { id: 'row_1', title: 'Option 1', description: 'Description 1' },
-    { id: 'row_2', title: 'Option 2', description: 'Description 2' },
-    { id: 'row_3', title: 'Option 3' }
-  ],
-  'Available Options'  // Section title (default: 'Opciones')
-);
-```
-
-**Parameters:**
-- `to` (string): Phone number
-- `body` (string): Main message text
-- `buttonLabel` (string): Button text to open list
-- `rows` (Array): List items with `id`, `title`, and optional `description`
-- `sectionTitle` (string, optional): Section title (default: 'Opciones')
-
-**Returns:** `Promise<string | null>` - Message ID or null on error
-
-### Reactions
-Quick feedback with emoji reactions.
-
-```typescript
-import { reactWithCheck, reactWithThinking, sendReaction } from '@/lib/whatsapp';
-
-// Quick reactions
-await reactWithCheck('1234567890', 'wamid.MSG_123');      // ✅
-await reactWithThinking('1234567890', 'wamid.MSG_123');  // 🤔
-await reactWithLike('1234567890', 'wamid.MSG_123');      // 👍
-
-// Custom emoji
-await sendReaction('1234567890', 'wamid.MSG_123', '🔥');
-
-// Remove reaction
-await removeReaction('1234567890', 'wamid.MSG_123');
-```
-
-### Typing Indicators
-Show processing status to users.
-
-```typescript
-import { createTypingManager } from '@/lib/whatsapp';
-
-const typing = createTypingManager('1234567890');
-
-// Manual control
-await typing.start();
-const response = await generateResponse(message);
-await typing.stop();
-
-// Auto-stop after duration (max 25 seconds)
-await typing.startWithDuration(5);  // Shows for 5s then auto-stops
-const response = await generateResponse(message);
-// No need to call stop()
-```
-
-### Read Receipts
-Mark messages as read.
-
-```typescript
-import { markAsRead } from '@/lib/whatsapp';
-
-// Mark as read
-await markAsRead('wamid.MSG_123');
-
-// Mark as read + show typing
-await markAsReadWithTyping('1234567890', 'wamid.MSG_123');
-```
-
-### Best Practices
-- **Buttons**: Use for 1-3 options. Titles max 20 characters.
-- **Lists**: Use for 4+ options. Includes descriptions for clarity.
-- **Reactions**: Instant feedback while processing longer requests.
-- **Typing**: Use `startWithDuration` for predictable operations.
-- **Read Receipts**: Mark immediately after receiving message.
-
-### Edge Runtime Compatibility
-All interactive features are **Edge Runtime compatible**:
-- ✅ Interactive Buttons
-- ✅ Interactive Lists
-- ✅ Reactions
-- ✅ Typing Indicators
-- ✅ Read Receipts
-
-**Note**: Broadcasting features require Node.js runtime (not Edge compatible).
+**Best Practice**: Use buttons for ≤3 options, lists for 4+
 
 ---
 
 ## Testing
 
-### Commands
 ```bash
-npm run test           # Run all tests
-npm run test:unit      # Jest unit tests only
-npm run test:e2e       # Playwright e2e tests
-npm run test:watch     # Watch mode
+npm run test          # All tests (Jest + Playwright)
+npm run test:unit     # Jest only
+npm run test:e2e      # Playwright only
 ```
 
-### Current Status (Complete ✅)
-- **Test Suites**: 20 passed, 20 total
-- **Tests**: 112 passed, 112 total
-- **Infrastructure**: Jest + @edge-runtime/jest-environment + Zod validation
-- **Architecture**: Next.js 15 App Router with Edge Functions
+**Status**: 20 suites, 112 tests ✅ | Coverage disabled (Edge Runtime)
 
-### Test Files
-- `tests/setup.ts` - Global test configuration with mocked env vars
-- `tests/unit/intent.test.ts` - Intent classification tests (10 tests)
-- `tests/unit/response.test.ts` - Response generation tests (10 tests)
-- `tests/unit/context.test.ts` - Conversation history tests (5 tests)
-- `tests/unit/schemas.test.ts` - Zod validation tests (14 tests)
-- `tests/unit/whatsapp-interactive.test.ts` - Interactive features tests (15 tests)
-
-### Requirements
-- ≥1 happy path + ≥1 failure path per e2e test
-- Deterministic and independent tests
-- Bug fixes MUST include regression test (write to fail first)
-- Use Jest for unit, Supertest for integration, Playwright for e2e
-- **Note**: Coverage disabled for Edge Runtime (doesn't support code generation)
+**Requirements**:
+- ≥1 happy + ≥1 failure path per e2e test
+- Bug fixes MUST include regression test (fail first)
 
 ---
 
 ## Common Tasks
 
-### Add New API Endpoint (Next.js 15 App Router)
-1. Create directory: `app/api/<module>/<endpoint>/`
-2. Create file: `app/api/<module>/<endpoint>/route.ts`
-3. Export runtime: `export const runtime = 'edge'`
-4. Implement HTTP methods: `export async function GET(req: Request)`, `export async function POST(req: Request)`, etc.
-5. Add unit tests in `tests/unit/`
-6. Update this file if needed (commands/routes)
+### Add API Endpoint
+1. Create `app/api/<name>/route.ts`
+2. Export `export const runtime = 'edge'`
+3. Implement HTTP methods: `GET`, `POST`, etc.
+4. Add tests in `tests/unit/`
 
-Example:
-```typescript
-// app/api/example/hello/route.ts
-export const runtime = 'edge';
-
-export async function GET(req: Request) {
-  return new Response(JSON.stringify({ message: 'Hello' }), {
-    headers: { 'content-type': 'application/json' }
-  });
-}
-```
-
-### Modify Database Schema
-1. Edit `supabase/schema.sql` (tables) or `supabase/security.sql` (RLS)
+### Modify Database
+1. Edit `supabase/schema.sql` or `supabase/security.sql`
 2. Test in Supabase SQL Editor
-3. Update TypeScript types if needed
-4. Add migration notes in commit message
+3. Update TypeScript types
 
-### Deploy to Vercel
+### Deploy
 ```bash
 git add . && git commit -m "feat: description"
-git push origin main
-# Vercel auto-deploys main branch
-# Edge Functions detected automatically via export config
+git push origin main  # Auto-deploys to Vercel
 ```
 
 ---
 
 ## Vercel Configuration
 
-### IMPORTANT: Edge Functions Auto-Detection
-- Vercel detects Edge Functions via `export const config = { runtime: 'edge' }`
-- DO NOT specify `runtime` in `vercel.json` (causes deployment errors)
-- `vercel.json` should ONLY contain: crons, headers, redirects, rewrites
+**CRITICAL**: Vercel auto-detects Edge Functions via `export const runtime = 'edge'`
 
-### Current vercel.json Structure
+DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
+
 ```json
 {
-  "crons": [
-    { "path": "/api/cron/check-reminders", "schedule": "0 9 * * *" }
-  ],
-  "headers": [
-    {
-      "source": "/api/whatsapp/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
-    }
-  ]
+  "crons": [{"path": "/api/cron/check-reminders", "schedule": "0 9 * * *"}],
+  "headers": [{"source": "/api/whatsapp/(.*)", "headers": [...]}]
 }
 ```
 
@@ -340,90 +140,75 @@ git push origin main
 ## Troubleshooting
 
 ### TypeScript Errors
-- **Array access**: Use `array[i]!` when certain index exists
-- **Nullable checks**: Validate before use: `if (value) { ... }`
-- **Type assertions**: Be explicit with `as Type` when needed
+- Array access: `array[i]!` when index certain
+- Nullable: `if (value) { ... }` before use
+- Type assertions: `as Type` when needed
 
-### Vercel Deployment Fails
-- ✅ Check all API routes are in `app/api/` with `route.ts` files (Next.js 15 App Router)
-- ✅ Verify all routes export `export const runtime = 'edge'` (NOT `export const config = { runtime: 'edge' }`)
-- ✅ Remove `functions.runtime` from `vercel.json` if present
-- ✅ Verify no Node.js-specific APIs (fs, path, etc.) in Edge Functions
-- ✅ Check env vars are set in Vercel Dashboard
-- ✅ Use **static imports** at top of file (NOT dynamic `await import()`)
-- ✅ Ensure `lib/` files are NOT gitignored (check .gitignore for Python/TypeScript conflicts)
-- ✅ Export named HTTP method handlers: `GET`, `POST`, `PUT`, `DELETE`, etc. (NOT `default export`)
+### Deployment Fails
+- ✅ Routes in `app/api/` with `route.ts`
+- ✅ Export `export const runtime = 'edge'`
+- ✅ NO `functions.runtime` in `vercel.json`
+- ✅ Static imports only (NO dynamic `await import()`)
+- ✅ Named exports: `GET`, `POST` (NOT default)
 
-### Database Connection Issues
-- Verify `SUPABASE_URL` and `SUPABASE_KEY` in env
-- Use `getSupabaseServerClient()` for server-side operations
-- Check RLS policies in Supabase Dashboard
-
-### WhatsApp Webhook Not Working
-- Verify `WHATSAPP_VERIFY_TOKEN` matches Meta App config
-- Check webhook URL is correct: `https://your-domain.vercel.app/api/whatsapp/webhook`
-- Test with Postman using GET for verification, POST for messages
+### Database Issues
+- Verify env: `SUPABASE_URL`, `SUPABASE_KEY`
+- Use `getSupabaseServerClient()` server-side
+- Check RLS policies in Dashboard
 
 ---
 
-## References
+## Project Management
 
-### Project Documentation
-- **[AGENTS.md](./AGENTS.md)** - Complete project blueprint & business context
-- **[README.md](./README.md)** - Project overview and quick start
-- **[docs/setup.md](./docs/setup.md)** - Detailed setup instructions
-- **[docs/architecture.md](./docs/architecture.md)** - Architecture deep-dive
-- **[docs/SUPABASE.md](./docs/SUPABASE.md)** - Database schema & RLS policies
+### Organization (.claude/)
+- **[.claude/ROADMAP.md](./.claude/ROADMAP.md)** - Complete project roadmap & timeline
+- **[.claude/phases/current.md](./.claude/phases/current.md)** - Fase 2 status (60% → 100%)
+- **[.claude/metrics.md](./.claude/metrics.md)** - Cost tracking (<$10/day target)
+- **[.claude/agents/delegation-matrix.md](./.claude/agents/delegation-matrix.md)** - Agent selection guide
 
-### Vercel Deployment Documentation (2025)
-- **[docs/deployment/README.md](./docs/deployment/README.md)** - Complete deployment index
-- **[docs/VERCEL-EDGE-FUNCTIONS-GUIDE.md](./docs/VERCEL-EDGE-FUNCTIONS-GUIDE.md)** - Edge Functions guide
-- **[docs/VERCEL-DEPLOYMENT-BEST-PRACTICES-2025.md](./docs/VERCEL-DEPLOYMENT-BEST-PRACTICES-2025.md)** - Best practices
-- **[docs/VERCEL-STREAMING-AI-RESPONSES.md](./docs/VERCEL-STREAMING-AI-RESPONSES.md)** - Streaming implementation
-- **[docs/VERCEL-MONITORING-ANALYTICS.md](./docs/VERCEL-MONITORING-ANALYTICS.md)** - Monitoring & analytics
-- **[docs/VERCEL-WHATSAPP-BOT-ARCHITECTURE.md](./docs/VERCEL-WHATSAPP-BOT-ARCHITECTURE.md)** - WhatsApp architecture
-- **[docs/VERCEL-SUPABASE-INTEGRATION.md](./docs/VERCEL-SUPABASE-INTEGRATION.md)** - Supabase integration
+### Documentation
+- **[AGENTS.md](./AGENTS.md)** - Business blueprint & project context
+- **[README.md](./README.md)** - Overview & quick start
+- **[docs/SUPABASE.md](./docs/SUPABASE.md)** - Database schema & RLS
+- **[docs/deployment/](./docs/deployment/)** - Vercel guides (6 docs)
 
-### External APIs
-- **[WhatsApp API Docs](https://developers.facebook.com/docs/whatsapp)** - Official API reference
-- **[Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)** - Runtime documentation
-- **[OpenAI API](https://platform.openai.com/docs)** - GPT-4o, Whisper, Embeddings
-- **[Supabase Docs](https://supabase.com/docs)** - PostgreSQL, Auth, Storage
+### External References
+- [WhatsApp API](https://developers.facebook.com/docs/whatsapp)
+- [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
+- [OpenAI API](https://platform.openai.com/docs)
+- [Supabase](https://supabase.com/docs)
 
 ---
 
 ## Project Info
-- **Stack**: Vercel Edge + Supabase + OpenAI (GPT-4o/Whisper/Embeddings)
-- **TypeScript**: 5.9.2 (strict mode)
-- **Node.js**: 20.x required
-- **Module Type**: ESM (ES Modules)
-- **Testing**: Jest + Playwright + Supertest
-- **Deployment**: ✅ Production ready on Vercel (https://migue.app)
-- **Status**: Fase 2 - Core Features Development
+
+**Stack**: Next.js 15 + Vercel Edge + Supabase + OpenAI
+**TypeScript**: 5.9.2 (strict)
+**Tests**: 112/112 ✅
+**Production**: https://migue.app
+**Status**: Fase 2 (60%) - Core Features Development
+
+**Current Phase**: Audio transcription, streaming responses, RAG implementation
+**Target**: Oct 10, 2025 - Fase 2 complete
+
+---
 
 ## Recent Updates
 
-### Migration to Next.js 15 App Router (Complete ✅)
-- ✅ **Architecture Upgrade**: Migrated from Pages Router to App Router (Next.js 15)
-- ✅ **API Routes Restructure**: Moved all endpoints from `/api` to `/app/api` with `route.ts` files
-- ✅ **Route Handlers**: Converted to named HTTP method exports (GET, POST) instead of default handlers
-- ✅ **Code Organization**: Extracted WhatsApp client to `lib/whatsapp.ts`
-- ✅ **All Tests Passing**: 16 test suites, 71 tests passing
-- ✅ **Build Verified**: Production build successful with Edge Function detection
+### 2025-10-03
+- ✅ CLAUDE-MASTER v2.0 structure initialized
+- ✅ Created complete `.claude/` organization
+- ✅ Compacted CLAUDE.md to <200 lines
+- 🔄 Fase 2 development in progress
 
-### Previous Updates
-- ✅ **Testing Infrastructure**: Jest + Edge Runtime + comprehensive test coverage
-- ✅ **Zod Validation**: Complete WhatsApp webhook schemas (types/schemas.ts)
-- ✅ **AI System**: GPT-4o intent classification + contextual responses
-- ✅ **Comprehensive Vercel Docs**: 6 guides + deployment index (2025 best practices)
-- ✅ **Database Optimization**: RLS indexes for 100x query improvement
-- ✅ **Edge Functions**: All endpoints optimized for < 100ms latency
+### Migration to Next.js 15 (Complete)
+- ✅ App Router with Edge Functions
+- ✅ All routes in `app/api/` with `route.ts`
+- ✅ Named HTTP exports (GET, POST)
+- ✅ 112 tests passing
 
-### File Structure Changes
-```
-Old (Pages Router):          New (App Router):
-/api/whatsapp/webhook.ts  →  /app/api/whatsapp/webhook/route.ts
-/api/whatsapp/send.ts     →  /lib/whatsapp.ts
-/api/cron/check-reminders →  /app/api/cron/check-reminders/route.ts
-/api/cron/follow-ups.ts   →  /app/api/cron/follow-ups/route.ts
-```
+---
+
+**Last Updated**: 2025-10-03
+**Owner**: claude-master
+**Session Model**: Claude Opus 4.1
