@@ -22,8 +22,13 @@ import {
   createTypingManager,
   sendInteractiveButtons,
   sendInteractiveList,
+  markAsRead,
+  reactWithThinking,
+  reactWithCheck,
+  reactWithWarning,
 } from './whatsapp';
 import type { NormalizedMessage } from './message-normalization';
+import { ingestWhatsAppDocument, formatIngestionResponse } from './rag/document-ingestion';
 
 /**
  * Send text message and persist to database
@@ -121,9 +126,10 @@ export async function processMessageWithAI(
   userId: string,
   userPhone: string,
   userMessage: string,
+  messageId: string,
   actionDefinition?: ActionDefinition | null
 ) {
-  const typingManager = createTypingManager(userPhone);
+  const typingManager = createTypingManager(userPhone, messageId);
   const processingNotifier = createProcessingNotifier(conversationId, userPhone);
 
   const ensureTyping = async () => {
@@ -132,9 +138,29 @@ export async function processMessageWithAI(
   };
 
   try {
+    // Mark message as read immediately
+    try {
+      await markAsRead(messageId);
+    } catch (err: any) {
+      logger.error('Mark as read error', err);
+    }
+
+    // Quick acknowledgment with thinking reaction
+    try {
+      await reactWithThinking(userPhone, messageId);
+    } catch (err: any) {
+      logger.error('Reaction error', err);
+    }
+
     // Direct response for predefined actions
     if (actionDefinition?.directResponse) {
       await sendTextAndPersist(conversationId, userPhone, actionDefinition.directResponse);
+      // Success reaction
+      try {
+        await reactWithCheck(userPhone, messageId);
+      } catch (err: any) {
+        logger.error('Reaction error', err);
+      }
       return;
     }
 
@@ -189,6 +215,13 @@ export async function processMessageWithAI(
     // Send response
     await sendTextAndPersist(conversationId, userPhone, response);
 
+    // Success reaction
+    try {
+      await reactWithCheck(userPhone, messageId);
+    } catch (err: any) {
+      logger.error('Reaction error', err);
+    }
+
     // Send follow-up actions
     if (sendScheduleActions) {
       await sendScheduleFollowUp(userPhone);
@@ -219,6 +252,12 @@ export async function processMessageWithAI(
     }
   } catch (error: any) {
     logger.error('AI processing error', error);
+    // Warning reaction on error
+    try {
+      await reactWithWarning(userPhone, messageId);
+    } catch (err: any) {
+      logger.error('Reaction error', err);
+    }
   } finally {
     await typingManager.stop();
     processingNotifier.stop();
@@ -247,8 +286,115 @@ export async function processAudioMessage(
     });
 
     // Process transcribed text with AI
-    await processMessageWithAI(conversationId, userId, normalized.from, result.transcript);
+    await processMessageWithAI(
+      conversationId,
+      userId,
+      normalized.from,
+      result.transcript,
+      normalized.waMessageId
+    );
   } catch (error: any) {
     logger.error('Audio processing error', error);
+  }
+}
+
+/**
+ * Process document/image message (extract text + ingest to RAG + summarize)
+ */
+export async function processDocumentMessage(
+  conversationId: string,
+  userId: string,
+  normalized: NormalizedMessage
+) {
+  if (!normalized.mediaUrl || !normalized.waMessageId || !normalized.from) {
+    return;
+  }
+
+  const userPhone = normalized.from;
+  const messageId = normalized.waMessageId;
+  const typingManager = createTypingManager(userPhone, messageId);
+
+  try {
+    // Mark as read immediately
+    try {
+      await markAsRead(messageId);
+    } catch (err: any) {
+      logger.error('Mark as read error', err);
+    }
+
+    // Quick acknowledgment with thinking reaction
+    try {
+      await reactWithThinking(userPhone, messageId);
+    } catch (err: any) {
+      logger.error('Reaction error', err);
+    }
+
+    // Start typing indicator
+    await typingManager.start();
+
+    // Ingest document into RAG system
+    const result = await ingestWhatsAppDocument(
+      normalized.mediaUrl,
+      userId,
+      normalized.content
+    );
+
+    // Format response
+    const response = formatIngestionResponse(result);
+
+    // Send response
+    await sendTextAndPersist(conversationId, userPhone, response);
+
+    // Success reaction
+    try {
+      await reactWithCheck(userPhone, messageId);
+    } catch (err: any) {
+      logger.error('Reaction error', err);
+    }
+
+    // Update message with extracted text
+    await updateInboundMessageByWaId(messageId, {
+      content: result.document.text.slice(0, 5000), // Store first 5000 chars
+      mediaUrl: result.document.storageUri,
+    });
+
+    logger.info('Document processed successfully', {
+      conversationId,
+      userId,
+      metadata: {
+        documentId: result.documentId,
+        type: result.document.type,
+        chunks: result.chunksCreated,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Document processing error', error, {
+      conversationId,
+      userId,
+      metadata: {
+        mediaUrl: normalized.mediaUrl,
+      },
+    });
+
+    // Warning reaction on error
+    try {
+      await reactWithWarning(userPhone, messageId);
+    } catch (err: any) {
+      logger.error('Reaction error', err);
+    }
+
+    // Send error message
+    const errorMessage =
+      error?.message?.includes('Unsupported document type')
+        ? 'Lo siento, solo puedo procesar archivos PDF e imágenes.'
+        : 'Tuve problemas al procesar el documento. ¿Puedes intentar enviarlo de nuevo?';
+
+    try {
+      await sendTextAndPersist(conversationId, userPhone, errorMessage);
+    } catch (err: any) {
+      logger.error('Error message send failed', err);
+    }
+  } finally {
+    await typingManager.stop();
   }
 }

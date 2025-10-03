@@ -21,12 +21,17 @@ const INTENT_SYSTEM_PROMPT = `You are an intent classifier for a personal AI ass
 Given a user message, classify it into ONE of these intents:
 - casual_chat: Greetings, casual conversation, chitchat
 - set_reminder: User wants to create a reminder or be notified later
-- ask_info: User asks for information, news, weather, facts
+- ask_info: User asks for information, news, weather, facts (NOT about previously sent documents)
 - manage_tasks: User wants to create/view/update tasks or to-do lists
 - transcribe_audio: User explicitly mentions transcribing audio (rare, usually implied)
-- analyze_document: User asks to analyze/summarize a document or PDF
+- analyze_document: User asks to analyze/summarize a document, PDF, or image OR asks questions about previously sent documents
 - schedule_meeting: User wants to schedule/manage appointments or calendar events
 - other: Anything that doesn't fit above
+
+IMPORTANT: Use "analyze_document" when user:
+1. Asks to analyze/summarize a document they will send
+2. Asks questions about documents/images they previously sent (e.g., "¿qué decía el PDF?", "busca en mi documento", "según la imagen que te envié")
+3. Mentions specific documents, contracts, invoices, reports, images
 
 Respond with JSON:
 {
@@ -39,6 +44,10 @@ Examples:
 User: "Hola, cómo estás?" -> {"intent": "casual_chat", "confidence": "high"}
 User: "Recuérdame mañana a las 3pm llamar a Juan" -> {"intent": "set_reminder", "confidence": "high"}
 User: "¿Qué clima hay hoy?" -> {"intent": "ask_info", "confidence": "high"}
+User: "¿Qué decía el contrato sobre los plazos?" -> {"intent": "analyze_document", "confidence": "high"}
+User: "Busca en mis documentos información sobre presupuesto" -> {"intent": "analyze_document", "confidence": "high"}
+User: "Resume el PDF que te envié" -> {"intent": "analyze_document", "confidence": "high"}
+User: "Según la factura, ¿cuánto es el total?" -> {"intent": "analyze_document", "confidence": "high"}
 User: "Agregar leche a mi lista de compras" -> {"intent": "manage_tasks", "confidence": "high"}
 User: "Agenda una reunión con María el viernes" -> {"intent": "schedule_meeting", "confidence": "high"}
 

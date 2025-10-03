@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from './supabase'
 
 const AUDIO_BUCKET = 'audio-files'
+const DOCUMENT_BUCKET = 'documents'
 
 const EXTENSIONS: Record<string, string> = {
   'audio/ogg': 'ogg',
@@ -42,5 +43,32 @@ export async function saveAudioToStorage(
     path,
     extension,
     storageUri: `storage://${AUDIO_BUCKET}/${path}`,
+  }
+}
+
+export async function saveDocumentToStorage(
+  userId: string,
+  mediaId: string,
+  bytes: Uint8Array,
+  mimeType: string,
+  extension: string
+) {
+  const supabase = getSupabaseServerClient()
+  const path = `${userId}/${mediaId}.${extension}`
+  const body = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
+  const { error } = await supabase.storage
+    .from(DOCUMENT_BUCKET)
+    .upload(path, body, {
+      contentType: mimeType,
+      upsert: true,
+    })
+  if (error) {
+    throw error
+  }
+  return {
+    bucket: DOCUMENT_BUCKET,
+    path,
+    extension,
+    storageUri: `storage://${DOCUMENT_BUCKET}/${path}`,
   }
 }

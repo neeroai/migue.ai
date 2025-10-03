@@ -98,6 +98,150 @@ const supabase = getSupabaseServerClient(); // Server-side, no session
 
 ---
 
+## WhatsApp Interactive Features
+
+### Interactive Buttons
+Send up to 3 buttons for guided user interactions.
+
+```typescript
+import { sendInteractiveButtons } from '@/lib/whatsapp';
+
+// Basic usage
+await sendInteractiveButtons(
+  '1234567890',
+  'Choose an option:',
+  [
+    { id: 'btn_1', title: 'Option 1' },
+    { id: 'btn_2', title: 'Option 2' },
+    { id: 'btn_3', title: 'Option 3' }
+  ]
+);
+
+// With optional header, footer, and reply-to
+await sendInteractiveButtons(
+  '1234567890',
+  'Do you accept the terms?',
+  [
+    { id: 'btn_accept', title: 'Accept' },
+    { id: 'btn_decline', title: 'Decline' }
+  ],
+  {
+    header: 'Terms & Conditions',
+    footer: 'Powered by migue.ai',
+    replyToMessageId: 'wamid.ORIGINAL_MSG_123'
+  }
+);
+```
+
+**Parameters:**
+- `to` (string): Phone number in WhatsApp format
+- `body` (string): Main message text
+- `buttons` (Array): Up to 3 buttons with `id` and `title` (max 20 chars)
+- `options` (optional):
+  - `header` (string): Header text
+  - `footer` (string): Footer text
+  - `replyToMessageId` (string): Reply to a specific message
+
+**Returns:** `Promise<string | null>` - Message ID or null on error
+
+### Interactive Lists
+Send selectable lists with multiple options (more than 3).
+
+```typescript
+import { sendInteractiveList } from '@/lib/whatsapp';
+
+// Basic usage
+await sendInteractiveList(
+  '1234567890',
+  'Select an option:',
+  'View Options',
+  [
+    { id: 'row_1', title: 'Option 1', description: 'Description 1' },
+    { id: 'row_2', title: 'Option 2', description: 'Description 2' },
+    { id: 'row_3', title: 'Option 3' }
+  ],
+  'Available Options'  // Section title (default: 'Opciones')
+);
+```
+
+**Parameters:**
+- `to` (string): Phone number
+- `body` (string): Main message text
+- `buttonLabel` (string): Button text to open list
+- `rows` (Array): List items with `id`, `title`, and optional `description`
+- `sectionTitle` (string, optional): Section title (default: 'Opciones')
+
+**Returns:** `Promise<string | null>` - Message ID or null on error
+
+### Reactions
+Quick feedback with emoji reactions.
+
+```typescript
+import { reactWithCheck, reactWithThinking, sendReaction } from '@/lib/whatsapp';
+
+// Quick reactions
+await reactWithCheck('1234567890', 'wamid.MSG_123');      // ✅
+await reactWithThinking('1234567890', 'wamid.MSG_123');  // 🤔
+await reactWithLike('1234567890', 'wamid.MSG_123');      // 👍
+
+// Custom emoji
+await sendReaction('1234567890', 'wamid.MSG_123', '🔥');
+
+// Remove reaction
+await removeReaction('1234567890', 'wamid.MSG_123');
+```
+
+### Typing Indicators
+Show processing status to users.
+
+```typescript
+import { createTypingManager } from '@/lib/whatsapp';
+
+const typing = createTypingManager('1234567890');
+
+// Manual control
+await typing.start();
+const response = await generateResponse(message);
+await typing.stop();
+
+// Auto-stop after duration (max 25 seconds)
+await typing.startWithDuration(5);  // Shows for 5s then auto-stops
+const response = await generateResponse(message);
+// No need to call stop()
+```
+
+### Read Receipts
+Mark messages as read.
+
+```typescript
+import { markAsRead } from '@/lib/whatsapp';
+
+// Mark as read
+await markAsRead('wamid.MSG_123');
+
+// Mark as read + show typing
+await markAsReadWithTyping('1234567890', 'wamid.MSG_123');
+```
+
+### Best Practices
+- **Buttons**: Use for 1-3 options. Titles max 20 characters.
+- **Lists**: Use for 4+ options. Includes descriptions for clarity.
+- **Reactions**: Instant feedback while processing longer requests.
+- **Typing**: Use `startWithDuration` for predictable operations.
+- **Read Receipts**: Mark immediately after receiving message.
+
+### Edge Runtime Compatibility
+All interactive features are **Edge Runtime compatible**:
+- ✅ Interactive Buttons
+- ✅ Interactive Lists
+- ✅ Reactions
+- ✅ Typing Indicators
+- ✅ Read Receipts
+
+**Note**: Broadcasting features require Node.js runtime (not Edge compatible).
+
+---
+
 ## Testing
 
 ### Commands
@@ -109,8 +253,8 @@ npm run test:watch     # Watch mode
 ```
 
 ### Current Status (Complete ✅)
-- **Test Suites**: 16 passed, 16 total
-- **Tests**: 71 passed, 71 total
+- **Test Suites**: 20 passed, 20 total
+- **Tests**: 112 passed, 112 total
 - **Infrastructure**: Jest + @edge-runtime/jest-environment + Zod validation
 - **Architecture**: Next.js 15 App Router with Edge Functions
 
@@ -120,6 +264,7 @@ npm run test:watch     # Watch mode
 - `tests/unit/response.test.ts` - Response generation tests (10 tests)
 - `tests/unit/context.test.ts` - Conversation history tests (5 tests)
 - `tests/unit/schemas.test.ts` - Zod validation tests (14 tests)
+- `tests/unit/whatsapp-interactive.test.ts` - Interactive features tests (15 tests)
 
 ### Requirements
 - ≥1 happy path + ≥1 failure path per e2e test

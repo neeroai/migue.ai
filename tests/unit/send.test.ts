@@ -3,10 +3,10 @@ import * as sendModule from '../../lib/whatsapp'
 
 const {
   sendWhatsAppText,
-  sendTypingIndicator,
   createTypingManager,
   sendInteractiveButtons,
   sendInteractiveList,
+  markAsReadWithTyping,
 } = sendModule
 
 describe('WhatsApp send helpers', () => {
@@ -46,9 +46,13 @@ describe('WhatsApp send helpers', () => {
   })
 
   it('supports typing indicator', async () => {
-    await sendTypingIndicator('+521234567890', 'typing')
+    await markAsReadWithTyping('+521234567890', 'wamid.test123')
 
     expect(fetch).toHaveBeenCalled()
+    const call = (fetch as jest.Mock).mock.calls[0]!
+    const body = JSON.parse(call[1]!.body as string)
+    expect(body.status).toBe('read')
+    expect(body.message_id).toBe('wamid.test123')
   })
 
   it('sends interactive buttons', async () => {
@@ -83,26 +87,24 @@ describe('WhatsApp send helpers', () => {
     expect(body.interactive.action.sections[0].rows).toHaveLength(2)
   })
 
-  it('refreshes typing indicator until stopped', async () => {
+  it('manages typing indicator state', async () => {
     jest.useFakeTimers()
-    const manager = createTypingManager('+521234567890')
+    const manager = createTypingManager('+521234567890', 'wamid.test123')
 
     ;(fetch as jest.Mock).mockClear()
     await manager.start()
     expect(fetch).toHaveBeenCalledTimes(1)
-    expect(JSON.parse((fetch as jest.Mock).mock.calls[0]![1]!.body as string).typing.status).toBe('typing')
+    expect(manager.isActive()).toBe(true)
 
-    ;(fetch as jest.Mock).mockClear()
-    jest.advanceTimersByTime(7000)
-    await Promise.resolve()
-    expect(fetch).toHaveBeenCalledTimes(1)
-    expect(JSON.parse((fetch as jest.Mock).mock.calls[0]![1]!.body as string).typing.status).toBe('typing')
+    const call = (fetch as jest.Mock).mock.calls[0]!
+    const body = JSON.parse(call[1]!.body as string)
+    expect(body.status).toBe('read')
+    expect(body.message_id).toBe('wamid.test123')
 
-    ;(fetch as jest.Mock).mockClear()
     await manager.stop()
-    expect(fetch).toHaveBeenCalledTimes(1)
-    expect(JSON.parse((fetch as jest.Mock).mock.calls[0]![1]!.body as string).typing.status).toBe('paused')
+    expect(manager.isActive()).toBe(false)
 
+    // Should not call API again when already stopped
     ;(fetch as jest.Mock).mockClear()
     jest.advanceTimersByTime(7000)
     await Promise.resolve()

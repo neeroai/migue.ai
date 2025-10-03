@@ -10,7 +10,7 @@ import {
   extractInteractiveReply,
   persistNormalizedMessage,
 } from '../../../../lib/message-normalization';
-import { processMessageWithAI, processAudioMessage } from '../../../../lib/ai-processing';
+import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../../../lib/ai-processing';
 
 /**
  * Create JSON response helper
@@ -149,6 +149,7 @@ export async function POST(req: Request): Promise<Response> {
         userId,
         normalized.from,
         normalized.content,
+        normalized.waMessageId,
         actionDefinition
       ).catch((err) => {
         logger.error('Background AI processing failed', err, {
@@ -167,6 +168,21 @@ export async function POST(req: Request): Promise<Response> {
     ) {
       processAudioMessage(conversationId, userId, normalized).catch((err) => {
         logger.error('Background audio processing failed', err, {
+          requestId,
+          conversationId,
+          userId,
+        });
+      });
+    }
+
+    // Process document/image message (fire and forget)
+    if (
+      (normalized.type === 'document' || normalized.type === 'image') &&
+      normalized.mediaUrl &&
+      normalized.from
+    ) {
+      processDocumentMessage(conversationId, userId, normalized).catch((err) => {
+        logger.error('Background document processing failed', err, {
           requestId,
           conversationId,
           userId,
