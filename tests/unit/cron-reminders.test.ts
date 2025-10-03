@@ -9,10 +9,10 @@ jest.mock('../../lib/env', () => ({
   }),
 }))
 
-import handler from '../../api/cron/check-reminders'
+import { GET as handler } from '../../app/api/cron/check-reminders/route'
 import { getSupabaseServerClient } from '../../lib/supabase'
 import { recordCalendarEvent } from '../../lib/calendar-store'
-import { sendWhatsAppText } from '../../api/whatsapp/send'
+import { sendWhatsAppText } from '../../lib/whatsapp'
 
 jest.mock('../../lib/supabase', () => ({
   getSupabaseServerClient: jest.fn(),
@@ -22,7 +22,7 @@ jest.mock('../../lib/calendar-store', () => ({
   recordCalendarEvent: jest.fn(),
 }))
 
-jest.mock('../../api/whatsapp/send', () => ({
+jest.mock('../../lib/whatsapp', () => ({
   sendWhatsAppText: jest.fn(),
 }))
 

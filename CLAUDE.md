@@ -14,9 +14,10 @@ npm run clean         # Clean build artifacts
 ```
 
 ### Key Files
-- `api/whatsapp/webhook.ts` - Message reception & verification + AI processing
-- `api/whatsapp/send.ts` - Message sending
-- `api/cron/check-reminders.ts` - Daily reminders (9 AM UTC)
+- `app/api/whatsapp/webhook/route.ts` - Message reception & verification + AI processing
+- `app/api/cron/check-reminders/route.ts` - Daily reminders (9 AM UTC)
+- `app/api/cron/follow-ups/route.ts` - Follow-up messages (every 6 hours)
+- `lib/whatsapp.ts` - WhatsApp API client (message sending, typing indicators)
 - `lib/supabase.ts` - Database client
 - `lib/persist.ts` - Data persistence helpers
 - `lib/openai.ts` - OpenAI client (Edge-compatible)
@@ -38,7 +39,8 @@ See `.env.example` - Required: `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`
 - **Small Changes**: Keep commits small and safe (≤300 LOC/file, ≤50 LOC/function)
 - **Security First**: NEVER commit secrets; validate inputs, encode outputs
 - **Test Coverage**: Minimum 80% for critical modules
-- **Edge Runtime**: ALL api routes MUST export `export const config = { runtime: 'edge' }`
+- **Edge Runtime**: ALL API routes MUST export `export const runtime = 'edge'` (Next.js 15 format)
+- **App Router**: API routes MUST be in `app/api/` with `route.ts` files (Next.js 15 App Router)
 
 ### Code Limits (Enforced)
 - File: ≤ 300 LOC
@@ -58,13 +60,22 @@ If exceeded → divide/refactor immediately
 
 ## Code Style
 
-### Edge Functions Pattern
+### Next.js 15 API Route Pattern (App Router)
 ```typescript
-export const config = { runtime: 'edge' };
+// app/api/example/route.ts
+export const runtime = 'edge';
 
-export default async function handler(req: Request): Promise<Response> {
-  // Edge-compatible code only (no Node.js APIs)
+export async function GET(req: Request): Promise<Response> {
+  // Handle GET requests
   return new Response(JSON.stringify(data), {
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  // Handle POST requests
+  const body = await req.json();
+  return new Response(JSON.stringify(result), {
     headers: { 'content-type': 'application/json' }
   });
 }
@@ -97,11 +108,11 @@ npm run test:e2e       # Playwright e2e tests
 npm run test:watch     # Watch mode
 ```
 
-### Current Status (Week 1 - Complete ✅)
-- **Test Suites**: 4 passed, 4 total
-- **Tests**: 39 passed, 39 total
-- **Unit Tests**: intent.test.ts (10), response.test.ts (10), context.test.ts (5), schemas.test.ts (14)
+### Current Status (Complete ✅)
+- **Test Suites**: 16 passed, 16 total
+- **Tests**: 71 passed, 71 total
 - **Infrastructure**: Jest + @edge-runtime/jest-environment + Zod validation
+- **Architecture**: Next.js 15 App Router with Edge Functions
 
 ### Test Files
 - `tests/setup.ts` - Global test configuration with mocked env vars
@@ -121,12 +132,25 @@ npm run test:watch     # Watch mode
 
 ## Common Tasks
 
-### Add New API Endpoint
-1. Create `api/<module>/<endpoint>.ts`
-2. Add `export const config = { runtime: 'edge' }`
-3. Implement handler with proper error handling
-4. Add unit tests in `tests/unit/`
-5. Update this file if needed (commands/routes)
+### Add New API Endpoint (Next.js 15 App Router)
+1. Create directory: `app/api/<module>/<endpoint>/`
+2. Create file: `app/api/<module>/<endpoint>/route.ts`
+3. Export runtime: `export const runtime = 'edge'`
+4. Implement HTTP methods: `export async function GET(req: Request)`, `export async function POST(req: Request)`, etc.
+5. Add unit tests in `tests/unit/`
+6. Update this file if needed (commands/routes)
+
+Example:
+```typescript
+// app/api/example/hello/route.ts
+export const runtime = 'edge';
+
+export async function GET(req: Request) {
+  return new Response(JSON.stringify({ message: 'Hello' }), {
+    headers: { 'content-type': 'application/json' }
+  });
+}
+```
 
 ### Modify Database Schema
 1. Edit `supabase/schema.sql` (tables) or `supabase/security.sql` (RLS)
@@ -176,12 +200,14 @@ git push origin main
 - **Type assertions**: Be explicit with `as Type` when needed
 
 ### Vercel Deployment Fails
-- ✅ Check all API routes export `export const config = { runtime: 'edge' }`
+- ✅ Check all API routes are in `app/api/` with `route.ts` files (Next.js 15 App Router)
+- ✅ Verify all routes export `export const runtime = 'edge'` (NOT `export const config = { runtime: 'edge' }`)
 - ✅ Remove `functions.runtime` from `vercel.json` if present
 - ✅ Verify no Node.js-specific APIs (fs, path, etc.) in Edge Functions
 - ✅ Check env vars are set in Vercel Dashboard
 - ✅ Use **static imports** at top of file (NOT dynamic `await import()`)
 - ✅ Ensure `lib/` files are NOT gitignored (check .gitignore for Python/TypeScript conflicts)
+- ✅ Export named HTTP method handlers: `GET`, `POST`, `PUT`, `DELETE`, etc. (NOT `default export`)
 
 ### Database Connection Issues
 - Verify `SUPABASE_URL` and `SUPABASE_KEY` in env
@@ -232,21 +258,27 @@ git push origin main
 
 ## Recent Updates
 
-### Week 1 - Testing Infrastructure (Complete ✅)
-- ✅ **Testing Infrastructure**: Jest + Edge Runtime + 39 unit tests passing
-- ✅ **Zod Validation**: Complete WhatsApp webhook schemas (types/schemas.ts)
-- ✅ **Webhook Validation**: Integrated Zod validation in webhook.ts
-- ✅ **Type Safety**: WhatsAppMessage types with 13 message formats supported
+### Migration to Next.js 15 App Router (Complete ✅)
+- ✅ **Architecture Upgrade**: Migrated from Pages Router to App Router (Next.js 15)
+- ✅ **API Routes Restructure**: Moved all endpoints from `/api` to `/app/api` with `route.ts` files
+- ✅ **Route Handlers**: Converted to named HTTP method exports (GET, POST) instead of default handlers
+- ✅ **Code Organization**: Extracted WhatsApp client to `lib/whatsapp.ts`
+- ✅ **All Tests Passing**: 16 test suites, 71 tests passing
+- ✅ **Build Verified**: Production build successful with Edge Function detection
 
 ### Previous Updates
-- ✅ **AI System Implemented**: GPT-4o intent classification + contextual responses
+- ✅ **Testing Infrastructure**: Jest + Edge Runtime + comprehensive test coverage
+- ✅ **Zod Validation**: Complete WhatsApp webhook schemas (types/schemas.ts)
+- ✅ **AI System**: GPT-4o intent classification + contextual responses
 - ✅ **Comprehensive Vercel Docs**: 6 guides + deployment index (2025 best practices)
 - ✅ **Database Optimization**: RLS indexes for 100x query improvement
 - ✅ **Edge Functions**: All endpoints optimized for < 100ms latency
 
-### Next Steps (Week 2)
-- 🔄 **Audio Transcription**: Whisper API integration for voice messages
-- 🔄 **Media Download**: WhatsApp media download module
-- 🔄 **Refactoring**: Extract sendWhatsAppMessage to lib/whatsapp.ts
-- 🔄 **Error Handling**: Custom error classes + structured logging
-- 🔄 **Integration Tests**: Webhook flow with mocks
+### File Structure Changes
+```
+Old (Pages Router):          New (App Router):
+/api/whatsapp/webhook.ts  →  /app/api/whatsapp/webhook/route.ts
+/api/whatsapp/send.ts     →  /lib/whatsapp.ts
+/api/cron/check-reminders →  /app/api/cron/check-reminders/route.ts
+/api/cron/follow-ups.ts   →  /app/api/cron/follow-ups/route.ts
+```

@@ -1,5 +1,5 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
-import * as sendModule from '../../api/whatsapp/send'
+import * as sendModule from '../../lib/whatsapp'
 
 const {
   sendWhatsAppText,

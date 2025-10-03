@@ -22,7 +22,7 @@ import {
   createTypingManager,
   sendInteractiveButtons,
   sendInteractiveList,
-} from '../api/whatsapp/send';
+} from './whatsapp';
 import type { NormalizedMessage } from './message-normalization';
 
 /**
