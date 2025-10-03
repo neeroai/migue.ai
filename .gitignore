@@ -1,7 +1,6 @@
 # migue.ai - WhatsApp AI Assistant
 
 # Project-specific directories to ignore
-/docs
 .claude
 .cursor
 .bmad-core
