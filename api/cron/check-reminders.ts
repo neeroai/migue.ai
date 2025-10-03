@@ -1,28 +1,26 @@
-export const config = { runtime: 'edge' };
+export const config = { runtime: 'edge' }
 
-import { getEnv } from '../../lib/env';
-import { getSupabaseServerClient } from '../../lib/supabase';
-import { recordCalendarEvent } from '../../lib/calendar-store';
-import { sendWhatsAppText } from '../whatsapp/send';
+import { getEnv } from '../../lib/env'
+import { getSupabaseServerClient } from '../../lib/supabase'
+import type { Tables } from '../../types/supabase-helpers'
+import { recordCalendarEvent } from '../../lib/calendar-store'
+import { sendWhatsAppText } from '../whatsapp/send'
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json; charset=utf-8' },
-  });
+  })
 }
 
-type DbReminder = {
-  id: string
-  user_id: string
-  title: string
-  description: string | null
-  scheduled_time: string
-  status: string
-  send_token: string | null
+// Type for reminders with joined users table
+type ReminderRow = Tables<'reminders'> & {
+  users: {
+    phone_number: string
+  } | null
 }
 
-type DueReminder = DbReminder & {
+type DueReminder = Tables<'reminders'> & {
   phone_number: string | null
 }
 
@@ -31,12 +29,20 @@ async function getDueReminders(): Promise<DueReminder[]> {
   const nowIso = new Date().toISOString()
   const { data, error } = await supabase
     .from('reminders')
-    .select('id, user_id, title, description, scheduled_time, status, send_token, users ( phone_number )')
+    .select('*, users ( phone_number )')
     .eq('status', 'pending')
     .lte('scheduled_time', nowIso)
   if (error) throw error
-  return (data || []).map((row: any) => ({
-    ...row,
+
+  return (data || []).map((row: ReminderRow): DueReminder => ({
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    description: row.description,
+    scheduled_time: row.scheduled_time,
+    status: row.status,
+    send_token: row.send_token,
+    created_at: row.created_at,
     phone_number: row.users?.phone_number ?? null,
   }))
 }

@@ -3,12 +3,13 @@
  * Converts WhatsApp webhook messages to normalized format
  */
 
-import type { WhatsAppMessage } from '../types/schemas';
+import type { WhatsAppMessage, InteractiveContent } from '../types/schemas'
+import { InteractiveContentSchema } from '../types/schemas'
 import {
   upsertUserByPhone,
   getOrCreateConversation,
   insertInboundMessage,
-} from './persist';
+} from './persist'
 
 export interface NormalizedMessage {
   from: string;
@@ -53,12 +54,16 @@ export function whatsAppMessageToNormalized(message: WhatsAppMessage): Normalize
   } else if (type === 'video' && message.video) {
     mediaUrl = message.video.id;
     content = message.video.caption ?? null;
-  } else if (type === 'interactive' && (message as any).interactive) {
-    const interactive: any = (message as any).interactive;
-    if (interactive?.type === 'button_reply' && interactive.button_reply) {
-      content = interactive.button_reply.id ?? interactive.button_reply.title ?? null;
-    } else if (interactive?.type === 'list_reply' && interactive.list_reply) {
-      content = interactive.list_reply.id ?? interactive.list_reply.title ?? null;
+  } else if (type === 'interactive' && message.interactive) {
+    // Validate interactive message with Zod schema
+    const result = InteractiveContentSchema.safeParse(message.interactive)
+    if (result.success) {
+      const interactive = result.data
+      if (interactive.type === 'button_reply') {
+        content = interactive.button_reply.id
+      } else if (interactive.type === 'list_reply') {
+        content = interactive.list_reply.id
+      }
     }
   }
 
@@ -78,37 +83,39 @@ export function whatsAppMessageToNormalized(message: WhatsAppMessage): Normalize
  * Extract interactive reply details from message
  */
 export function extractInteractiveReply(raw: unknown): InteractiveReply | null {
-  const interactive = (raw as any)?.interactive;
-  if (!interactive) return null;
+  // Validate with Zod schema
+  const result = InteractiveContentSchema.safeParse(raw)
+  if (!result.success) return null
 
-  if (interactive.type === 'button_reply' && interactive.button_reply) {
+  const interactive = result.data
+  if (interactive.type === 'button_reply') {
     return {
-      id: interactive.button_reply.id as string,
-      title: interactive.button_reply.title as string,
+      id: interactive.button_reply.id,
+      title: interactive.button_reply.title,
       description: undefined,
-    };
+    }
   }
 
-  if (interactive.type === 'list_reply' && interactive.list_reply) {
+  if (interactive.type === 'list_reply') {
     return {
-      id: interactive.list_reply.id as string,
-      title: interactive.list_reply.title as string,
-      description: interactive.list_reply.description as string | undefined,
-    };
+      id: interactive.list_reply.id,
+      title: interactive.list_reply.title,
+      description: interactive.list_reply.description,
+    }
   }
 
-  return null;
+  return null
 }
 
 /**
  * Persist normalized message to database
  */
 export async function persistNormalizedMessage(normalized: NormalizedMessage) {
-  if (!normalized?.from) return null;
+  if (!normalized?.from) return null
 
-  const userId = await upsertUserByPhone(normalized.from);
-  const conversationId = await getOrCreateConversation(userId, normalized.conversationId);
-  await insertInboundMessage(conversationId, normalized as any);
+  const userId = await upsertUserByPhone(normalized.from)
+  const conversationId = await getOrCreateConversation(userId, normalized.conversationId)
+  await insertInboundMessage(conversationId, normalized)
 
-  return { userId, conversationId };
+  return { userId, conversationId }
 }

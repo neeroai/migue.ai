@@ -25,7 +25,7 @@ export async function scheduleFollowUp(params: {
     conversation_id: params.conversationId,
     category: params.category,
     scheduled_for: scheduledFor,
-    payload: params.payload ?? null,
+    payload: (params.payload ?? null) as never,
   })
   if (error) throw error
 }

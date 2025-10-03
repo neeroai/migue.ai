@@ -12,15 +12,15 @@ import {
 describe('WhatsApp Webhook Schemas', () => {
   describe('PhoneNumberSchema', () => {
     it('should validate valid E.164 phone numbers', () => {
-      expect(() => PhoneNumberSchema.parse('1234567890')).not.toThrow();
-      expect(() => PhoneNumberSchema.parse('123456789012345')).not.toThrow();
+      expect(() => PhoneNumberSchema.parse('+1234567890')).not.toThrow();
+      expect(() => PhoneNumberSchema.parse('+123456789012345')).not.toThrow();
     });
 
     it('should reject invalid phone numbers', () => {
-      expect(() => PhoneNumberSchema.parse('123')).toThrow(); // Too short
-      expect(() => PhoneNumberSchema.parse('12345678901234567')).toThrow(); // Too long
-      expect(() => PhoneNumberSchema.parse('+1234567890')).toThrow(); // Has +
-      expect(() => PhoneNumberSchema.parse('abcd567890')).toThrow(); // Has letters
+      expect(() => PhoneNumberSchema.parse('+123')).toThrow(); // Too short
+      expect(() => PhoneNumberSchema.parse('+12345678901234567')).toThrow(); // Too long
+      expect(() => PhoneNumberSchema.parse('1234567890')).toThrow(); // Missing +
+      expect(() => PhoneNumberSchema.parse('+abcd567890')).toThrow(); // Has letters
     });
   });
 
@@ -56,13 +56,13 @@ describe('WhatsApp Webhook Schemas', () => {
                   contacts: [
                     {
                       profile: { name: 'John Doe' },
-                      wa_id: '1234567890',
+                      wa_id: '+1234567890',
                     },
                   ],
                   messages: [
                     {
                       id: 'msg-123',
-                      from: '1234567890',
+                      from: '+1234567890',
                       timestamp: '1234567890',
                       type: 'text',
                       text: { body: 'Hello World' },
@@ -98,7 +98,7 @@ describe('WhatsApp Webhook Schemas', () => {
                 messages: [
                   {
                     id: 'msg-456',
-                    from: '1234567890',
+                    from: '+1234567890',
                     timestamp: '1234567890',
                     type: 'interactive',
                     interactive: {
@@ -140,7 +140,7 @@ describe('WhatsApp Webhook Schemas', () => {
                       id: 'status-123',
                       status: 'delivered',
                       timestamp: '1234567890',
-                      recipient_id: '1234567890',
+                      recipient_id: '+1234567890',
                     },
                   ],
                 },
@@ -192,7 +192,7 @@ describe('WhatsApp Webhook Schemas', () => {
                   messages: [
                     {
                       id: 'msg-123',
-                      from: '1234567890',
+                      from: '+1234567890',
                       timestamp: '1234567890',
                       type: 'text',
                       text: { body: 'Test' },
@@ -242,7 +242,7 @@ describe('WhatsApp Webhook Schemas', () => {
                   messages: [
                     {
                       id: 'msg-123',
-                      from: '1234567890',
+                      from: '+1234567890',
                       timestamp: '1234567890',
                       type: 'text',
                       text: { body: 'Hello' },
@@ -309,7 +309,7 @@ describe('WhatsApp Webhook Schemas', () => {
                       id: 'status-123',
                       status: 'read',
                       timestamp: '1234567890',
-                      recipient_id: '1234567890',
+                      recipient_id: '+1234567890',
                     },
                   ],
                 },

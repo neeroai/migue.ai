@@ -9,7 +9,7 @@ export async function retrieveContext(options: {
 }): Promise<RetrievedChunk[]> {
   const queryEmbedding = await generateEmbedding(options.query)
   return searchEmbeddings(options.userId, queryEmbedding, {
-    documentId: options.documentId,
+    ...(options.documentId ? { documentId: options.documentId } : {}),
     topK: options.topK ?? 5,
   })
 }

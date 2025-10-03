@@ -52,22 +52,34 @@ export const ReactionContentSchema = z.object({
   emoji: z.string(),
 });
 
-const ButtonReplySchema = z.object({
-  id: z.string(),
-  title: z.string(),
+// Interactive message schemas (discriminated union for type safety)
+const ButtonReplyContentSchema = z.object({
+  type: z.literal('button_reply'),
+  button_reply: z.object({
+    id: z.string(),
+    title: z.string(),
+  }),
 })
 
-const ListReplySchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
+const ListReplyContentSchema = z.object({
+  type: z.literal('list_reply'),
+  list_reply: z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+  }),
 })
 
-const InteractiveReplySchema = z.object({
-  type: z.enum(['button_reply', 'list_reply']),
-  button_reply: ButtonReplySchema.optional(),
-  list_reply: ListReplySchema.optional(),
-})
+// Discriminated union for better type inference
+export const InteractiveContentSchema = z.discriminatedUnion('type', [
+  ButtonReplyContentSchema,
+  ListReplyContentSchema,
+])
+
+// Export types for use in message-normalization.ts
+export type InteractiveContent = z.infer<typeof InteractiveContentSchema>
+export type ButtonReplyContent = z.infer<typeof ButtonReplyContentSchema>
+export type ListReplyContent = z.infer<typeof ListReplyContentSchema>
 
 // WhatsApp message schema
 export const WhatsAppMessageSchema = z.object({
@@ -86,7 +98,7 @@ export const WhatsAppMessageSchema = z.object({
   sticker: MediaContentSchema.optional(),
   location: LocationContentSchema.optional(),
   reaction: ReactionContentSchema.optional(),
-  interactive: InteractiveReplySchema.optional(),
+  interactive: InteractiveContentSchema.optional(),
 
   // Context (reply to message)
   context: z
@@ -213,32 +225,36 @@ export function validateWebhookVerification(params: unknown): WebhookVerificatio
 
 /**
  * Extract first message from webhook payload (helper)
+ * Safe array access with noUncheckedIndexedAccess
  */
 export function extractFirstMessage(payload: WebhookPayload): WhatsAppMessage | null {
-  const entry = payload.entry[0];
-  if (!entry) return null;
+  // Check array has elements before accessing with [0]
+  if (payload.entry.length === 0) return null
+  const entry = payload.entry[0]!
 
-  const change = entry.changes[0];
-  if (!change) return null;
+  if (entry.changes.length === 0) return null
+  const change = entry.changes[0]!
 
-  const messages = change.value.messages;
-  if (!messages || messages.length === 0) return null;
+  const messages = change.value.messages
+  if (!messages || messages.length === 0) return null
 
-  return messages[0]!;
+  return messages[0]!
 }
 
 /**
  * Extract first status update from webhook payload (helper)
+ * Safe array access with noUncheckedIndexedAccess
  */
 export function extractFirstStatus(payload: WebhookPayload): StatusUpdate | null {
-  const entry = payload.entry[0];
-  if (!entry) return null;
+  // Check array has elements before accessing with [0]
+  if (payload.entry.length === 0) return null
+  const entry = payload.entry[0]!
 
-  const change = entry.changes[0];
-  if (!change) return null;
+  if (entry.changes.length === 0) return null
+  const change = entry.changes[0]!
 
-  const statuses = change.value.statuses;
-  if (!statuses || statuses.length === 0) return null;
+  const statuses = change.value.statuses
+  if (!statuses || statuses.length === 0) return null
 
-  return statuses[0]!;
+  return statuses[0]!
 }

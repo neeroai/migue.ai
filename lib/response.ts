@@ -77,7 +77,7 @@ export async function generateResponse(
     if (intent === 'analyze_document' && userId) {
       const contextChunks = await retrieveContext({
         userId,
-        documentId,
+        ...(documentId ? { documentId } : {}),
         query: userMessage,
         topK: 5,
       })

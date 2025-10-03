@@ -71,7 +71,7 @@ export async function recordCalendarEvent(input: CalendarEventRecordInput): Prom
       start_time: input.startTime,
       end_time: input.endTime,
       meeting_url: input.meetingUrl ?? null,
-      metadata: input.metadata ?? null,
+      metadata: (input.metadata ?? null) as never,
     },
     { onConflict: 'user_id,provider,external_id' }
   )

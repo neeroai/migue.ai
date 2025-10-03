@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { chatCompletion, type ChatMessage } from './openai'
 import { getSupabaseServerClient } from './supabase'
 
@@ -5,13 +6,30 @@ const REMINDER_PROMPT = `Extrae recordatorios de la frase del usuario y responde
 {
   "title": "Qué recordar",
   "description": "Detalles opcionales",
-  "datetime_iso": "YYYY-MM-DDTHH:MM:SS-05:00" 
+  "datetime_iso": "YYYY-MM-DDTHH:MM:SS-05:00"
 }
 Si falta información crítica (fecha u hora), responde con:
 {
   "missing": ["campo"],
   "clarification": "Pregunta al usuario"
 }`
+
+// Zod schemas for AI response validation
+const ReminderReadySchema = z.object({
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  datetime_iso: z.string(),
+})
+
+const ReminderClarificationSchema = z.object({
+  missing: z.array(z.string()),
+  clarification: z.string(),
+})
+
+const ReminderResponseSchema = z.union([
+  ReminderReadySchema,
+  ReminderClarificationSchema,
+])
 
 export type ReminderParseResult =
   | {
@@ -40,25 +58,37 @@ export async function parseReminderRequest(
     temperature: 0,
     maxTokens: 150,
   })
-  const parsed = JSON.parse(response) as any
-  if (parsed.missing) {
+
+  // Parse and validate with Zod
+  let jsonData: unknown
+  try {
+    jsonData = JSON.parse(response)
+  } catch {
+    throw new Error('Invalid JSON response from AI')
+  }
+
+  const result = ReminderResponseSchema.safeParse(jsonData)
+  if (!result.success) {
+    throw new Error(`Invalid reminder response format: ${result.error.message}`)
+  }
+
+  const parsed = result.data
+
+  // Check if it's a clarification response (has 'missing' field)
+  if ('missing' in parsed) {
     return {
       status: 'needs_clarification',
-      missing: Array.isArray(parsed.missing) ? parsed.missing : ['detalle'],
-      clarification:
-        typeof parsed.clarification === 'string'
-          ? parsed.clarification
-          : 'Necesito saber la fecha y hora exacta para crear tu recordatorio.',
+      missing: parsed.missing,
+      clarification: parsed.clarification,
     }
   }
-  const datetimeIso = parsed.datetime_iso as string
-  const title = parsed.title as string
-  const description = (parsed.description ?? null) as string | null
+
+  // It's a ready response
   return {
     status: 'ready',
-    title,
-    description,
-    datetimeIso,
+    title: parsed.title,
+    description: parsed.description ?? null,
+    datetimeIso: parsed.datetime_iso,
   }
 }
 

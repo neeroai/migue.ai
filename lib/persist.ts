@@ -1,15 +1,5 @@
 import { getSupabaseServerClient } from './supabase'
-
-export type NormalizedMessage = {
-  from?: string
-  type?: string
-  content: string | null
-  mediaUrl: string | null
-  waMessageId?: string
-  conversationId?: string
-  timestamp: number
-  raw: unknown
-}
+import type { NormalizedMessage } from './message-normalization'
 
 export async function upsertUserByPhone(phoneNumber: string) {
   const supabase = getSupabaseServerClient()
@@ -61,8 +51,8 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
   const supabase = getSupabaseServerClient()
   const payload = {
     conversation_id: conversationId,
-    direction: 'inbound',
-    type: msg.type ?? 'text',
+    direction: 'inbound' as const,
+    type: (msg.type ?? 'text') as 'text' | 'image' | 'audio' | 'video' | 'document' | 'location' | 'interactive' | 'button' | 'contacts' | 'system' | 'unknown',
     content: msg.content,
     media_url: msg.mediaUrl,
     wa_message_id: msg.waMessageId ?? null,
@@ -80,8 +70,8 @@ export async function insertOutboundMessage(
   const supabase = getSupabaseServerClient()
   const payload = {
     conversation_id: conversationId,
-    direction: 'outbound',
-    type: 'text',
+    direction: 'outbound' as const,
+    type: 'text' as const,
     content,
     media_url: null,
     wa_message_id: waMessageId ?? null,

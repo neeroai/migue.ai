@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from '../supabase'
+import type { Tables, EmbeddingMetadata } from '../../types/supabase-helpers'
 import type { EmbeddingVector } from './embeddings'
 
 export type RetrievedChunk = {
@@ -6,6 +7,9 @@ export type RetrievedChunk = {
   content: string
   score: number
 }
+
+// Type for embedding row
+type EmbeddingRow = Tables<'embeddings'>
 
 function cosineSimilarity(a: EmbeddingVector, b: EmbeddingVector): number {
   let dot = 0
@@ -26,14 +30,17 @@ export async function fetchEmbeddingsForUser(userId: string, documentId?: string
   const supabase = getSupabaseServerClient()
   let query = supabase
     .from('embeddings')
-    .select('chunk_index, vector, metadata')
+    .select('*')
     .order('chunk_index', { ascending: true })
   if (documentId) {
     query = query.eq('document_id', documentId)
   }
   const { data, error } = await query
   if (error) throw error
-  return (data ?? []).filter((row: any) => row.metadata?.user_id === userId)
+  return (data ?? []).filter((row) => {
+    const metadata = row.metadata as EmbeddingMetadata | null
+    return metadata?.user_id === userId
+  })
 }
 
 export async function searchEmbeddings(
@@ -43,11 +50,14 @@ export async function searchEmbeddings(
 ): Promise<RetrievedChunk[]> {
   const rows = await fetchEmbeddingsForUser(userId, options?.documentId)
   const results = rows
-    .map((row: any) => ({
-      chunkIndex: row.chunk_index as number,
-      content: (row.metadata?.content as string) ?? '',
-      score: cosineSimilarity(queryVector, row.vector as EmbeddingVector),
-    }))
+    .map((row): RetrievedChunk => {
+      const metadata = row.metadata as (EmbeddingMetadata & { content?: string }) | null
+      return {
+        chunkIndex: row.chunk_index,
+        content: metadata?.content ?? '',
+        score: cosineSimilarity(queryVector, row.vector as EmbeddingVector),
+      }
+    })
     .filter((item) => item.content)
     .sort((a, b) => b.score - a.score)
   return results.slice(0, options?.topK ?? 5)

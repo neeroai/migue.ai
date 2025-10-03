@@ -1,3 +1,5 @@
+export const config = { runtime: 'edge' };
+
 export const GRAPH_BASE_URL = 'https://graph.facebook.com/v19.0'
 
 type WhatsAppPayload = {

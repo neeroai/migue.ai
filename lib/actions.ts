@@ -59,16 +59,16 @@ export function getActionDefinition(actionId: string | null | undefined): Action
 
 export function getScheduleButtons(): ActionDefinition[] {
   return [
-    ACTIONS['action:schedule_confirm'],
-    ACTIONS['action:schedule_reschedule'],
-    ACTIONS['action:schedule_cancel'],
+    ACTIONS['action:schedule_confirm']!,
+    ACTIONS['action:schedule_reschedule']!,
+    ACTIONS['action:schedule_cancel']!,
   ]
 }
 
 export function getReminderOptions(): ActionDefinition[] {
   return [
-    ACTIONS['action:reminder_view'],
-    ACTIONS['action:reminder_edit'],
-    ACTIONS['action:reminder_cancel'],
+    ACTIONS['action:reminder_view']!,
+    ACTIONS['action:reminder_edit']!,
+    ACTIONS['action:reminder_cancel']!,
   ]
 }

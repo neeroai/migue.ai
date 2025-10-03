@@ -78,13 +78,13 @@ function ensureTimes(data: Extraction, fallbackTimeZone?: string) {
   }
 }
 
-function buildCalendarInput(data: Extraction, times: ReturnType<typeof ensureTimes>): CalendarEventInput {
+function buildCalendarInput(data: Extraction, times: NonNullable<ReturnType<typeof ensureTimes>>): CalendarEventInput {
   return {
     summary: data.summary ?? 'Reunión',
     description: data.notes ?? null,
     start: { dateTime: times.startIso, timeZone: times.timezone },
     end: { dateTime: times.endIso, timeZone: times.timezone },
-    attendees: data.attendees?.map((email) => ({ email })) ?? undefined,
+    ...(data.attendees ? { attendees: data.attendees.map((email) => ({ email })) } : {}),
     location: data.location ?? null,
     conferencing: 'google_meet',
   }
