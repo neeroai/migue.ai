@@ -1,0 +1,244 @@
+import { z } from 'zod';
+
+/**
+ * WhatsApp Webhook Validation Schemas (2025)
+ * Based on WhatsApp Business API v19.0
+ */
+
+// E.164 phone number format (+ followed by 10-15 digits)
+export const PhoneNumberSchema = z.string().regex(/^\+\d{10,15}$/, 'Invalid E.164 phone number');
+
+// Message types
+export const MessageTypeSchema = z.enum([
+  'text',
+  'image',
+  'video',
+  'document',
+  'audio',
+  'voice',
+  'sticker',
+  'location',
+  'contacts',
+  'interactive',
+  'button',
+  'reaction',
+  'unsupported',
+]);
+
+// Text message
+export const TextContentSchema = z.object({
+  body: z.string().min(1),
+});
+
+// Media message (image, video, document, audio, sticker)
+export const MediaContentSchema = z.object({
+  id: z.string(),
+  mime_type: z.string().optional(),
+  sha256: z.string().optional(),
+  caption: z.string().optional(),
+});
+
+// Location message
+export const LocationContentSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
+  name: z.string().optional(),
+  address: z.string().optional(),
+});
+
+// Reaction message
+export const ReactionContentSchema = z.object({
+  message_id: z.string(),
+  emoji: z.string(),
+});
+
+const ButtonReplySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+})
+
+const ListReplySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+})
+
+const InteractiveReplySchema = z.object({
+  type: z.enum(['button_reply', 'list_reply']),
+  button_reply: ButtonReplySchema.optional(),
+  list_reply: ListReplySchema.optional(),
+})
+
+// WhatsApp message schema
+export const WhatsAppMessageSchema = z.object({
+  id: z.string(),
+  from: PhoneNumberSchema,
+  timestamp: z.string(),
+  type: MessageTypeSchema,
+
+  // Content by type (only one should be present)
+  text: TextContentSchema.optional(),
+  image: MediaContentSchema.optional(),
+  video: MediaContentSchema.optional(),
+  document: MediaContentSchema.optional(),
+  audio: MediaContentSchema.optional(),
+  voice: MediaContentSchema.optional(),
+  sticker: MediaContentSchema.optional(),
+  location: LocationContentSchema.optional(),
+  reaction: ReactionContentSchema.optional(),
+  interactive: InteractiveReplySchema.optional(),
+
+  // Context (reply to message)
+  context: z
+    .object({
+      from: PhoneNumberSchema.optional(),
+      id: z.string(),
+    })
+    .optional(),
+});
+
+// Status update schema
+export const StatusUpdateSchema = z.object({
+  id: z.string(),
+  status: z.enum(['sent', 'delivered', 'read', 'failed', 'deleted']),
+  timestamp: z.string(),
+  recipient_id: PhoneNumberSchema,
+  conversation: z
+    .object({
+      id: z.string(),
+      origin: z.object({
+        type: z.string(),
+      }),
+    })
+    .optional(),
+  pricing: z
+    .object({
+      billable: z.boolean(),
+      pricing_model: z.string(),
+      category: z.string(),
+    })
+    .optional(),
+  errors: z
+    .array(
+      z.object({
+        code: z.number(),
+        title: z.string(),
+        message: z.string().optional(),
+        error_data: z
+          .object({
+            details: z.string(),
+          })
+          .optional(),
+      })
+    )
+    .optional(),
+});
+
+// Value schema (contains messages or statuses)
+export const ValueSchema = z.object({
+  messaging_product: z.literal('whatsapp'),
+  metadata: z.object({
+    display_phone_number: z.string(),
+    phone_number_id: z.string(),
+  }),
+  contacts: z
+    .array(
+      z.object({
+        profile: z.object({
+          name: z.string(),
+        }),
+        wa_id: PhoneNumberSchema,
+      })
+    )
+    .optional(),
+  messages: z.array(WhatsAppMessageSchema).optional(),
+  statuses: z.array(StatusUpdateSchema).optional(),
+});
+
+// Change schema
+export const ChangeSchema = z.object({
+  value: ValueSchema,
+  field: z.literal('messages'),
+});
+
+// Entry schema
+export const EntrySchema = z.object({
+  id: z.string(),
+  changes: z.array(ChangeSchema),
+});
+
+// Main webhook payload schema
+export const WebhookPayloadSchema = z.object({
+  object: z.literal('whatsapp_business_account'),
+  entry: z.array(EntrySchema),
+});
+
+// Webhook verification schema (GET request)
+export const WebhookVerificationSchema = z.object({
+  'hub.mode': z.literal('subscribe'),
+  'hub.challenge': z.string(),
+  'hub.verify_token': z.string(),
+});
+
+// Type exports
+export type WhatsAppMessage = z.infer<typeof WhatsAppMessageSchema>;
+export type StatusUpdate = z.infer<typeof StatusUpdateSchema>;
+export type WebhookPayload = z.infer<typeof WebhookPayloadSchema>;
+export type WebhookVerification = z.infer<typeof WebhookVerificationSchema>;
+export type MessageType = z.infer<typeof MessageTypeSchema>;
+
+/**
+ * Validate WhatsApp webhook payload
+ * @returns Parsed payload or throws ZodError with validation details
+ */
+export function validateWebhookPayload(body: unknown): WebhookPayload {
+  return WebhookPayloadSchema.parse(body);
+}
+
+/**
+ * Safe validation with error handling
+ * @returns { success: true, data } or { success: false, error }
+ */
+export function safeValidateWebhookPayload(body: unknown) {
+  return WebhookPayloadSchema.safeParse(body);
+}
+
+/**
+ * Validate webhook verification request (GET)
+ * @returns Parsed verification params or throws ZodError
+ */
+export function validateWebhookVerification(params: unknown): WebhookVerification {
+  return WebhookVerificationSchema.parse(params);
+}
+
+/**
+ * Extract first message from webhook payload (helper)
+ */
+export function extractFirstMessage(payload: WebhookPayload): WhatsAppMessage | null {
+  const entry = payload.entry[0];
+  if (!entry) return null;
+
+  const change = entry.changes[0];
+  if (!change) return null;
+
+  const messages = change.value.messages;
+  if (!messages || messages.length === 0) return null;
+
+  return messages[0]!;
+}
+
+/**
+ * Extract first status update from webhook payload (helper)
+ */
+export function extractFirstStatus(payload: WebhookPayload): StatusUpdate | null {
+  const entry = payload.entry[0];
+  if (!entry) return null;
+
+  const change = entry.changes[0];
+  if (!change) return null;
+
+  const statuses = change.value.statuses;
+  if (!statuses || statuses.length === 0) return null;
+
+  return statuses[0]!;
+}

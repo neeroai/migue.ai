@@ -3,7 +3,7 @@
 # Project-specific directories to ignore
 .claude
 .cursor
-.bmad-core
+# .bmad-core  <- NEVER DELETE THIS DIRECTORY (contains essential config)
 
 # Dependencies
 node_modules/

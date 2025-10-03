@@ -1,5 +1,6 @@
-import { chatCompletion, type ChatMessage } from './openai'
+import { chatCompletion, streamChatCompletion, type ChatMessage } from './openai'
 import type { Intent } from './intent'
+import { retrieveContext } from './rag/use-rag'
 
 const SYSTEM_PROMPTS: Record<Intent, string> = {
   casual_chat: `Eres migue.ai, un asistente personal amigable y útil en español (Latinoamérica).
@@ -31,8 +32,8 @@ Ejemplo: "¡Por supuesto! Envíame el documento y te ayudo a analizarlo."`,
 
   schedule_meeting: `Eres migue.ai, un asistente personal en español.
 El usuario quiere agendar una cita o reunión. Confirma la intención de forma amigable.
-Por ahora, responde confirmando. En el futuro integraremos Google Calendar.
-Ejemplo: "¡Entendido! Quieres agendar [detalle]. En breve tendremos integración con tu calendario."`,
+Pregunta sólo los datos faltantes (fecha, hora, duración, asistentes) si son necesarios para agendar en Google Calendar.
+Ejemplo: "Perfecto, agendamos [detalle]. ¿Qué día y a qué hora la quieres?"`,
 
   other: `Eres migue.ai, un asistente personal amigable en español.
 Responde de forma útil y natural. Si no estás seguro, pregunta para clarificar.
@@ -44,6 +45,8 @@ export type ResponseOptions = {
   conversationHistory?: ChatMessage[]
   userMessage: string
   userName?: string
+  userId?: string
+  documentId?: string
 }
 
 /**
@@ -53,36 +56,60 @@ export type ResponseOptions = {
 export async function generateResponse(
   options: ResponseOptions
 ): Promise<string> {
-  const { intent, conversationHistory = [], userMessage, userName } = options
+  const { intent, conversationHistory = [], userMessage, userName, userId, documentId } = options
 
   const systemPrompt = SYSTEM_PROMPTS[intent] || SYSTEM_PROMPTS.other
   const enhancedSystemPrompt = userName
     ? `${systemPrompt}\n\nEl usuario se llama ${userName}.`
     : systemPrompt
 
-  const messages: ChatMessage[] = [
-    { role: 'system', content: enhancedSystemPrompt },
-  ]
+  const baseMessages: ChatMessage[] = [{ role: 'system', content: enhancedSystemPrompt }]
 
-  // Add conversation history (last 5 messages for context)
   if (conversationHistory.length > 0) {
-    const recentHistory = conversationHistory.slice(-5)
-    messages.push(...recentHistory)
+    baseMessages.push(...conversationHistory.slice(-5))
   }
 
-  // Add current user message
-  messages.push({ role: 'user', content: userMessage })
+  baseMessages.push({ role: 'user', content: userMessage })
 
   try {
-    const response = await chatCompletion(messages, {
+    let finalMessages: ChatMessage[] = baseMessages
+
+    if (intent === 'analyze_document' && userId) {
+      const contextChunks = await retrieveContext({
+        userId,
+        documentId,
+        query: userMessage,
+        topK: 5,
+      })
+      if (contextChunks.length > 0) {
+        const contextString = contextChunks
+          .map((chunk, idx) => `Fragmento ${idx + 1} (score ${chunk.score.toFixed(2)}): ${chunk.content}`)
+          .join('\n\n')
+        finalMessages = [
+          {
+            role: 'system',
+            content: `${enhancedSystemPrompt}\nUsa únicamente el siguiente contexto para fundamentar tu respuesta y cita el fragmento correspondiente:\n${contextString}`,
+          },
+          ...baseMessages.slice(1),
+        ]
+      }
+    }
+
+    const completionOptions = {
       model: 'gpt-4o',
       temperature: 0.7,
-      maxTokens: 300, // Keep responses concise for WhatsApp
-    })
+      maxTokens: 300,
+    }
 
-    return response.trim()
+    try {
+      const streamed = await streamChatCompletion(finalMessages, completionOptions)
+      return streamed.trim()
+    } catch (streamError: any) {
+      console.error('Streaming error:', streamError?.message)
+      const fallback = await chatCompletion(finalMessages, completionOptions)
+      return fallback.trim()
+    }
   } catch (error: any) {
-    // Fallback response on error
     return `Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentar de nuevo?`
   }
 }

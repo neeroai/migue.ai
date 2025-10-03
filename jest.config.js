@@ -1,31 +1,56 @@
 /** @type {import('jest').Config} */
 export default {
   preset: 'ts-jest/presets/default-esm',
+  testEnvironment: '@edge-runtime/jest-environment',
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+
+  // ESM support
   extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^@/(.*)$': '<rootDir>/$1',
   },
-  testEnvironment: 'node',
-  roots: ['<rootDir>/api', '<rootDir>/lib'],
-  testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/?(*.)+(spec|test).ts'
-  ],
   transform: {
-    '^.+\\.ts$': 'ts-jest'
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        useESM: true,
+        tsconfig: {
+          module: 'ES2022',
+          moduleResolution: 'bundler',
+        },
+      },
+    ],
   },
+
+  // Test patterns
+  testMatch: [
+    '<rootDir>/tests/unit/**/*.test.ts',
+    '<rootDir>/tests/integration/**/*.test.ts',
+  ],
+  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/.vercel/'],
+
+  // Coverage
   collectCoverageFrom: [
-    'api/**/*.ts',
     'lib/**/*.ts',
+    'api/**/*.ts',
     '!**/*.d.ts',
-    '!**/node_modules/**'
+    '!**/node_modules/**',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/$1'
-  }
+  // Note: Coverage disabled for Edge Runtime (doesn't support code generation)
+  // coverageThreshold: {
+  //   global: { branches: 60, functions: 60, lines: 60, statements: 60 },
+  //   './lib/': { branches: 80, functions: 80, lines: 80, statements: 80 },
+  // },
+
+  // Performance
+  maxWorkers: '50%',
+  testTimeout: 10000,
+
+  // Output
+  verbose: true,
+  clearMocks: true,
+  restoreMocks: true,
 };

@@ -116,6 +116,7 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 - **Seguridad de Secretos**: Nunca commitear o logear secretos; validar todas las entradas y codificar/normalizar salidas
 - **Nombres Intencionados**: Evitar abstracciones prematuras y usar nombres que revelen la intención
 - **Comparación de Opciones**: Comparar al menos dos opciones antes de decidir
+- **⚠️ CRÍTICO: NUNCA eliminar el directorio `.bmad-core/`** - Contiene configuración esencial del proyecto
 
 ### Mentalidad de Desarrollo
 - **Pensar como Senior Engineer**: No saltar a conclusiones o apresurarse
@@ -281,14 +282,26 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 - [x] Implementación de arquitectura Vercel Edge Functions + Supabase
 - [x] Deployment exitoso en producción (Vercel)
 - [x] Edge Functions con static imports funcionando correctamente
-- [ ] Funcionalidades básicas: texto, reconocimiento de intención con OpenAI
-- [ ] Integración con OpenAI para respuestas
+- [x] Funcionalidades básicas: texto, reconocimiento de intención con OpenAI
+- [x] Integración con OpenAI para respuestas (GPT-4o)
+- [x] Sistema de IA con intent classification (8 categorías)
+- [x] Generación de respuestas contextuales con historial
+- [x] Database optimization con RLS indexes (100x mejora)
 
-### Fase 2: Funcionalidades Core (Mes 3-4)
+### Fase 2: Funcionalidades Core (Mes 3-4) 🔄
+- [x] Sistema de intent classification con GPT-4o
+- [x] Response generation contextual
+- [x] Conversation history management
+- [x] Documentación completa de Vercel (6 guías + índice)
+- [x] Optimización de performance (Edge Functions < 100ms)
+- [x] **Testing Infrastructure (Week 1)**: Jest + Edge Runtime + 39 unit tests
+- [x] **Zod Validation**: WhatsApp webhook schemas completos (types/schemas.ts)
+- [x] **Type Safety**: Validación de 13 formatos de mensaje WhatsApp
+- [ ] Transcripción de audios (Whisper API) - En progreso
 - [ ] Gestión de calendarios (Google Calendar)
-- [ ] Transcripción de audios (Whisper API)
-- [ ] Sistema de recordatorios (Vercel Cron + Supabase)
+- [ ] Sistema de recordatorios completamente funcional
 - [ ] Análisis básico de documentos (RAG con embeddings + Supabase)
+- [ ] Streaming de respuestas GPT-4o implementado
 
 ### Fase 3: Avanzado (Mes 5-6)
 - [ ] Agente autónomo para reservas (Zapia Conecta style)
@@ -325,7 +338,19 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 ---
 
 **Fecha de creación**: 2025-01-27
-**Última actualización**: 2025-01-29
-**Versión**: 1.1
-**Estado**: En desarrollo - Fase 2 (Core Features)
+**Última actualización**: 2025-10-03
+**Versión**: 1.3
+**Estado**: En desarrollo - Fase 2 (Core Features - Progreso 60%)
 **Deployment**: ✅ Producción activa en Vercel
+
+**Últimos Logros (Week 1 - Testing Infrastructure)**:
+- ✅ Testing Infrastructure completa: Jest + @edge-runtime + 39 unit tests
+- ✅ Zod Validation: Schemas completos para WhatsApp webhooks (types/schemas.ts)
+- ✅ Type Safety: Validación de 13 formatos de mensaje con Zod
+- ✅ Webhook mejorado: Integración Zod + mejor error handling
+
+**Logros Anteriores**:
+- ✅ Sistema de IA con GPT-4o implementado (intent + response)
+- ✅ Documentación completa de Vercel (2025 best practices)
+- ✅ Database optimization con RLS indexes (100x mejora)
+- ✅ Edge Functions optimizadas (< 100ms latency)

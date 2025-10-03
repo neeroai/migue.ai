@@ -111,6 +111,64 @@ create index if not exists idx_reminders_time on public.reminders(scheduled_time
 create index if not exists idx_reminders_status_time on public.reminders(status, scheduled_time);
 create unique index if not exists uniq_reminders_send_token on public.reminders(send_token) where send_token is not null;
 
+create table if not exists public.calendar_credentials (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  provider text not null default 'google',
+  refresh_token text not null,
+  access_token text,
+  access_token_expires_at timestamptz,
+  scope text[],
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint chk_calendar_provider check (provider = 'google')
+);
+create unique index if not exists uniq_calendar_credentials_user_provider on public.calendar_credentials(user_id, provider);
+
+create table if not exists public.calendar_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  provider text not null default 'google',
+  external_id text not null,
+  summary text not null,
+  description text,
+  start_time timestamptz not null,
+  end_time timestamptz not null,
+  meeting_url text,
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists uniq_calendar_events_user_ext on public.calendar_events(user_id, provider, external_id);
+create index if not exists idx_calendar_events_user_time on public.calendar_events(user_id, start_time);
+
+create table if not exists public.conversation_actions (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  user_id uuid not null references public.users(id) on delete cascade,
+  action_type text not null,
+  payload jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_conversation_actions_conversation on public.conversation_actions(conversation_id);
+create index if not exists idx_conversation_actions_user on public.conversation_actions(user_id);
+
+do $$ begin
+  create type follow_up_status as enum ('pending','sent','failed','cancelled');
+exception when duplicate_object then null; end $$;
+
+create table if not exists public.follow_up_jobs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  category text not null,
+  status follow_up_status not null default 'pending',
+  scheduled_for timestamptz not null,
+  payload jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_follow_up_jobs_status_time on public.follow_up_jobs(status, scheduled_for);
+
 create table if not exists public.documents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
@@ -143,6 +201,10 @@ alter table public.messages_v2 enable row level security;
 alter table public.reminders enable row level security;
 alter table public.documents enable row level security;
 alter table public.embeddings enable row level security;
+alter table public.calendar_credentials enable row level security;
+alter table public.calendar_events enable row level security;
+alter table public.conversation_actions enable row level security;
+alter table public.follow_up_jobs enable row level security;
 
 -- Permissive policies for initial development (tighten later with auth)
 drop policy if exists "allow_all_users" on public.users;
@@ -157,6 +219,14 @@ drop policy if exists "allow_all_documents" on public.documents;
 create policy "allow_all_documents" on public.documents for all using (true) with check (true);
 drop policy if exists "allow_all_embeddings" on public.embeddings;
 create policy "allow_all_embeddings" on public.embeddings for all using (true) with check (true);
+drop policy if exists "allow_all_calendar_credentials" on public.calendar_credentials;
+create policy "allow_all_calendar_credentials" on public.calendar_credentials for all using (true) with check (true);
+drop policy if exists "allow_all_calendar_events" on public.calendar_events;
+create policy "allow_all_calendar_events" on public.calendar_events for all using (true) with check (true);
+drop policy if exists "allow_all_conversation_actions" on public.conversation_actions;
+create policy "allow_all_conversation_actions" on public.conversation_actions for all using (true) with check (true);
+drop policy if exists "allow_all_follow_up_jobs" on public.follow_up_jobs;
+create policy "allow_all_follow_up_jobs" on public.follow_up_jobs for all using (true) with check (true);
 
 -- Business constraints & idempotency
 create unique index if not exists uniq_wa_message on public.messages_v2(wa_message_id);
@@ -197,6 +267,14 @@ drop trigger if exists t_conversations_updated on public.conversations;
 create trigger t_conversations_updated before update on public.conversations
 for each row execute function set_updated_at();
 
+drop trigger if exists t_calendar_credentials_updated on public.calendar_credentials;
+create trigger t_calendar_credentials_updated before update on public.calendar_credentials
+for each row execute function set_updated_at();
+
+drop trigger if exists t_follow_up_jobs_updated on public.follow_up_jobs;
+create trigger t_follow_up_jobs_updated before update on public.follow_up_jobs
+for each row execute function set_updated_at();
+
 -- Reminders business rules
 alter table public.reminders drop constraint if exists chk_reminder_future_on_insert;
 alter table public.reminders add constraint chk_reminder_future_on_insert check (created_at <= scheduled_time);
@@ -230,5 +308,3 @@ end $$ language plpgsql;
 drop trigger if exists t_reminders_set_token on public.reminders;
 create trigger t_reminders_set_token before update on public.reminders
 for each row execute function reminders_set_send_token();
-
-
