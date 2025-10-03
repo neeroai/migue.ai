@@ -39,7 +39,6 @@ See `.env.example` - Required: `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`
 - **Security First**: NEVER commit secrets; validate inputs, encode outputs
 - **Test Coverage**: Minimum 80% for critical modules
 - **Edge Runtime**: ALL api routes MUST export `export const config = { runtime: 'edge' }`
-- **⚠️ CRITICAL: NEVER delete `.bmad-core/` directory** - Contains essential project configuration
 
 ### Code Limits (Enforced)
 - File: ≤ 300 LOC

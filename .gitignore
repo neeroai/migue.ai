@@ -4,6 +4,7 @@
 .claude
 .cursor
 # .bmad-core  <- NEVER DELETE THIS DIRECTORY (contains essential config)
+docs/
 
 # Dependencies
 node_modules/

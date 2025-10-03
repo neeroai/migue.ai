@@ -25,6 +25,7 @@ describe('parseReminderRequest', () => {
   it('returns ready reminder when extraction succeeds', async () => {
     mockedChatCompletion.mockResolvedValueOnce(
       JSON.stringify({
+        status: 'ready',
         title: 'Llamar a Juan',
         description: 'Confirmar pago',
         datetime_iso: '2025-10-10T15:00:00-05:00',
@@ -43,7 +44,11 @@ describe('parseReminderRequest', () => {
 
   it('returns clarification when missing fields', async () => {
     mockedChatCompletion.mockResolvedValueOnce(
-      JSON.stringify({ missing: ['fecha', 'hora'], clarification: '¿Cuándo quieres el recordatorio?' })
+      JSON.stringify({
+        status: 'needs_clarification',
+        missing: ['fecha', 'hora'],
+        clarification: '¿Cuándo quieres el recordatorio?',
+      })
     )
 
     const result = await parseReminderRequest('Recuérdame pagar la renta')

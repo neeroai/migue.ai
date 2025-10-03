@@ -4,29 +4,33 @@ import { getSupabaseServerClient } from './supabase'
 
 const REMINDER_PROMPT = `Extrae recordatorios de la frase del usuario y responde JSON:
 {
+  "status": "ready",
   "title": "Qué recordar",
   "description": "Detalles opcionales",
   "datetime_iso": "YYYY-MM-DDTHH:MM:SS-05:00"
 }
 Si falta información crítica (fecha u hora), responde con:
 {
+  "status": "needs_clarification",
   "missing": ["campo"],
   "clarification": "Pregunta al usuario"
 }`
 
-// Zod schemas for AI response validation
+// Zod schemas for AI response validation (discriminated union for type safety)
 const ReminderReadySchema = z.object({
+  status: z.literal('ready'),
   title: z.string(),
   description: z.string().nullable().optional(),
   datetime_iso: z.string(),
 })
 
 const ReminderClarificationSchema = z.object({
+  status: z.literal('needs_clarification'),
   missing: z.array(z.string()),
   clarification: z.string(),
 })
 
-const ReminderResponseSchema = z.union([
+const ReminderResponseSchema = z.discriminatedUnion('status', [
   ReminderReadySchema,
   ReminderClarificationSchema,
 ])
@@ -74,8 +78,8 @@ export async function parseReminderRequest(
 
   const parsed = result.data
 
-  // Check if it's a clarification response (has 'missing' field)
-  if ('missing' in parsed) {
+  // TypeScript can now correctly narrow the type using discriminator
+  if (parsed.status === 'needs_clarification') {
     return {
       status: 'needs_clarification',
       missing: parsed.missing,
