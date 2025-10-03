@@ -53,6 +53,25 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
     wa_message_id: msg.waMessageId ?? null,
     timestamp: new Date(msg.timestamp).toISOString(),
   }
-  const { error } = await supabase.from('messages').insert(payload)
+  const { error } = await supabase.from('messages_v2').insert(payload)
+  if (error) throw error
+}
+
+export async function insertOutboundMessage(
+  conversationId: string,
+  content: string,
+  waMessageId?: string
+) {
+  const supabase = getSupabaseServerClient()
+  const payload = {
+    conversation_id: conversationId,
+    direction: 'outbound',
+    type: 'text',
+    content,
+    media_url: null,
+    wa_message_id: waMessageId ?? null,
+    timestamp: new Date().toISOString(),
+  }
+  const { error } = await supabase.from('messages_v2').insert(payload)
   if (error) throw error
 }

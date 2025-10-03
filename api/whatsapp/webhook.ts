@@ -1,6 +1,9 @@
 export const config = { runtime: 'edge' };
 
-import { upsertUserByPhone, getOrCreateConversation, insertInboundMessage } from '../../lib/persist';
+import { upsertUserByPhone, getOrCreateConversation, insertInboundMessage, insertOutboundMessage } from '../../lib/persist';
+import { getConversationHistory, historyToChatMessages } from '../../lib/context';
+import { classifyIntent } from '../../lib/intent';
+import { generateResponse } from '../../lib/response';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -117,6 +120,69 @@ async function persistNormalizedMessage(normalized: ReturnType<typeof extractNor
   const userId = await upsertUserByPhone(normalized.from)
   const conversationId = await getOrCreateConversation(userId, normalized.conversationId)
   await insertInboundMessage(conversationId, normalized as any)
+  return { userId, conversationId }
+}
+
+async function sendWhatsAppMessage(to: string, text: string): Promise<string | null> {
+  const token = process.env.WHATSAPP_TOKEN
+  const phoneId = process.env.WHATSAPP_PHONE_ID
+  if (!token || !phoneId) return null
+
+  const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`
+  const payload = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'text',
+    text: { body: text },
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) return null
+  const data = await res.json() as any
+  return data?.messages?.[0]?.id ?? null
+}
+
+async function processMessageWithAI(
+  conversationId: string,
+  userPhone: string,
+  userMessage: string
+) {
+  try {
+    // Get conversation history
+    const history = await getConversationHistory(conversationId, 10)
+    const chatHistory = historyToChatMessages(history)
+
+    // Classify intent
+    const intentResult = await classifyIntent(userMessage, chatHistory)
+
+    // Generate response
+    const response = await generateResponse({
+      intent: intentResult.intent,
+      conversationHistory: chatHistory,
+      userMessage,
+    })
+
+    // Send to WhatsApp
+    const waMessageId = await sendWhatsAppMessage(userPhone, response)
+
+    // Persist outbound message
+    if (waMessageId) {
+      await insertOutboundMessage(conversationId, response, waMessageId)
+    } else {
+      await insertOutboundMessage(conversationId, response)
+    }
+  } catch (error: any) {
+    // Log error but don't fail webhook (fail silently)
+    console.error('AI processing error:', error?.message)
+  }
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -147,10 +213,23 @@ export default async function handler(req: Request): Promise<Response> {
       return jsonResponse({ status: 'ignored', reason: 'no message', request_id: requestId }, 200);
     }
 
+    let conversationId: string
     try {
-      await persistNormalizedMessage(normalized)
+      const result = await persistNormalizedMessage(normalized)
+      if (!result) {
+        return jsonResponse({ status: 'ignored', reason: 'persist failed', request_id: requestId }, 200)
+      }
+      conversationId = result.conversationId
     } catch (persistErr: any) {
       return jsonResponse({ error: 'DB error', detail: persistErr?.message, request_id: requestId }, 500)
+    }
+
+    // Process text messages with AI (async, don't block webhook response)
+    if (normalized.type === 'text' && normalized.content && normalized.from) {
+      // Fire and forget - process in background
+      processMessageWithAI(conversationId, normalized.from, normalized.content).catch((err) => {
+        console.error('Background AI processing failed:', err)
+      })
     }
 
     return jsonResponse({ success: true, request_id: requestId });
