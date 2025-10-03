@@ -13,8 +13,13 @@ process.env.WHATSAPP_PHONE_ID = 'test-phone-id';
 global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
 describe('WhatsApp Interactive Buttons', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+
+    // Clear WhatsApp module caches
+    const { _clearCaches } = await import('../../lib/whatsapp');
+    _clearCaches();
+
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
       ok: true,
       json: async () => ({ messages: [{ id: 'msg_interactive_123' }] }),
@@ -39,7 +44,7 @@ describe('WhatsApp Interactive Buttons', () => {
 
     expect(result).toBe('msg_interactive_123');
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://graph.facebook.com/v19.0/test-phone-id/messages',
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -267,8 +272,13 @@ describe('WhatsApp Interactive Buttons', () => {
 });
 
 describe('WhatsApp Interactive Lists', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+
+    // Clear WhatsApp module caches
+    const { _clearCaches } = await import('../../lib/whatsapp');
+    _clearCaches();
+
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
       ok: true,
       json: async () => ({ messages: [{ id: 'msg_list_123' }] }),
@@ -295,7 +305,7 @@ describe('WhatsApp Interactive Lists', () => {
 
     expect(result).toBe('msg_list_123');
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://graph.facebook.com/v19.0/test-phone-id/messages',
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({

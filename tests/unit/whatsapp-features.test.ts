@@ -13,8 +13,13 @@ process.env.WHATSAPP_PHONE_ID = 'test-phone-id';
 global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
 describe('WhatsApp Reactions', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+
+    // Clear WhatsApp module caches
+    const { _clearCaches } = await import('../../lib/whatsapp');
+    _clearCaches();
+
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
       ok: true,
       json: async () => ({ messages: [{ id: 'msg_123' }] }),
@@ -29,12 +34,12 @@ describe('WhatsApp Reactions', () => {
 
     expect(result).toBe('msg_123');
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://graph.facebook.com/v19.0/test-phone-id/messages',
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
-          Authorization: 'Bearer test-token',
+          'Authorization': 'Bearer test-token',
         }),
         body: expect.stringContaining('"type":"reaction"'),
       })
@@ -115,8 +120,13 @@ describe('WhatsApp Reactions', () => {
 });
 
 describe('WhatsApp Read Receipts', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+
+    // Clear WhatsApp module caches
+    const { _clearCaches } = await import('../../lib/whatsapp');
+    _clearCaches();
+
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
       ok: true,
       json: async () => ({ success: true }),
@@ -130,7 +140,7 @@ describe('WhatsApp Read Receipts', () => {
     await markAsRead('wamid.ABC123');
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://graph.facebook.com/v19.0/test-phone-id/messages',
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -161,9 +171,14 @@ describe('WhatsApp Read Receipts', () => {
 });
 
 describe('Enhanced Typing Manager', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+
+    // Clear WhatsApp module caches
+    const { _clearCaches } = await import('../../lib/whatsapp');
+    _clearCaches();
+
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
       ok: true,
       json: async () => ({ success: true }),

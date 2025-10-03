@@ -1,9 +1,12 @@
 /**
  * Document processing module
  * Handles PDF extraction and image analysis from WhatsApp messages
+ *
+ * NOTE: This module uses pdf-parse which is NOT compatible with Edge Runtime.
+ * This file should only be used in Node.js runtime routes.
+ * For Edge Runtime, use a separate serverless function or disable PDF processing.
  */
 
-import { pdf } from 'pdf-parse'
 import { downloadWhatsAppMedia } from './whatsapp-media'
 import { saveDocumentToStorage } from './storage'
 import { getOpenAIClient } from './openai'
@@ -31,9 +34,12 @@ export type ImageAnalysis = {
 
 /**
  * Extract text from PDF bytes using pdf-parse
+ * IMPORTANT: This function is NOT compatible with Edge Runtime
  */
 async function extractPDFText(bytes: Uint8Array): Promise<{ text: string; pageCount: number }> {
   try {
+    // Dynamic import to avoid bundling in Edge Runtime
+    const { pdf } = await import('pdf-parse')
     const data = await pdf(Buffer.from(bytes)) as any
     return {
       text: data.text?.trim() ?? '',
