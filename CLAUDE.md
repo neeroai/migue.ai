@@ -115,10 +115,38 @@ npm run test:e2e      # Playwright only
 3. Update TypeScript types
 
 ### Deploy
+
+**IMPORTANT**: Always validate before deploying to prevent build failures
+
+#### Pre-Deploy Validation (MANDATORY)
 ```bash
-git add . && git commit -m "feat: description"
+# Quick validation (recommended before every push)
+npm run pre-deploy
+
+# Full automated verification
+npm run verify-deploy
+```
+
+#### Manual Deploy Process
+```bash
+# 1. Validate locally
+npm run typecheck    # Type safety
+npm run build        # Build validation
+npm run test:unit    # Unit tests
+
+# 2. Commit and push
+git add .
+git commit -m "feat: description"
 git push origin main  # Auto-deploys to Vercel
 ```
+
+#### Automated Protections
+- **Pre-commit hook**: Type check (fast)
+- **Pre-push hook**: Full build + tests (prevents Vercel failures)
+- **GitHub Actions**: CI pipeline on PRs
+- **Vercel**: Build validation before deployment
+
+**See**: [Deploy Checklist](./docs/05-deployment/DEPLOY-CHECKLIST.md)
 
 ---
 
@@ -208,6 +236,12 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 - ✅ Reorganized `/docs` into numbered categories (01-10)
 - ✅ Consolidated documentation (56 files → 35 files)
 - ✅ Created main documentation index
+- ✅ **Deploy Validation System** - Prevents Vercel build failures:
+  - Pre-commit hooks (Husky) - type checking
+  - Pre-push hooks - full build + tests
+  - GitHub Actions CI pipeline
+  - Automated verification script
+  - Deploy checklist documentation
 - 🔄 Fase 2 development in progress
 
 ### Migration to Next.js 15 (Complete)

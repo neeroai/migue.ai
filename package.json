@@ -22,7 +22,10 @@
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist .vercel coverage test-results out .next",
     "setup": "npm install && npm run typecheck",
-    "postinstall": "playwright install"
+    "postinstall": "playwright install",
+    "pre-deploy": "npm run typecheck && npm run build && npm run test:unit",
+    "verify-deploy": "node scripts/verify-deploy.js",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
@@ -35,6 +38,7 @@
     "@types/node": "^24.5.2",
     "@types/react": "19.1.15",
     "dotenv-cli": "^10.0.0",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
     "playwright": "^1.55.1",
     "supertest": "^7.1.4",

@@ -23,6 +23,7 @@
 |--------------|-------|-------|-----------|-----------------|
 | **Frontend Development** | frontend-developer | Sonnet | UI work is mostly routine | "React", "component", "UI", "CSS", "responsive" |
 | **Backend API** | backend-developer | Sonnet | CRUD operations standard | "API", "endpoint", "route", "database query" |
+| **Edge Functions** | edge-functions-expert | Sonnet | Edge Runtime patterns established | "edge function", "edge runtime", "vercel edge", "cold start", "bundle size" |
 | **TypeScript Architecture** | typescript-pro | Opus | Complex type systems need deep reasoning | "type safety", "generics", "architecture", "refactor" |
 | **AI/ML Features** | ai-engineer | Opus | LLM integration complex | "OpenAI", "RAG", "embeddings", "streaming", "Whisper" |
 | **Testing** | general-purpose | Sonnet | Test writing mostly mechanical | "test", "spec", "coverage", "jest" |
@@ -87,6 +88,24 @@
 **Delegation Command**:
 ```
 /task ai-engineer "Complete RAG implementation with pgvector, document ingestion, and semantic search. Target <200ms retrieval latency."
+```
+
+---
+
+#### Edge Functions Development
+**Agent**: `edge-functions-expert` (Sonnet)
+**Reason**: Edge Runtime requires specific patterns and optimizations
+**Scope**:
+- Edge Function creation/modification
+- Node.js to Edge Runtime migration
+- Performance optimization (cold start, bundle size)
+- Streaming responses implementation
+- HMAC signature validation
+- WhatsApp webhook optimization
+
+**Delegation Command**:
+```
+/task edge-functions-expert "Optimize WhatsApp webhook Edge Function for <100ms cold start and implement streaming responses with chunking."
 ```
 
 ---
@@ -279,6 +298,7 @@ graph TD
 
     B -->|UI/Frontend| C[frontend-developer<br/>Sonnet]
     B -->|API/Backend| D{Complex?}
+    B -->|Edge Functions| E1[edge-functions-expert<br/>Sonnet]
     B -->|AI/ML| E[ai-engineer<br/>Opus]
     B -->|Testing| F[general-purpose<br/>Sonnet]
     B -->|Review| G[code-reviewer<br/>Opus]
@@ -296,6 +316,11 @@ graph TD
     N -->|No| P{Streaming?}
     P -->|Yes| O
     P -->|No| O
+
+    E1 --> Q{Edge Runtime?}
+    Q -->|Migration| R[Node.js to Edge<br/>Migration]
+    Q -->|Optimization| S[Cold Start/<br/>Bundle Size]
+    Q -->|Streaming| T[SSE/Chunking]
 ```
 
 ---
@@ -387,6 +412,32 @@ graph TD
 - Complex ML integration
 - Advanced architecture
 - UI development
+
+---
+
+### edge-functions-expert (Sonnet)
+**Expertise**:
+- Vercel Edge Functions
+- Edge Runtime APIs (Web APIs, Web Crypto)
+- Performance optimization (cold start, bundle size, memory)
+- Streaming responses (SSE, ReadableStream)
+- Node.js to Edge migration patterns
+- WhatsApp webhook optimization
+- Security patterns (HMAC, rate limiting)
+
+**Use For**:
+- Creating/modifying Edge Functions
+- Optimizing cold start performance
+- Converting Node.js code to Edge Runtime
+- Implementing streaming responses
+- Fixing Edge Runtime compatibility issues
+- Reducing bundle size
+- WhatsApp 5s timeout compliance
+
+**Avoid For**:
+- Frontend UI components
+- Complex database schema design
+- Advanced TypeScript architecture
 
 ---
 
