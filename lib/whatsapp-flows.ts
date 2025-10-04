@@ -1,9 +1,10 @@
 /**
  * WhatsApp Flows - v23.0 Implementation
  * Handles interactive flow messages and data exchange
+ *
+ * ✅ Edge Runtime Compatible - Uses Web Crypto API
  */
 
-import { randomBytes } from 'crypto';
 import { sendWhatsAppRequest } from './whatsapp';
 import { getSupabaseServerClient } from './supabase';
 import type {
@@ -14,10 +15,13 @@ import type {
 } from '@/types/whatsapp';
 
 /**
- * Generate a secure flow token
+ * Generate a secure flow token using Web Crypto API (Edge Runtime compatible)
  */
 export function generateFlowToken(): string {
-  return randomBytes(32).toString('hex');
+  // Use Web Crypto API available in Edge Runtime
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -54,14 +58,13 @@ export async function sendFlow(
       .single();
 
     if (user) {
-      // @ts-ignore - flow_sessions table exists but types not yet regenerated
       await supabase.from('flow_sessions').insert({
         user_id: user.id,
         flow_id: flowId,
         flow_token: flowToken,
         flow_type: flowType,
-        status: 'pending',
-        session_data: options?.initialData || {},
+        status: 'pending' as const,
+        session_data: (options?.initialData || {}) as any,
       });
     }
 
@@ -119,7 +122,6 @@ export async function handleFlowDataExchange(
 
     // Validate flow token
     const supabase = getSupabaseServerClient();
-    // @ts-ignore - flow_sessions table exists but types not yet regenerated
     const { data: session } = await supabase
       .from('flow_sessions')
       .select('*')
@@ -132,7 +134,6 @@ export async function handleFlowDataExchange(
     }
 
     // Update session status
-    // @ts-ignore - flow_sessions table exists but types not yet regenerated
     await supabase
       .from('flow_sessions')
       .update({
@@ -225,7 +226,6 @@ async function handleDataExchange(
   const supabase = getSupabaseServerClient();
 
   // Save screen data
-  // @ts-ignore - flow_sessions table exists but types not yet regenerated
   await supabase
     .from('flow_sessions')
     .update({
@@ -305,7 +305,6 @@ async function handleDataExchange(
  */
 export async function completeFlowSession(flowToken: string): Promise<void> {
   const supabase = getSupabaseServerClient();
-  // @ts-ignore - flow_sessions table exists but types not yet regenerated
   await supabase
     .from('flow_sessions')
     .update({
@@ -321,12 +320,15 @@ function validateLeadData(data: Record<string, unknown>): boolean {
 }
 
 function getAvailableDates(): string[] {
-  const dates = [];
+  const dates: string[] = [];
   const today = new Date();
   for (let i = 1; i <= 14; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
-    dates.push(date.toISOString().split('T')[0]);
+    const dateString = date.toISOString().split('T')[0];
+    if (dateString) {
+      dates.push(dateString);
+    }
   }
   return dates;
 }
@@ -342,11 +344,10 @@ function generateAppointmentId(): string {
 
 async function saveFeedback(userId: string, data: Record<string, unknown>): Promise<void> {
   const supabase = getSupabaseServerClient();
-  // @ts-ignore - user_interactions table exists but types not yet regenerated
   await supabase.from('user_interactions').insert({
     user_id: userId,
-    interaction_type: 'flow_completion',
-    metadata: { feedback: data },
+    interaction_type: 'flow_completion' as const,
+    metadata: { feedback: data } as any,
   });
 }
 

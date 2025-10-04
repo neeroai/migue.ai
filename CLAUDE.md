@@ -21,7 +21,7 @@ npm run test         # Run all tests
 - `types/schemas.ts` - Zod validation schemas
 
 ### Environment Variables
-See `.env.example` - Required: `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`
+See `.env.local` - Required: `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`
 
 ---
 
@@ -169,8 +169,14 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 ### Documentation
 - **[AGENTS.md](./AGENTS.md)** - Business blueprint & project context
 - **[README.md](./README.md)** - Overview & quick start
-- **[docs/SUPABASE.md](./docs/SUPABASE.md)** - Database schema & RLS
-- **[docs/deployment/](./docs/deployment/)** - Vercel guides (6 docs)
+- **[docs/README.md](./docs/README.md)** - Complete documentation index
+- **[docs/01-getting-started/](./docs/01-getting-started/)** - Setup & installation
+- **[docs/02-architecture/](./docs/02-architecture/)** - System design & data models
+- **[docs/03-api-reference/](./docs/03-api-reference/)** - API documentation (WhatsApp, Supabase, OpenAI)
+- **[docs/04-features/](./docs/04-features/)** - Feature implementation guides
+- **[docs/05-deployment/](./docs/05-deployment/)** - Vercel deployment guides
+- **[docs/06-whatsapp/](./docs/06-whatsapp/)** - WhatsApp API integration
+- **[docs/08-project-management/](./docs/08-project-management/)** - PRD, roadmap, planning
 
 ### External References
 - [WhatsApp API](https://developers.facebook.com/docs/whatsapp)
@@ -199,6 +205,9 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 - ✅ CLAUDE-MASTER v2.0 structure initialized
 - ✅ Created complete `.claude/` organization
 - ✅ Compacted CLAUDE.md to <200 lines
+- ✅ Reorganized `/docs` into numbered categories (01-10)
+- ✅ Consolidated documentation (56 files → 35 files)
+- ✅ Created main documentation index
 - 🔄 Fase 2 development in progress
 
 ### Migration to Next.js 15 (Complete)

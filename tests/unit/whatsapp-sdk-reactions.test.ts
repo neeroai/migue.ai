@@ -1,79 +1,136 @@
 /**
- * WhatsApp SDK Reactions Test
- * Tests message reaction functionality from SDK wrapper
+ * WhatsApp Reactions Test
+ * Tests message reaction functionality from lib/whatsapp.ts
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
-// Mock whatsapp-client-sdk before importing wrapper
-const mockReactWithLike = jest.fn();
-const mockReactWithLove = jest.fn();
-const mockReactWithFire = jest.fn();
-const mockReactWithCheck = jest.fn();
-const mockSendReaction = jest.fn();
-const mockMarkMessageAsRead = jest.fn();
+// Mock environment variables
+process.env.WHATSAPP_TOKEN = 'test-token';
+process.env.WHATSAPP_PHONE_ID = 'test-phone-id';
 
-jest.mock('whatsapp-client-sdk', () => ({
-  WhatsAppClient: jest.fn().mockImplementation(() => ({
-    reactWithLike: mockReactWithLike,
-    reactWithLove: mockReactWithLove,
-    reactWithFire: mockReactWithFire,
-    reactWithCheck: mockReactWithCheck,
-    sendReaction: mockSendReaction,
-    markMessageAsRead: mockMarkMessageAsRead,
-  })),
-}));
+// Mock fetch globally
+global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
-describe('WhatsApp SDK Reactions', () => {
-  beforeEach(() => {
+describe('WhatsApp Reactions', () => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    mockReactWithLike.mockResolvedValue({ success: true, messageId: 'test-msg-id' });
-    mockReactWithLove.mockResolvedValue({ success: true, messageId: 'test-msg-id' });
-    mockReactWithFire.mockResolvedValue({ success: true, messageId: 'test-msg-id' });
-    mockReactWithCheck.mockResolvedValue({ success: true, messageId: 'test-msg-id' });
-    mockSendReaction.mockResolvedValue({ success: true, messageId: 'test-msg-id' });
-    mockMarkMessageAsRead.mockResolvedValue({ success: true });
+
+    // Clear WhatsApp module caches
+    const { _clearCaches } = await import('../../lib/whatsapp');
+    _clearCaches();
+
+    (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: 'test-msg-id' }] }),
+      text: async () => '',
+    } as Response);
   });
 
   it('should send like reaction', async () => {
-    const { reactWithLike } = await import('../../lib/whatsapp-sdk-wrapper');
-    await reactWithLike('+1234567890', 'wamid.123');
+    const { reactWithLike } = await import('../../lib/whatsapp');
 
-    expect(mockReactWithLike).toHaveBeenCalledWith('+1234567890', 'wamid.123');
+    const result = await reactWithLike('+1234567890', 'wamid.123');
+
+    expect(result).toBe('test-msg-id');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"emoji":"👍"'),
+      })
+    );
   });
 
   it('should send love reaction', async () => {
-    const { reactWithLove } = await import('../../lib/whatsapp-sdk-wrapper');
-    await reactWithLove('+1234567890', 'wamid.123');
+    const { reactWithLove } = await import('../../lib/whatsapp');
 
-    expect(mockReactWithLove).toHaveBeenCalledWith('+1234567890', 'wamid.123');
+    const result = await reactWithLove('+1234567890', 'wamid.123');
+
+    expect(result).toBe('test-msg-id');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"emoji":"❤️"'),
+      })
+    );
   });
 
   it('should send fire reaction', async () => {
-    const { reactWithFire } = await import('../../lib/whatsapp-sdk-wrapper');
-    await reactWithFire('+1234567890', 'wamid.123');
+    const { reactWithFire } = await import('../../lib/whatsapp');
 
-    expect(mockReactWithFire).toHaveBeenCalledWith('+1234567890', 'wamid.123');
+    const result = await reactWithFire('+1234567890', 'wamid.123');
+
+    expect(result).toBe('test-msg-id');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"emoji":"🔥"'),
+      })
+    );
   });
 
   it('should send check reaction', async () => {
-    const { reactWithCheck } = await import('../../lib/whatsapp-sdk-wrapper');
-    await reactWithCheck('+1234567890', 'wamid.123');
+    const { reactWithCheck } = await import('../../lib/whatsapp');
 
-    expect(mockReactWithCheck).toHaveBeenCalledWith('+1234567890', 'wamid.123');
+    const result = await reactWithCheck('+1234567890', 'wamid.123');
+
+    expect(result).toBe('test-msg-id');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"emoji":"✅"'),
+      })
+    );
   });
 
   it('should send custom emoji reaction', async () => {
-    const { sendReaction } = await import('../../lib/whatsapp-sdk-wrapper');
-    await sendReaction('+1234567890', 'wamid.123', '🎉');
+    const { sendReaction } = await import('../../lib/whatsapp');
 
-    expect(mockSendReaction).toHaveBeenCalledWith('+1234567890', 'wamid.123', '🎉');
+    const result = await sendReaction('+1234567890', 'wamid.123', '🎉');
+
+    expect(result).toBe('test-msg-id');
+
+    const callBody = JSON.parse(
+      (global.fetch as jest.MockedFunction<typeof fetch>).mock.calls[0]![1]!.body as string
+    );
+    expect(callBody.reaction.emoji).toBe('🎉');
+    expect(callBody.reaction.message_id).toBe('wamid.123');
+  });
+
+  it('should remove reaction', async () => {
+    const { removeReaction } = await import('../../lib/whatsapp');
+
+    const result = await removeReaction('+1234567890', 'wamid.123');
+
+    expect(result).toBe('test-msg-id');
+
+    const callBody = JSON.parse(
+      (global.fetch as jest.MockedFunction<typeof fetch>).mock.calls[0]![1]!.body as string
+    );
+    expect(callBody.reaction.emoji).toBe('');
+    expect(callBody.reaction.message_id).toBe('wamid.123');
   });
 
   it('should mark message as read', async () => {
-    const { markMessageAsRead } = await import('../../lib/whatsapp-sdk-wrapper');
-    await markMessageAsRead('wamid.123');
+    const { markAsRead } = await import('../../lib/whatsapp');
 
-    expect(mockMarkMessageAsRead).toHaveBeenCalledWith('wamid.123');
+    await markAsRead('wamid.123');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://graph.facebook.com/v23.0/test-phone-id/messages',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"status":"read"'),
+      })
+    );
+
+    const callBody = JSON.parse(
+      (global.fetch as jest.MockedFunction<typeof fetch>).mock.calls[0]![1]!.body as string
+    );
+    expect(callBody.message_id).toBe('wamid.123');
   });
 });

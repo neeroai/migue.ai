@@ -14,13 +14,14 @@ export async function scheduleFollowUp(params: {
   const supabase = getSupabaseServerClient()
   const delay = params.delayMinutes ?? DEFAULT_DELAY_MINUTES
   const scheduledFor = new Date(Date.now() + delay * 60_000).toISOString()
-  await supabase
-    .from('follow_up_jobs')
+  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
+  await (supabase.from('follow_up_jobs') as any)
     .delete()
     .eq('conversation_id', params.conversationId)
     .eq('category', params.category)
     .eq('status', 'pending')
-  const { error } = await supabase.from('follow_up_jobs').insert({
+  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
+  const { error } = await (supabase.from('follow_up_jobs') as any).insert({
     user_id: params.userId,
     conversation_id: params.conversationId,
     category: params.category,
@@ -30,11 +31,17 @@ export async function scheduleFollowUp(params: {
   if (error) throw error
 }
 
-export async function fetchDueFollowUps(limit = 10) {
+export async function fetchDueFollowUps(limit = 10): Promise<Array<{
+  id: string;
+  user_id: string;
+  conversation_id: string;
+  category: string;
+  payload: Record<string, unknown> | null;
+}>> {
   const supabase = getSupabaseServerClient()
   const nowIso = new Date().toISOString()
-  const { data, error } = await supabase
-    .from('follow_up_jobs')
+  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
+  const { data, error } = await (supabase.from('follow_up_jobs') as any)
     .select('id, user_id, conversation_id, category, payload')
     .eq('status', 'pending')
     .lte('scheduled_for', nowIso)
@@ -45,8 +52,8 @@ export async function fetchDueFollowUps(limit = 10) {
 
 export async function markFollowUpStatus(id: string, status: 'sent' | 'failed' | 'cancelled') {
   const supabase = getSupabaseServerClient()
-  const { error } = await supabase
-    .from('follow_up_jobs')
+  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
+  const { error } = await (supabase.from('follow_up_jobs') as any)
     .update({ status })
     .eq('id', id)
   if (error) throw error

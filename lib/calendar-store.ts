@@ -29,8 +29,8 @@ export async function fetchCalendarCredential(
   provider: CalendarProvider = 'google'
 ): Promise<CalendarCredentialRecord | null> {
   const supabase = getSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('calendar_credentials')
+  // @ts-ignore - calendar_credentials table exists but types not yet regenerated
+  const { data, error } = await (supabase.from('calendar_credentials') as any)
     .select('id, user_id, provider, refresh_token, access_token, access_token_expires_at, scope')
     .eq('user_id', userId)
     .eq('provider', provider)
@@ -52,8 +52,8 @@ export async function updateAccessToken(
     access_token_expires_at: expiresAt,
   }
   if (scope) payload.scope = scope
-  const { error } = await supabase
-    .from('calendar_credentials')
+  // @ts-ignore - calendar_credentials table exists but types not yet regenerated
+  const { error } = await (supabase.from('calendar_credentials') as any)
     .update(payload)
     .eq('id', credentialId)
   if (error) throw error
@@ -61,7 +61,8 @@ export async function updateAccessToken(
 
 export async function recordCalendarEvent(input: CalendarEventRecordInput): Promise<void> {
   const supabase = getSupabaseServerClient()
-  const { error } = await supabase.from('calendar_events').upsert(
+  // @ts-ignore - calendar_events table exists but types not yet regenerated
+  const { error } = await (supabase.from('calendar_events') as any).upsert(
     {
       user_id: input.userId,
       provider: input.provider,

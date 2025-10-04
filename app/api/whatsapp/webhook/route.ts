@@ -11,6 +11,7 @@ import {
   persistNormalizedMessage,
 } from '../../../../lib/message-normalization';
 import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../../../lib/ai-processing';
+import { getSupabaseServerClient } from '../../../../lib/supabase';
 
 /**
  * Create JSON response helper
@@ -27,6 +28,40 @@ function jsonResponse(body: unknown, status = 200) {
  */
 function getRequestId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Webhook deduplication cache
+ * WhatsApp retries failed webhooks up to 5 times
+ */
+const processedWebhooks = new Map<string, number>();
+const DEDUP_WINDOW_MS = 60000; // 1 minute
+
+/**
+ * Check if webhook was already processed recently
+ */
+function isDuplicateWebhook(messageId: string): boolean {
+  const now = Date.now();
+
+  // Check if message was processed recently
+  if (processedWebhooks.has(messageId)) {
+    const processedAt = processedWebhooks.get(messageId)!;
+    if (now - processedAt < DEDUP_WINDOW_MS) {
+      return true;
+    }
+  }
+
+  // Mark message as processed
+  processedWebhooks.set(messageId, now);
+
+  // Clean old entries (prevent memory leak)
+  for (const [id, timestamp] of processedWebhooks) {
+    if (now - timestamp > DEDUP_WINDOW_MS) {
+      processedWebhooks.delete(id);
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -80,6 +115,18 @@ export async function POST(req: Request): Promise<Response> {
     const message = extractFirstMessage(payload);
     if (!message) {
       return jsonResponse({ status: 'ignored', reason: 'no message', request_id: requestId }, 200);
+    }
+
+    // Check for duplicate webhook (WhatsApp retries up to 5 times)
+    if (isDuplicateWebhook(message.id)) {
+      logger.info('[webhook] Duplicate webhook detected', {
+        requestId,
+        metadata: { messageId: message.id },
+      });
+      return jsonResponse(
+        { status: 'duplicate', message_id: message.id, request_id: requestId },
+        200
+      );
     }
 
     // Convert to normalized format
@@ -192,38 +239,44 @@ export async function POST(req: Request): Promise<Response> {
 
     // Process location message (v23.0)
     if (normalized.type === 'location' && message.location) {
-      // Use dynamic import to avoid circular dependencies
-      import('../../../../lib/supabase').then(({ getSupabaseServerClient }) => {
-        const supabase = getSupabaseServerClient();
-        // @ts-ignore - user_locations table exists but types not yet regenerated
-        supabase
-          .from('user_locations')
-          .insert({
-            user_id: userId,
-            conversation_id: conversationId,
-            latitude: message.location!.latitude,
-            longitude: message.location!.longitude,
-            name: message.location!.name || null,
-            address: message.location!.address || null,
-            timestamp: new Date().toISOString(),
-          })
-          .then(() => {
+      // Fire and forget - save location asynchronously
+      (async () => {
+        try {
+          const supabase = getSupabaseServerClient();
+          // @ts-ignore - user_locations table exists but types not yet regenerated
+          const { error } = await supabase
+            .from('user_locations')
+            .insert({
+              user_id: userId,
+              conversation_id: conversationId,
+              latitude: message.location!.latitude,
+              longitude: message.location!.longitude,
+              name: message.location!.name || null,
+              address: message.location!.address || null,
+              timestamp: new Date().toISOString(),
+            });
+
+          if (error) {
+            logger.error('Failed to save location', error, {
+              requestId,
+              conversationId,
+              userId,
+            });
+          } else {
             logger.info('[webhook] Location saved', {
               requestId,
               conversationId,
               userId,
             });
-          })
-          .catch((err: any) => {
-            logger.error('Failed to save location', err, {
-              requestId,
-              conversationId,
-              userId,
-            });
+          }
+        } catch (err: any) {
+          logger.error('Failed to save location', err, {
+            requestId,
+            conversationId,
+            userId,
           });
-      }).catch((err: any) => {
-        logger.error('Failed to import supabase', err, { requestId });
-      });
+        }
+      })();
     }
 
     return jsonResponse({ success: true, request_id: requestId });
