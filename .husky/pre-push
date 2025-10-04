@@ -1,6 +1,3 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
 # Full validation before push to prevent Vercel build failures
 echo "Running pre-push validation..."
 
