@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * WhatsApp Webhook Validation Schemas (2025)
- * Based on WhatsApp Business API v19.0
+ * Based on WhatsApp Business API v23.0
  */
 
 // E.164 phone number format (+ followed by 10-15 digits)
@@ -70,16 +70,27 @@ const ListReplyContentSchema = z.object({
   }),
 })
 
+// CTA Button Reply (v23.0)
+const CTAButtonReplyContentSchema = z.object({
+  type: z.literal('cta_url'),
+  cta_url: z.object({
+    id: z.string(),
+    title: z.string(),
+  }),
+})
+
 // Discriminated union for better type inference
 export const InteractiveContentSchema = z.discriminatedUnion('type', [
   ButtonReplyContentSchema,
   ListReplyContentSchema,
+  CTAButtonReplyContentSchema,
 ])
 
 // Export types for use in message-normalization.ts
 export type InteractiveContent = z.infer<typeof InteractiveContentSchema>
 export type ButtonReplyContent = z.infer<typeof ButtonReplyContentSchema>
 export type ListReplyContent = z.infer<typeof ListReplyContentSchema>
+export type CTAButtonReplyContent = z.infer<typeof CTAButtonReplyContentSchema>
 
 // WhatsApp message schema
 export const WhatsAppMessageSchema = z.object({
@@ -167,16 +178,40 @@ export const ValueSchema = z.object({
   statuses: z.array(StatusUpdateSchema).optional(),
 });
 
+// Call Event Value Schema (v23.0)
+export const CallEventValueSchema = z.object({
+  messaging_product: z.literal('whatsapp'),
+  metadata: z.object({
+    display_phone_number: z.string(),
+    phone_number_id: z.string(),
+  }),
+  call_event: z.object({
+    type: z.enum(['call_initiated', 'call_accepted', 'call_rejected', 'call_ended']),
+    call_id: z.string(),
+    from: PhoneNumberSchema,
+    to: PhoneNumberSchema,
+    timestamp: z.string(),
+    duration: z.number().optional(),
+    reason: z.enum(['user_declined', 'user_busy', 'timeout']).optional(),
+  }),
+});
+
 // Change schema
 export const ChangeSchema = z.object({
   value: ValueSchema,
   field: z.literal('messages'),
 });
 
-// Entry schema
+// Call Event Change schema (v23.0)
+export const CallEventChangeSchema = z.object({
+  value: CallEventValueSchema,
+  field: z.literal('call_events'),
+});
+
+// Entry schema - supports both message and call event changes
 export const EntrySchema = z.object({
   id: z.string(),
-  changes: z.array(ChangeSchema),
+  changes: z.array(z.union([ChangeSchema, CallEventChangeSchema])),
 });
 
 // Main webhook payload schema
@@ -198,6 +233,8 @@ export type StatusUpdate = z.infer<typeof StatusUpdateSchema>;
 export type WebhookPayload = z.infer<typeof WebhookPayloadSchema>;
 export type WebhookVerification = z.infer<typeof WebhookVerificationSchema>;
 export type MessageType = z.infer<typeof MessageTypeSchema>;
+export type CallEventValue = z.infer<typeof CallEventValueSchema>;
+export type CallEvent = z.infer<typeof CallEventValueSchema>['call_event'];
 
 /**
  * Validate WhatsApp webhook payload
@@ -235,6 +272,12 @@ export function extractFirstMessage(payload: WebhookPayload): WhatsAppMessage | 
   if (entry.changes.length === 0) return null
   const change = entry.changes[0]!
 
+  // Check if this is a message change (not a call event)
+  if (change.field !== 'messages') return null
+
+  // Type guard to ensure we have the right value type
+  if (!('messages' in change.value)) return null
+
   const messages = change.value.messages
   if (!messages || messages.length === 0) return null
 
@@ -253,8 +296,35 @@ export function extractFirstStatus(payload: WebhookPayload): StatusUpdate | null
   if (entry.changes.length === 0) return null
   const change = entry.changes[0]!
 
+  // Check if this is a message change (not a call event)
+  if (change.field !== 'messages') return null
+
+  // Type guard to ensure we have the right value type
+  if (!('statuses' in change.value)) return null
+
   const statuses = change.value.statuses
   if (!statuses || statuses.length === 0) return null
 
   return statuses[0]!
+}
+
+/**
+ * Extract first call event from webhook payload (helper)
+ * Safe array access with noUncheckedIndexedAccess
+ */
+export function extractFirstCallEvent(payload: WebhookPayload): CallEvent | null {
+  // Check array has elements before accessing with [0]
+  if (payload.entry.length === 0) return null
+  const entry = payload.entry[0]!
+
+  if (entry.changes.length === 0) return null
+  const change = entry.changes[0]!
+
+  // Check if this is a call event change
+  if (change.field !== 'call_events') return null
+
+  // Type guard to ensure we have the right value type
+  if (!('call_event' in change.value)) return null
+
+  return change.value.call_event || null
 }

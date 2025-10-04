@@ -9,6 +9,13 @@
  * - Sub-100ms global latency target
  */
 
+import type {
+  CTAButtonOptions,
+  LocationRequestOptions,
+  CallPermissionOptions,
+  LocationData,
+} from '@/types/whatsapp';
+
 export const GRAPH_BASE_URL = 'https://graph.facebook.com/v23.0';
 
 // Cache TTL: 1 hour (based on TiDB Serverless case study)
@@ -235,6 +242,253 @@ export async function sendInteractiveList(
   } catch (error) {
     console.error('Error sending interactive list:', error);
     return null;
+  }
+}
+
+// =============================
+// v23.0 Interactive Features
+// =============================
+
+/**
+ * Send a Call-to-Action (CTA) button with URL (v23.0)
+ * @param to - Phone number in WhatsApp format
+ * @param bodyText - Main message text
+ * @param buttonText - Button label (max 20 characters)
+ * @param url - URL to open when button is tapped
+ * @param options - Optional header, footer, and reply-to message ID
+ * @returns Message ID or null on error
+ */
+export async function sendCTAButton(
+  to: string,
+  bodyText: string,
+  buttonText: string,
+  url: string,
+  options?: CTAButtonOptions
+): Promise<string | null> {
+  try {
+    // Validate button text length
+    if (buttonText.length > 20) {
+      console.error('CTA button text exceeds 20 characters');
+      return null;
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      console.error('Invalid URL format for CTA button');
+      return null;
+    }
+
+    const payload: WhatsAppPayload = {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'cta_url',
+        body: { text: bodyText },
+        action: {
+          name: 'cta_url',
+          parameters: {
+            display_text: buttonText,
+            url,
+          },
+        },
+        ...(options?.header && {
+          header: { type: 'text', text: options.header },
+        }),
+        ...(options?.footer && {
+          footer: { text: options.footer },
+        }),
+      },
+      ...(options?.replyToMessageId && {
+        context: { message_id: options.replyToMessageId },
+      }),
+    };
+
+    const result = await sendWhatsAppRequest(payload);
+    return result?.messages?.[0]?.id ?? null;
+  } catch (error) {
+    console.error('Error sending CTA button:', error);
+    return null;
+  }
+}
+
+/**
+ * Request user's location with permission (v23.0)
+ * @param to - Phone number in WhatsApp format
+ * @param bodyText - Message explaining why location is needed
+ * @param options - Optional footer and reply-to message ID
+ * @returns Message ID or null on error
+ */
+export async function requestLocation(
+  to: string,
+  bodyText: string,
+  options?: LocationRequestOptions
+): Promise<string | null> {
+  try {
+    const payload: WhatsAppPayload = {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'location_request_message',
+        body: { text: bodyText },
+        action: {
+          name: 'send_location',
+        },
+        ...(options?.footer && {
+          footer: { text: options.footer },
+        }),
+      },
+      ...(options?.replyToMessageId && {
+        context: { message_id: options.replyToMessageId },
+      }),
+    };
+
+    const result = await sendWhatsAppRequest(payload);
+    return result?.messages?.[0]?.id ?? null;
+  } catch (error) {
+    console.error('Error requesting location:', error);
+    return null;
+  }
+}
+
+/**
+ * Send a location to user (v23.0)
+ * @param to - Phone number in WhatsApp format
+ * @param location - Location data (latitude, longitude, name, address)
+ * @returns Message ID or null on error
+ */
+export async function sendLocation(
+  to: string,
+  location: LocationData
+): Promise<string | null> {
+  try {
+    const result = await sendWhatsAppRequest({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'location',
+      location,
+    });
+    return result?.messages?.[0]?.id ?? null;
+  } catch (error) {
+    console.error('Error sending location:', error);
+    return null;
+  }
+}
+
+/**
+ * Request permission to call user (v23.0)
+ * @param to - Phone number in WhatsApp format
+ * @param bodyText - Message explaining why call is needed
+ * @param options - Optional footer and reply-to message ID
+ * @returns Message ID or null on error
+ */
+export async function requestCallPermission(
+  to: string,
+  bodyText: string,
+  options?: CallPermissionOptions
+): Promise<string | null> {
+  try {
+    const payload: WhatsAppPayload = {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'call_permission_request',
+        body: { text: bodyText },
+        action: {
+          name: 'request_call_permission',
+        },
+        ...(options?.footer && {
+          footer: { text: options.footer },
+        }),
+      },
+      ...(options?.replyToMessageId && {
+        context: { message_id: options.replyToMessageId },
+      }),
+    };
+
+    const result = await sendWhatsAppRequest(payload);
+    return result?.messages?.[0]?.id ?? null;
+  } catch (error) {
+    console.error('Error requesting call permission:', error);
+    return null;
+  }
+}
+
+/**
+ * Block a phone number (v23.0 Block API)
+ * @param phoneNumber - Phone number to block
+ * @returns Success boolean
+ */
+export async function blockPhoneNumber(phoneNumber: string): Promise<boolean> {
+  try {
+    const token = process.env.WHATSAPP_TOKEN;
+    const phoneId = process.env.WHATSAPP_PHONE_ID;
+    if (!token || !phoneId) {
+      throw new Error('Missing WhatsApp credentials');
+    }
+
+    const url = `${GRAPH_BASE_URL}/${phoneId}/block`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        phone_number: phoneNumber,
+      }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      console.error(`WhatsApp Block API error ${res.status}:`, detail);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error blocking phone number:', error);
+    return false;
+  }
+}
+
+/**
+ * Unblock a phone number (v23.0 Block API)
+ * @param phoneNumber - Phone number to unblock
+ * @returns Success boolean
+ */
+export async function unblockPhoneNumber(phoneNumber: string): Promise<boolean> {
+  try {
+    const token = process.env.WHATSAPP_TOKEN;
+    const phoneId = process.env.WHATSAPP_PHONE_ID;
+    if (!token || !phoneId) {
+      throw new Error('Missing WhatsApp credentials');
+    }
+
+    const url = `${GRAPH_BASE_URL}/${phoneId}/block/${encodeURIComponent(phoneNumber)}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      console.error(`WhatsApp Unblock API error ${res.status}:`, detail);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error unblocking phone number:', error);
+    return false;
   }
 }
 

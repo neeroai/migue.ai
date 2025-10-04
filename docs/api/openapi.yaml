@@ -1,0 +1,77 @@
+openapi: 3.1.0
+info:
+  title: migue.ai Edge API
+  version: 0.1.0
+servers:
+  - url: https://{deployment-host}
+    variables:
+      deployment-host:
+        default: example.vercel.app
+paths:
+  /api/whatsapp/webhook:
+    get:
+      summary: Verify WhatsApp webhook (challenge)
+      parameters:
+        - in: query
+          name: hub.mode
+          schema: { type: string }
+        - in: query
+          name: hub.verify_token
+          schema: { type: string }
+        - in: query
+          name: hub.challenge
+          schema: { type: string }
+      responses:
+        '200': { description: OK (challenge echoed) }
+        '401': { description: Unauthorized }
+    post:
+      summary: Receive WhatsApp webhook events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200':
+          description: Accepted/Processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  request_id: { type: string }
+        '400': { description: Invalid payload }
+        '401': { description: Invalid signature }
+        '500': { description: Server error }
+  /api/whatsapp/send:
+    post:
+      summary: Send a WhatsApp message (text)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, text]
+              properties:
+                to: { type: string, description: E164 phone number }
+                text:
+                  type: object
+                  required: [body]
+                  properties:
+                    body: { type: string }
+      responses:
+        '200':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object }
+                  request_id: { type: string }
+        '400': { description: Invalid body }
+        '502': { description: Upstream error }
+components: {}

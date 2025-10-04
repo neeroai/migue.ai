@@ -190,6 +190,42 @@ export async function POST(req: Request): Promise<Response> {
       });
     }
 
+    // Process location message (v23.0)
+    if (normalized.type === 'location' && message.location) {
+      // Use dynamic import to avoid circular dependencies
+      import('../../../../lib/supabase').then(({ getSupabaseServerClient }) => {
+        const supabase = getSupabaseServerClient();
+        // @ts-ignore - user_locations table exists but types not yet regenerated
+        supabase
+          .from('user_locations')
+          .insert({
+            user_id: userId,
+            conversation_id: conversationId,
+            latitude: message.location!.latitude,
+            longitude: message.location!.longitude,
+            name: message.location!.name || null,
+            address: message.location!.address || null,
+            timestamp: new Date().toISOString(),
+          })
+          .then(() => {
+            logger.info('[webhook] Location saved', {
+              requestId,
+              conversationId,
+              userId,
+            });
+          })
+          .catch((err: any) => {
+            logger.error('Failed to save location', err, {
+              requestId,
+              conversationId,
+              userId,
+            });
+          });
+      }).catch((err: any) => {
+        logger.error('Failed to import supabase', err, { requestId });
+      });
+    }
+
     return jsonResponse({ success: true, request_id: requestId });
   } catch (error: any) {
     return jsonResponse(
