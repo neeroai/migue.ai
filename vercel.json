@@ -12,17 +12,6 @@
       "schedule": "0 */6 * * *"
     }
   ],
-  "functions": {
-    "app/api/whatsapp/webhook/route.ts": {
-      "maxDuration": 30,
-      "memory": 512,
-      "regions": ["iad1"]
-    },
-    "app/api/health/route.ts": {
-      "maxDuration": 15,
-      "memory": 256
-    }
-  },
   "headers": [
     {
       "source": "/api/whatsapp/(.*)",
