@@ -24,6 +24,7 @@
 | **Frontend Development** | frontend-developer | Sonnet | UI work is mostly routine | "React", "component", "UI", "CSS", "responsive" |
 | **Backend API** | backend-developer | Sonnet | CRUD operations standard | "API", "endpoint", "route", "database query" |
 | **Edge Functions** | edge-functions-expert | Sonnet | Edge Runtime patterns established | "edge function", "edge runtime", "vercel edge", "cold start", "bundle size" |
+| **WhatsApp Integration** | whatsapp-api-expert | Sonnet | WhatsApp API patterns well-documented | "whatsapp", "interactive message", "flows", "webhook", "media message" |
 | **TypeScript Architecture** | typescript-pro | Opus | Complex type systems need deep reasoning | "type safety", "generics", "architecture", "refactor" |
 | **AI/ML Features** | ai-engineer | Opus | LLM integration complex | "OpenAI", "RAG", "embeddings", "streaming", "Whisper" |
 | **Testing** | general-purpose | Sonnet | Test writing mostly mechanical | "test", "spec", "coverage", "jest" |
@@ -106,6 +107,26 @@
 **Delegation Command**:
 ```
 /task edge-functions-expert "Optimize WhatsApp webhook Edge Function for <100ms cold start and implement streaming responses with chunking."
+```
+
+---
+
+#### WhatsApp Integration Development
+**Agent**: `whatsapp-api-expert` (Sonnet)
+**Reason**: WhatsApp API v23.0 requires specific patterns and compliance
+**Scope**:
+- Interactive message implementation (buttons, lists, reactions)
+- WhatsApp Flows (navigate and data exchange)
+- Webhook processing with 5s timeout compliance
+- Media message handling (audio, images, documents)
+- Rate limiting (250 msg/sec) implementation
+- Template message management
+- Signature validation (HMAC-SHA256)
+- Deduplication strategies
+
+**Delegation Command**:
+```
+/task whatsapp-api-expert "Implement appointment booking WhatsApp Flow with real-time availability checks via data exchange endpoint."
 ```
 
 ---
@@ -299,6 +320,7 @@ graph TD
     B -->|UI/Frontend| C[frontend-developer<br/>Sonnet]
     B -->|API/Backend| D{Complex?}
     B -->|Edge Functions| E1[edge-functions-expert<br/>Sonnet]
+    B -->|WhatsApp| W1[whatsapp-api-expert<br/>Sonnet]
     B -->|AI/ML| E[ai-engineer<br/>Opus]
     B -->|Testing| F[general-purpose<br/>Sonnet]
     B -->|Review| G[code-reviewer<br/>Opus]
@@ -321,6 +343,12 @@ graph TD
     Q -->|Migration| R[Node.js to Edge<br/>Migration]
     Q -->|Optimization| S[Cold Start/<br/>Bundle Size]
     Q -->|Streaming| T[SSE/Chunking]
+
+    W1 --> U{WhatsApp Feature?}
+    U -->|Interactive| V[Buttons/Lists/<br/>Reactions]
+    U -->|Flows| X[Navigate/<br/>Data Exchange]
+    U -->|Webhook| Y[5s Timeout/<br/>Deduplication]
+    U -->|Media| Z[Audio/Image/<br/>Transcription]
 ```
 
 ---
@@ -438,6 +466,34 @@ graph TD
 - Frontend UI components
 - Complex database schema design
 - Advanced TypeScript architecture
+
+---
+
+### whatsapp-api-expert (Sonnet)
+**Expertise**:
+- WhatsApp Business API v23.0 (Cloud API)
+- Interactive messages (buttons, lists, reactions, typing indicators)
+- WhatsApp Flows v3 (navigate and data exchange modes)
+- Webhook processing (5s timeout, signature validation)
+- Media handling (audio transcription, images, documents)
+- Template messages and multi-product broadcasts
+- Rate limiting (250 msg/sec) and retry strategies
+- Error recovery and deduplication
+
+**Use For**:
+- Implementing interactive messaging features
+- Creating WhatsApp Flows for forms/booking
+- Optimizing webhook handlers
+- Processing media messages (audio, images)
+- Managing template broadcasts
+- Rate limiting and API compliance
+- Webhook signature validation
+- Fixing WhatsApp API errors
+
+**Avoid For**:
+- Edge Runtime optimization (use edge-functions-expert)
+- AI/ML integration (use ai-engineer)
+- Database schema design (use backend-developer)
 
 ---
 

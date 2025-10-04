@@ -3,6 +3,9 @@ const nextConfig = {
   // NO usar 'export' para permitir Edge Functions en /api
   // Vercel maneja el deployment automáticamente
 
+  // Resolver advertencia de múltiples lockfiles
+  outputFileTracingRoot: process.cwd(),
+
   images: {
     unoptimized: true,
   },
