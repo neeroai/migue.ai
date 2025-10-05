@@ -22,7 +22,7 @@ import {
 } from './claude-agents'
 import { type ClaudeMessage } from './claude-client'
 import { transcribeWithGroq, bufferToFile } from './groq-client'
-import { extractTextFromImage } from './tesseract-ocr'
+// Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
   sendWhatsAppText,
   createTypingManager,
@@ -303,6 +303,9 @@ export async function processDocumentMessage(
     // Download image/document
     const imageResponse = await fetch(normalized.mediaUrl)
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer())
+
+    // Lazy load Tesseract (saves 2MB from bundle)
+    const { extractTextFromImage } = await import('./tesseract-ocr')
 
     // Extract text with Tesseract (FREE!)
     const extractedText = await extractTextFromImage(imageBuffer, {

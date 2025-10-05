@@ -1,3 +1,23 @@
+/**
+ * OpenAI Client - FALLBACK ONLY
+ *
+ * ⚠️ IMPORTANT: This module is maintained for fallback purposes only.
+ * Primary AI provider: Claude Sonnet 4.5 (see ai-providers.ts)
+ * Primary transcription: Groq Whisper (see groq-client.ts)
+ * Primary OCR: Tesseract (see tesseract-ocr.ts)
+ *
+ * Cost comparison (per 1M tokens):
+ * - Claude Sonnet 4.5: $3 input / $15 output (75% cheaper than GPT-4o)
+ * - GPT-4o: $15 input / $60 output (FALLBACK ONLY)
+ *
+ * Only use OpenAI when:
+ * - Claude SDK is unavailable
+ * - Groq transcription fails
+ * - Backwards compatibility required
+ *
+ * @deprecated Prefer Claude SDK for chat, Groq for audio, Tesseract for OCR
+ */
+
 import OpenAI from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 
@@ -27,6 +47,8 @@ export type ChatMessage = ChatCompletionMessageParam
 /**
  * Call GPT-4o with a list of messages and get a response.
  * Edge-compatible: uses fetch under the hood via OpenAI SDK.
+ *
+ * @deprecated Use Claude SDK via ai-providers.ts (75% cheaper)
  */
 export async function chatCompletion(
   messages: ChatMessage[],
@@ -52,6 +74,9 @@ export async function chatCompletion(
   return choice.message.content
 }
 
+/**
+ * @deprecated Not used in production - kept for backwards compatibility only
+ */
 export async function streamChatCompletion(
   messages: ChatMessage[],
   options?: {
@@ -120,6 +145,11 @@ async function toUploadable(
   throw new Error('Unsupported audio payload for transcription')
 }
 
+/**
+ * Transcribe audio using OpenAI Whisper
+ *
+ * @deprecated Use Groq Whisper via groq-client.ts (93% cheaper: $0.05/hr vs $0.36/hr)
+ */
 export async function transcribeAudio(
   data: UploadableInput,
   options?: TranscriptionOptions

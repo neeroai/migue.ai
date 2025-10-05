@@ -2,12 +2,25 @@
  * Document processing module
  * Handles PDF extraction and image analysis from WhatsApp messages
  *
- * NOTE: This module uses pdf-parse which is NOT compatible with Edge Runtime.
- * This file should only be used in Node.js runtime routes.
- * For Edge Runtime, use a separate serverless function or disable PDF processing.
+ * ⚠️ CRITICAL: NOT COMPATIBLE WITH VERCEL EDGE RUNTIME ⚠️
+ *
+ * This module uses pdf-parse which requires Node.js 'fs' and 'buffer' modules.
+ * DO NOT import this file directly in Edge Runtime routes (app/api/**\/route.ts).
+ *
+ * Current Usage:
+ * - Used via lazy/dynamic import in ai-processing-v2.ts (Edge-compatible)
+ * - Only loaded when PDF processing is actually needed
+ * - Fallback to RAG system if PDF extraction fails
+ *
+ * Migration Path for Full Edge Compatibility:
+ * 1. Move PDF processing to separate serverless function (Node.js runtime)
+ * 2. Or use alternative: pdf.js (browser-compatible) or API-based PDF service
+ * 3. Or disable PDF processing entirely for Edge deployment
+ *
+ * @see lib/ai-processing-v2.ts - Handles dynamic import safely
  */
 
-import { downloadWhatsAppMedia } from './whatsapp-media'
+import { downloadWhatsAppMedia } from './whatsapp'
 import { saveDocumentToStorage } from './storage'
 import { getOpenAIClient } from './openai'
 import { logger } from './logger'

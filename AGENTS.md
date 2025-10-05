@@ -126,7 +126,6 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 - **Seguridad de Secretos**: Nunca commitear o logear secretos; validar todas las entradas y codificar/normalizar salidas
 - **Nombres Intencionados**: Evitar abstracciones prematuras y usar nombres que revelen la intención
 - **Comparación de Opciones**: Comparar al menos dos opciones antes de decidir
-- **⚠️ CRÍTICO: NUNCA eliminar el directorio `.bmad-core/`** - Contiene configuración esencial del proyecto
 
 ### Mentalidad de Desarrollo
 - **Pensar como Senior Engineer**: No saltar a conclusiones o apresurarse

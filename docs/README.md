@@ -47,7 +47,6 @@ docs/
 ├── 04-features/           # Feature-specific implementation guides
 ├── 05-deployment/         # Edge Functions, monitoring, best practices (2024/2025)
 ├── 06-whatsapp/           # WhatsApp API v23.0 integration
-├── 07-whatsapp-sdk/       # SDK reference (advanced)
 ├── 08-project-management/ # PRD, roadmap, planning
 ├── 09-qa-testing/         # Testing strategies, checklists
 └── 10-research/           # Research notes, investigations

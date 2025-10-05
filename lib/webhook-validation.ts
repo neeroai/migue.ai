@@ -47,9 +47,16 @@ export async function validateSignature(req: Request, rawBody: string): Promise<
   const header = req.headers.get('x-hub-signature-256') || req.headers.get('X-Hub-Signature-256');
   const { WHATSAPP_APP_SECRET } = getEnv();
 
-  // Allow when not configured (development only)
+  // Security: Fail closed in production if credentials missing
   if (!header || !WHATSAPP_APP_SECRET) {
-    console.warn('⚠️  Webhook signature validation disabled - configure WHATSAPP_APP_SECRET');
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+    if (isProd) {
+      console.error('❌ Missing WHATSAPP_APP_SECRET in production - blocking webhook');
+      return false;
+    }
+
+    console.warn('⚠️  Development mode: Webhook signature validation disabled');
     return true;
   }
 

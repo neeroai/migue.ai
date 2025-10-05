@@ -25,6 +25,95 @@ export function generateFlowToken(): string {
 }
 
 /**
+ * Convert ArrayBuffer to hex string
+ */
+function hex(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let out = '';
+  for (let i = 0; i < bytes.length; i++) {
+    out += bytes[i]!.toString(16).padStart(2, '0');
+  }
+  return out;
+}
+
+/**
+ * Generate HMAC-SHA256 hex signature (same as webhook validation)
+ */
+async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return hex(sig);
+}
+
+/**
+ * Validate WhatsApp Flow signature
+ * Uses the same HMAC-SHA256 validation as webhooks
+ *
+ * @param req - Request with x-hub-signature-256 header
+ * @param rawBody - Raw request body as string
+ * @returns true if signature is valid
+ */
+export async function validateFlowSignature(req: Request, rawBody: string): Promise<boolean> {
+  const header = req.headers.get('x-hub-signature-256') || req.headers.get('X-Hub-Signature-256');
+  const WHATSAPP_APP_SECRET = process.env.WHATSAPP_APP_SECRET;
+
+  // Security: Fail closed in production if credentials missing
+  if (!header || !WHATSAPP_APP_SECRET) {
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+    if (isProd) {
+      console.error('❌ Missing WHATSAPP_APP_SECRET in production - blocking flow request');
+      return false;
+    }
+
+    console.warn('⚠️  Development mode: Flow signature validation disabled');
+    return true;
+  }
+
+  // Header format: sha256=abcdef...
+  const parts = header.split('=');
+  if (parts.length !== 2 || parts[0] !== 'sha256') {
+    console.error('❌ Invalid flow signature header format');
+    return false;
+  }
+
+  const provided = parts[1];
+  if (!provided) {
+    console.error('❌ Missing flow signature value');
+    return false;
+  }
+
+  // Calculate expected signature
+  const expected = await hmacSha256Hex(WHATSAPP_APP_SECRET, rawBody);
+
+  // Constant-time comparison to prevent timing attacks
+  if (provided.length !== expected.length) {
+    console.error('❌ Flow signature length mismatch');
+    return false;
+  }
+
+  // XOR-based constant-time string comparison
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+  }
+
+  const isValid = diff === 0;
+
+  if (!isValid) {
+    console.error('❌ Flow signature validation failed');
+  }
+
+  return isValid;
+}
+
+/**
  * Send a WhatsApp Flow message
  * @param to - Phone number in WhatsApp format
  * @param flowId - Flow ID from Meta Business Manager

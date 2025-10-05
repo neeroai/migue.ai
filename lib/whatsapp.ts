@@ -18,18 +18,12 @@ import type {
 
 export const GRAPH_BASE_URL = 'https://graph.facebook.com/v23.0';
 
-// Cache TTL: 1 hour (based on TiDB Serverless case study)
-const CACHE_TTL = 3600 * 1000;
-
 type WhatsAppPayload = {
   messaging_product: 'whatsapp';
   to: string;
   type: string;
   [key: string]: unknown;
 };
-
-// Response cache for reducing API calls
-const messageCache = new Map<string, { data: unknown; timestamp: number }>();
 
 // Rate limiting: 250 msg/sec (WhatsApp Cloud API 2025 limit)
 const rateLimitBuckets = new Map<number, number[]>();
@@ -40,7 +34,6 @@ const RATE_LIMIT = 250; // messages per second
  * @internal
  */
 export function _clearCaches() {
-  messageCache.clear();
   rateLimitBuckets.clear();
 }
 
@@ -82,13 +75,6 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
   // Apply rate limiting
   await rateLimit();
 
-  // Check cache for duplicate requests (dedupe within 1 hour)
-  const cacheKey = JSON.stringify(payload);
-  const cached = messageCache.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    return cached.data;
-  }
-
   const url = `${GRAPH_BASE_URL}/${phoneId}/messages`;
   const startTime = Date.now();
 
@@ -97,8 +83,6 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
-      // Edge caching with stale-while-revalidate
-      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
     },
     body: JSON.stringify(payload),
   });
@@ -113,15 +97,58 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
 
   const data = await res.json();
 
-  // Cache successful responses
-  messageCache.set(cacheKey, { data, timestamp: Date.now() });
-
   // Log performance metrics (Vercel Observability)
   if (latency > 100) {
     console.warn(`WhatsApp API slow response: ${latency}ms`);
   }
 
   return data;
+}
+
+/**
+ * Send WhatsApp request with retry logic and exponential backoff
+ * Retries on transient errors (5xx), gives up on client errors (4xx)
+ *
+ * @param payload - WhatsApp message payload
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns API response data
+ */
+export async function sendWhatsAppRequestWithRetry(
+  payload: WhatsAppPayload,
+  maxRetries = 3
+): Promise<unknown> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await sendWhatsAppRequest(payload);
+    } catch (error: unknown) {
+      const isLastAttempt = attempt === maxRetries - 1;
+
+      // Extract status code from error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const statusMatch = errorMessage.match(/WhatsApp API error (\d+)/);
+      const status = statusMatch ? parseInt(statusMatch[1]!, 10) : 0;
+
+      // Don't retry client errors (4xx)
+      if (status >= 400 && status < 500) {
+        console.error(`Client error ${status}, not retrying`);
+        throw error;
+      }
+
+      // On last attempt, throw the error
+      if (isLastAttempt) {
+        console.error(`Max retries (${maxRetries}) reached, giving up`);
+        throw error;
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delayMs = 1000 * Math.pow(2, attempt);
+      console.warn(`Retry ${attempt + 1}/${maxRetries} after ${delayMs}ms delay`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  // This should never be reached due to throw in loop
+  throw new Error('Unexpected retry loop exit');
 }
 
 export async function sendWhatsAppText(to: string, body: string) {
@@ -658,3 +685,60 @@ export const reactWithParty = (to: string, messageId: string) =>
 
 export const reactWithPray = (to: string, messageId: string) =>
   sendReaction(to, messageId, '🙏');
+
+// ============================================================================
+// Media Download Functions (consolidated from whatsapp-media.ts)
+// ============================================================================
+
+export type WhatsAppMediaDownload = {
+  bytes: Uint8Array
+  mimeType: string
+}
+
+async function fetchGraphResource(path: string, token: string) {
+  const url = `${GRAPH_BASE_URL}/${path}`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    throw new Error(`WhatsApp media fetch failed with ${res.status}`)
+  }
+  return res
+}
+
+function asUint8Array(input: ArrayBuffer | Uint8Array): Uint8Array {
+  return input instanceof Uint8Array ? input : new Uint8Array(input)
+}
+
+/**
+ * Resolve media URL from media ID
+ */
+export async function resolveMediaUrl(mediaId: string, token: string) {
+  const res = await fetchGraphResource(mediaId, token)
+  const body = (await res.json()) as { url?: string; mime_type?: string }
+  if (!body?.url) {
+    throw new Error('WhatsApp media metadata missing url')
+  }
+  return { url: body.url, mimeType: body.mime_type }
+}
+
+/**
+ * Download WhatsApp media (images, audio, documents)
+ * Consolidated from whatsapp-media.ts for better organization
+ */
+export async function downloadWhatsAppMedia(mediaId: string): Promise<WhatsAppMediaDownload> {
+  const token = process.env.WHATSAPP_TOKEN
+  if (!token) {
+    throw new Error('WHATSAPP_TOKEN is not configured')
+  }
+  const { url, mimeType } = await resolveMediaUrl(mediaId, token)
+  const mediaRes = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!mediaRes.ok) {
+    throw new Error(`WhatsApp media content fetch failed with ${mediaRes.status}`)
+  }
+  const buffer = await mediaRes.arrayBuffer()
+  const contentType = mediaRes.headers.get('content-type') ?? mimeType ?? 'application/octet-stream'
+  return { bytes: asUint8Array(buffer), mimeType: contentType }
+}
