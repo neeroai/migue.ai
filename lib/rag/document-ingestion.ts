@@ -3,7 +3,8 @@
  * Processes documents and stores them with embeddings for semantic search
  */
 
-import { processDocument, generateDocumentSummary, type ProcessedDocument } from '../document-processor'
+// Type-only import (no runtime impact - Edge compatible)
+import type { ProcessedDocument } from '../document-processor'
 import { ingestDocument } from './index'
 import { logger } from '../logger'
 
@@ -30,6 +31,10 @@ export async function ingestWhatsAppDocument(
   caption?: string | null
 ): Promise<DocumentIngestionResult> {
   const startTime = Date.now()
+
+  // Lazy load document processor (Edge Runtime incompatible - uses pdf-parse)
+  // Only loads when actually called (fallback path in ai-processing-v2.ts)
+  const { processDocument, generateDocumentSummary } = await import('../document-processor')
 
   // Process document
   logger.info('Processing document', { userId, metadata: { mediaId } })
