@@ -1,7 +1,7 @@
 export const runtime = 'edge';
 
-import { handleFlowDataExchange, completeFlowSession } from '@/lib/whatsapp-flows';
-import type { FlowDataExchangeRequest } from '@/types/whatsapp';
+import { handleFlowDataExchange, completeFlowSession } from '../../../../lib/whatsapp-flows';
+import type { FlowDataExchangeRequest } from '../../../../types/whatsapp';
 
 /**
  * WhatsApp Flows Data Exchange Endpoint

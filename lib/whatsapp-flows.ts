@@ -13,7 +13,7 @@ import type {
   FlowDataExchangeRequest,
   FlowDataExchangeResponse,
   FlowSessionStatus,
-} from '@/types/whatsapp';
+} from '../types/whatsapp';
 
 /**
  * Generate a secure flow token using Web Crypto API (Edge Runtime compatible)

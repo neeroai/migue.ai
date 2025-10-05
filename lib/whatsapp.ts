@@ -14,7 +14,7 @@ import type {
   LocationRequestOptions,
   CallPermissionOptions,
   LocationData,
-} from '@/types/whatsapp';
+} from '../types/whatsapp';
 
 export const GRAPH_BASE_URL = 'https://graph.facebook.com/v23.0';
 
