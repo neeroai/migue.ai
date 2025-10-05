@@ -343,6 +343,21 @@ export async function processDocumentMessage(
   } catch (error: any) {
     logger.error('Tesseract OCR error', error)
 
+    // TEMPORARY: RAG fallback disabled to fix Vercel Edge Runtime build
+    // pdf-parse import chain causes Edge bundler to fail
+    // Will be re-enabled via separate Node.js serverless function in Phase 2
+    // See: EDGE-RUNTIME-OPTIMIZATION.md for details
+
+    logger.warn('RAG fallback temporarily disabled for Edge Runtime compatibility')
+    await reactWithWarning(normalized.from, normalized.waMessageId)
+
+    await sendTextAndPersist(
+      conversationId,
+      normalized.from,
+      'Lo siento, el procesamiento de documentos PDF está temporalmente deshabilitado. Por favor, envía la imagen nuevamente o intenta más tarde.'
+    )
+
+    /* DISABLED CODE - Will be moved to Node.js serverless function
     // Fallback to existing RAG system
     try {
       const { ingestWhatsAppDocument, formatIngestionResponse } = await import(
@@ -369,6 +384,7 @@ export async function processDocumentMessage(
         'Lo siento, no pude procesar el documento. ¿Puedes intentar enviarlo de nuevo?'
       )
     }
+    */
   } finally {
     await typingManager.stop()
   }

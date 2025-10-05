@@ -3,6 +3,7 @@
  * Handles interactive flow messages and data exchange
  *
  * ✅ Edge Runtime Compatible - Uses Web Crypto API
+ * @vercel-force-rebuild 2025-10-05
  */
 
 import { sendWhatsAppRequest } from './whatsapp';
