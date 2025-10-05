@@ -10,7 +10,8 @@ import {
   extractInteractiveReply,
   persistNormalizedMessage,
 } from '../../../../lib/message-normalization';
-import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../../../lib/ai-processing';
+// Import V2 AI processing with multi-provider support (76% cost savings)
+import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../../../lib/ai-processing-v2';
 import { getSupabaseServerClient } from '../../../../lib/supabase';
 
 /**
@@ -196,8 +197,7 @@ export async function POST(req: Request): Promise<Response> {
         userId,
         normalized.from,
         normalized.content,
-        normalized.waMessageId,
-        actionDefinition
+        normalized.waMessageId
       ).catch((err) => {
         logger.error('Background AI processing failed', err, {
           requestId,
