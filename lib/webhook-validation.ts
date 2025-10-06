@@ -18,6 +18,20 @@ function hex(buffer: ArrayBuffer): string {
 }
 
 /**
+ * Escape non-ASCII characters to Unicode escape sequences
+ * This ensures consistent signature validation with emojis and special characters
+ *
+ * Pattern from: Secreto31126/whatsapp-api-js
+ * @param str - String to escape
+ * @returns String with Unicode escape sequences
+ */
+function escapeUnicode(str: string): string {
+  return str.replace(/[^\x00-\x7F]/g, (char) => {
+    return '\\u' + ('0000' + char.charCodeAt(0).toString(16)).slice(-4);
+  });
+}
+
+/**
  * Generate HMAC-SHA256 hex signature
  */
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
@@ -28,7 +42,8 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
     false,
     ['sign']
   );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  // Escape Unicode characters before encoding to ensure consistent signature validation
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(escapeUnicode(message)));
   return hex(sig);
 }
 

@@ -976,20 +976,187 @@ import sharp from 'sharp'; // ✓ Funciona
 
 ---
 
-### Matriz de Decisión
+### ⚠️ Aclaración Importante: Procesamiento LOCAL vs VÍA API
 
-| Use Case | Edge | Serverless | Razón |
-|---|---|---|---|
-| Webhook WhatsApp | ✅ | ⚠️ | Latencia baja, requests simples |
-| Transcripción audio | ❌ | ✅ | Requiere bibliotecas nativas |
-| Health check | ✅ | ✅ | Ambos funcionan, Edge más rápido |
-| Procesamiento imágenes | ❌ | ✅ | sharp requiere Node.js |
-| Generación PDF | ❌ | ✅ | canvas/puppeteer requiere Node.js |
-| Rate limiting | ✅ | ⚠️ | Edge más rápido globalmente |
-| Database queries | ✅ | ✅ | Ambos OK, Edge si <25s |
-| Cron jobs | ✅ | ✅ | Edge para tareas simples |
-| File uploads | ⚠️ | ✅ | Edge limitado a 4.5MB body |
-| Streaming AI | ✅ | ✅ | Edge ideal para streaming |
+**Confusión común**: La tabla abajo dice "Transcripción audio ❌ Edge", pero el proyecto `migue.ai` SÍ procesa audio en Edge Functions. ¿Contradicción?
+
+**Respuesta**: NO. La diferencia clave es **CÓMO** procesas:
+
+#### Procesamiento LOCAL (NO funciona en Edge)
+
+```typescript
+// ❌ NO FUNCIONA en Edge Runtime
+export const runtime = 'edge';
+
+import sharp from 'sharp';           // ❌ Native module (C++)
+import { exec } from 'child_process'; // ❌ No child_process
+import fs from 'fs';                 // ❌ No filesystem
+
+// Intentar procesar audio localmente
+const audioBuffer = await req.arrayBuffer();
+exec('ffmpeg -i audio.mp3 output.wav'); // ❌ FALLA
+```
+
+**Razón**: Edge Runtime NO tiene acceso a:
+- Native modules (C/C++ bindings)
+- Filesystem (`fs`, `/tmp`)
+- Child processes (`exec`, `spawn`)
+
+---
+
+#### Procesamiento VÍA API (SÍ funciona en Edge)
+
+```typescript
+// ✅ FUNCIONA PERFECTAMENTE en Edge Runtime
+export const runtime = 'edge';
+
+import Groq from 'groq-sdk';        // ✅ Pure JS SDK
+import Tesseract from 'tesseract.js'; // ✅ WebAssembly (WASM)
+
+// Procesar audio vía Groq API
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const audioUrl = 'https://whatsapp.com/audio.mp3';
+
+const transcription = await groq.audio.transcriptions.create({
+  file: audioUrl,  // ✅ Groq procesa remotamente
+  model: 'whisper-large-v3',
+});
+
+console.log(transcription.text); // ✅ FUNCIONA
+```
+
+**Razón**: Solo usas:
+- `fetch` API (estándar web)
+- SDKs pure JavaScript
+- APIs externas (Groq, Anthropic, etc.)
+
+---
+
+#### Tabla Comparativa: ¿Qué Método Usar?
+
+| Tarea | Método LOCAL | Método VÍA API | Edge Compatible | Usado en migue.ai |
+|---|---|---|---|---|
+| **Audio → Texto** | FFmpeg + Whisper local | Groq Whisper API | ✅ **Sí (vía API)** | ✅ Groq API |
+| **Imágenes → Texto (OCR)** | Tesseract native | Tesseract.js (WASM) | ✅ **Sí (WASM)** | ✅ Tesseract.js |
+| **PDF → Texto** | pdf-lib + native deps | Claude Vision API | ✅ **Sí (vía API)** | ✅ Claude Vision |
+| **Resize imágenes** | sharp (native) | Cloudinary API | ❌ **No local** | N/A |
+| **Generar PDFs** | Puppeteer (native) | HTML → PDF API | ❌ **No local** | N/A |
+| **Video processing** | FFmpeg (native) | Mux API | ❌ **No local** | N/A |
+
+---
+
+#### Ejemplos Reales del Proyecto
+
+**1. Procesamiento Audio en Edge** (`lib/ai-processing-v2.ts`):
+```typescript
+export const runtime = 'edge';
+
+export async function processAudioMessage(
+  conversationId: string,
+  userId: string,
+  message: NormalizedMessage
+): Promise<void> {
+  const provider = getProviderManager();
+  const groq = provider.getGroq(); // ✅ Groq SDK (pure JS)
+
+  // Descargar audio de WhatsApp
+  const audioBuffer = await downloadMedia(message.mediaUrl);
+
+  // ✅ Transcribir vía Groq API (NO localmente)
+  const transcription = await groq.audio.transcriptions.create({
+    file: new File([audioBuffer], 'audio.mp3'),
+    model: 'whisper-large-v3-turbo',
+  });
+
+  // Procesar con AI
+  await processMessageWithAI(conversationId, userId, from, transcription.text);
+}
+```
+
+**2. OCR de Imágenes en Edge** (`lib/tesseract-ocr.ts`):
+```typescript
+export const runtime = 'edge';
+
+import Tesseract from 'tesseract.js';
+
+export async function extractTextFromImage(imageUrl: string): Promise<string> {
+  // ✅ Tesseract.js usa WebAssembly (Edge compatible)
+  const { data: { text } } = await Tesseract.recognize(imageUrl, 'eng+spa', {
+    logger: (m) => console.log(m),
+  });
+
+  return text;
+}
+```
+
+**3. Análisis de PDFs en Edge** (`lib/ai-processing-v2.ts`):
+```typescript
+export const runtime = 'edge';
+
+export async function processDocumentMessage(
+  conversationId: string,
+  userId: string,
+  message: NormalizedMessage
+): Promise<void> {
+  // Opción 1: Enviar PDF a Claude Vision API
+  const claude = provider.getClaude();
+  const response = await claude.messages.create({
+    model: 'claude-sonnet-4-5',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'document', source: { url: message.mediaUrl } },
+        { type: 'text', text: 'Resume este documento' },
+      ],
+    }],
+  });
+
+  // ✅ Claude procesa el PDF remotamente, no localmente
+}
+```
+
+---
+
+### Matriz de Decisión (Actualizada)
+
+**Leyenda**:
+- ✅ = Funciona bien
+- ⚠️ = Funciona pero con limitaciones
+- ❌ = NO funciona o requiere Serverless
+- 🔧 = Requiere procesamiento LOCAL (Serverless only)
+- 🌐 = Funciona vía API externa (Edge OK)
+
+| Use Case | Edge | Serverless | Método | Razón |
+|---|---|---|---|---|
+| **Webhook WhatsApp** | ✅ | ⚠️ | Web APIs | Latencia baja, requests simples |
+| **Transcripción audio** 🌐 | ✅ | ✅ | **Groq API** | ✅ Edge si usas API (Groq, OpenAI Whisper) |
+| **Transcripción audio** 🔧 | ❌ | ✅ | FFmpeg local | ❌ Edge NO si usas bibliotecas nativas |
+| **Health check** | ✅ | ✅ | Fetch | Ambos funcionan, Edge más rápido |
+| **OCR imágenes** 🌐 | ✅ | ✅ | **Tesseract.js** | ✅ Edge con Tesseract.js (WASM) o Claude Vision |
+| **Procesamiento imágenes** 🔧 | ❌ | ✅ | sharp (native) | ❌ Edge NO si necesitas resize/crop local (sharp) |
+| **Análisis PDF** 🌐 | ✅ | ✅ | **Claude Vision** | ✅ Edge vía Claude Vision API |
+| **Generación PDF** 🔧 | ❌ | ✅ | Puppeteer | ❌ Edge NO (canvas/puppeteer son nativos) |
+| **Rate limiting** | ✅ | ⚠️ | Memory/Redis | Edge más rápido globalmente |
+| **Database queries** | ✅ | ✅ | Supabase | Ambos OK, Edge si <25s |
+| **Cron jobs** | ✅ | ✅ | Scheduled | Edge para tareas simples |
+| **File uploads** | ⚠️ | ✅ | FormData | Edge limitado a 4.5MB body |
+| **Streaming AI** | ✅ | ✅ | ReadableStream | Edge ideal para streaming (300s) |
+
+---
+
+#### Conclusión: ¿Edge o Serverless?
+
+**Usa Edge Functions para**:
+- ✅ Audio → Texto vía **Groq/OpenAI API**
+- ✅ Imagen → Texto vía **Tesseract.js (WASM)** o **Claude Vision**
+- ✅ PDF → Análisis vía **Claude Vision API**
+- ✅ Cualquier procesamiento que use **APIs externas**
+
+**Usa Serverless Functions para**:
+- 🔧 Procesamiento LOCAL con bibliotecas nativas (sharp, FFmpeg)
+- 🔧 Generación de PDFs/imágenes desde cero (Puppeteer, canvas)
+- 🔧 Video processing local
+- 🔧 Cualquier tarea que requiera filesystem o child processes
 
 ---
 

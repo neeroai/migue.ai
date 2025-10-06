@@ -16,6 +16,8 @@ import type {
   LocationData,
 } from '../types/whatsapp';
 import { logger } from './logger';
+import { ButtonMessage, ListMessage } from './message-builders';
+import { getWhatsAppErrorHint, WhatsAppAPIError } from './whatsapp-errors';
 
 export const GRAPH_BASE_URL = 'https://graph.facebook.com/v23.0';
 
@@ -92,13 +94,38 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
 
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    const error = new Error(`WhatsApp API error ${res.status}: ${detail}`)
+
+    let errorCode: number | undefined;
+    let errorSubcode: number | undefined;
+    let errorMessage: string | undefined;
+
+    try {
+      const parsed = JSON.parse(detail);
+      errorCode = parsed.error?.code;
+      errorSubcode = parsed.error?.error_subcode;
+      errorMessage = parsed.error?.message;
+    } catch {
+      // detail is not JSON, use as-is
+    }
+
+    const errorDetails = {
+      status: res.status,
+      errorCode,
+      errorSubcode,
+      message: errorMessage || detail,
+    };
+
+    const hint = getWhatsAppErrorHint(errorDetails);
+    const error = new WhatsAppAPIError(errorDetails, hint);
 
     // Use logger instead of console.error (catch logging errors in tests)
     try {
       logger.error('[WhatsApp API] Request failed', error, {
         metadata: {
           status: res.status,
+          errorCode,
+          errorSubcode,
+          hint,
           latency,
           payloadType: payload.type,
           to: payload.to,
@@ -183,6 +210,13 @@ export interface InteractiveButtonOptions {
   replyToMessageId?: string;
 }
 
+export interface InteractiveListOptions {
+  header?: string;
+  footer?: string;
+  sectionTitle?: string;
+  replyToMessageId?: string;
+}
+
 interface InteractiveButton {
   type: 'button';
   body: { text: string };
@@ -202,48 +236,15 @@ export async function sendInteractiveButtons(
   buttons: Array<{ id: string; title: string }>,
   options: InteractiveButtonOptions = {}
 ) {
-  // Validate button count (WhatsApp API v23.0 limit: max 3 buttons)
-  if (buttons.length === 0) {
-    throw new Error('At least 1 button required');
-  }
-  if (buttons.length > 3) {
-    console.error('Interactive buttons limited to 3 options. Use sendInteractiveList for 4+ options.');
-    throw new Error('Maximum 3 buttons allowed. Use interactive list for more options.');
-  }
-
   try {
-    const interactive: InteractiveButton = {
-      type: 'button',
-      body: { text: body },
-      action: {
-        buttons: buttons.map((button) => ({
-          type: 'reply',
-          reply: { id: button.id, title: button.title },
-        })),
-      },
-    };
+    // Use type-safe ButtonMessage builder (validates at construction)
+    const messageOptions: any = {};
+    if (options.header) messageOptions.header = options.header;
+    if (options.footer) messageOptions.footer = options.footer;
 
-    // Add optional header
-    if (options.header) {
-      interactive.header = {
-        type: 'text',
-        text: options.header,
-      };
-    }
+    const message = new ButtonMessage(body, buttons, messageOptions);
 
-    // Add optional footer
-    if (options.footer) {
-      interactive.footer = {
-        text: options.footer,
-      };
-    }
-
-    const payload: WhatsAppPayload = {
-      messaging_product: 'whatsapp',
-      to,
-      type: 'interactive',
-      interactive,
-    };
+    const payload = message.toPayload(to);
 
     // Add reply-to context if provided
     if (options.replyToMessageId) {
@@ -265,40 +266,34 @@ export async function sendInteractiveList(
   body: string,
   buttonLabel: string,
   rows: Array<{ id: string; title: string; description?: string }>,
-  sectionTitle = 'Opciones'
+  optionsOrSectionTitle?: InteractiveListOptions | string
 ) {
-  // Validate row count (WhatsApp API v23.0 limit: max 10 rows per section)
-  if (rows.length === 0) {
-    throw new Error('At least 1 row required');
-  }
-  if (rows.length > 10) {
-    console.error('Interactive lists limited to 10 rows per section. Use WhatsApp Flows for complex forms.');
-    throw new Error('Maximum 10 rows allowed per section. Use WhatsApp Flows for more options.');
-  }
-
   try {
-    const result = await sendWhatsAppRequest({
-      messaging_product: 'whatsapp',
-      to,
-      type: 'interactive',
-      interactive: {
-        type: 'list',
-        body: { text: body },
-        action: {
-          button: buttonLabel,
-          sections: [
-            {
-              title: sectionTitle,
-              rows: rows.map((row) => ({
-                id: row.id,
-                title: row.title,
-                description: row.description,
-              })),
-            },
-          ],
-        },
-      },
-    });
+    // Support both legacy (string) and new (object) signatures
+    const options: InteractiveListOptions =
+      typeof optionsOrSectionTitle === 'string'
+        ? { sectionTitle: optionsOrSectionTitle }
+        : (optionsOrSectionTitle || {});
+
+    // Use type-safe ListMessage builder (validates at construction)
+    const messageOptions: any = {};
+    if (options.header) messageOptions.header = options.header;
+    if (options.footer) messageOptions.footer = options.footer;
+    if (options.sectionTitle) messageOptions.sectionTitle = options.sectionTitle;
+    else messageOptions.sectionTitle = 'Opciones';
+
+    const message = new ListMessage(body, buttonLabel, rows, messageOptions);
+
+    const payload = message.toPayload(to);
+
+    // Add reply-to context if provided
+    if (options.replyToMessageId) {
+      payload.context = {
+        message_id: options.replyToMessageId,
+      };
+    }
+
+    const result = await sendWhatsAppRequest(payload);
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
     console.error('Error sending interactive list:', error);

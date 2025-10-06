@@ -91,6 +91,30 @@ All features in `lib/whatsapp.ts` - Edge Runtime compatible:
 
 **Best Practice**: Use buttons for ≤3 options, lists for 4+
 
+### Type-Safe Message Builders (2025-10-06)
+```typescript
+import { ButtonMessage, ListMessage } from '@/lib/message-builders';
+
+// Buttons (≤3 options) - Validates at construction time
+const btn = new ButtonMessage('Choose', [
+  { id: '1', title: 'Yes' },
+  { id: '2', title: 'No' }
+], {
+  header: 'Quick Selection',
+  footer: 'Powered by migue.ai'
+});
+await sendWhatsAppRequest(btn.toPayload(phone));
+
+// Lists (4-10 options) - Validates at construction time
+const list = new ListMessage('Select service', 'View Services', [
+  { id: '1', title: 'Service A', description: '30 min - $150' },
+  { id: '2', title: 'Service B', description: '45 min - $200' }
+]);
+await sendWhatsAppRequest(list.toPayload(phone));
+```
+
+**Benefits**: Validation at construction, type safety, prevents invalid payloads
+
 ---
 
 ## Testing

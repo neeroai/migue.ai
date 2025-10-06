@@ -112,9 +112,10 @@ describe('WhatsApp Reactions', () => {
     } as Response);
 
     const { sendReaction } = await import('../../lib/whatsapp');
+    const { WhatsAppAPIError } = await import('../../lib/whatsapp-errors');
 
     await expect(sendReaction('1234567890', 'invalid', '🔥')).rejects.toThrow(
-      'WhatsApp API error 400: Invalid message ID'
+      WhatsAppAPIError
     );
   });
 });
