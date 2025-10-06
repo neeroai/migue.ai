@@ -1,14 +1,30 @@
 import { getSupabaseServerClient } from './supabase'
 import type { NormalizedMessage } from './message-normalization'
+import { logger } from './logger'
 
 export async function upsertUserByPhone(phoneNumber: string) {
+  const startTime = Date.now()
+
+  logger.debug('[DB] Upserting user', {
+    metadata: { phoneNumber: phoneNumber.slice(0, 8) + '***' }, // Partial for privacy
+  })
+
   const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('users')
     .upsert({ phone_number: phoneNumber }, { onConflict: 'phone_number' })
     .select('id')
     .single()
-  if (error) throw error
+
+  if (error) {
+    logger.error('[DB] Upsert user failed', error)
+    throw error
+  }
+
+  logger.performance('DB upsertUserByPhone', Date.now() - startTime, {
+    metadata: { userId: data.id },
+  })
+
   return data.id as string
 }
 
@@ -48,6 +64,13 @@ export async function getOrCreateConversation(userId: string, waConversationId?:
 }
 
 export async function insertInboundMessage(conversationId: string, msg: NormalizedMessage) {
+  const startTime = Date.now()
+
+  logger.debug('[DB] Inserting inbound message', {
+    conversationId,
+    metadata: { type: msg.type },
+  })
+
   const supabase = getSupabaseServerClient()
   const payload = {
     conversation_id: conversationId,
@@ -59,7 +82,17 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
     timestamp: new Date(msg.timestamp).toISOString(),
   }
   const { error } = await supabase.from('messages_v2').insert(payload)
-  if (error) throw error
+
+  if (error) {
+    logger.error('[DB] Insert inbound message failed', error, {
+      conversationId,
+    })
+    throw error
+  }
+
+  logger.performance('DB insertInboundMessage', Date.now() - startTime, {
+    conversationId,
+  })
 }
 
 export async function insertOutboundMessage(

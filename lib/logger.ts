@@ -117,4 +117,42 @@ export const logger = {
   error(message: string, error: Error, context?: LogContext): void {
     log('error', message, error, context);
   },
+
+  /**
+   * Log function entry with parameters (debug level)
+   */
+  functionEntry(functionName: string, params?: Record<string, unknown>, context?: LogContext): void {
+    log('debug', `[ENTRY] ${functionName}`, undefined, {
+      ...context,
+      metadata: { ...context?.metadata, params },
+    });
+  },
+
+  /**
+   * Log function exit with timing and result (debug level)
+   */
+  functionExit(functionName: string, duration: number, result?: unknown, context?: LogContext): void {
+    log('debug', `[EXIT] ${functionName}`, undefined, {
+      ...context,
+      duration,
+      metadata: { ...context?.metadata, result },
+    });
+  },
+
+  /**
+   * Log performance metrics (info level)
+   */
+  performance(operation: string, duration: number, context?: LogContext): void {
+    log('info', `[PERF] ${operation}`, undefined, {
+      ...context,
+      duration,
+    });
+  },
+
+  /**
+   * Log decision points in control flow (debug level)
+   */
+  decision(decision: string, chosen: string, context?: LogContext): void {
+    log('debug', `[DECISION] ${decision}: ${chosen}`, undefined, context);
+  },
 };

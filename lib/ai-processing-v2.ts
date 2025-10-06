@@ -79,6 +79,15 @@ export async function processMessageWithAI(
   userMessage: string,
   messageId: string
 ) {
+  const startTime = Date.now()
+
+  logger.functionEntry('processMessageWithAI', {
+    conversationId,
+    userId,
+    userMessage: userMessage.slice(0, 100), // First 100 chars
+    messageId,
+  })
+
   let typingManager
   let providerManager
 
@@ -86,6 +95,11 @@ export async function processMessageWithAI(
     // Initialize managers inside try-catch to prevent synchronous errors
     typingManager = createTypingManager(userPhone, messageId)
     providerManager = getProviderManager()
+
+    logger.debug('[AI] Initialized managers', {
+      conversationId,
+      userId,
+    })
 
     // Mark message as read
     await markAsRead(messageId)
@@ -95,16 +109,34 @@ export async function processMessageWithAI(
     await typingManager.start()
 
     // Get conversation history
+    logger.debug('[AI] Getting conversation history', {
+      conversationId,
+      userId,
+    })
     const history = await getConversationHistory(conversationId, 10)
     const claudeHistory = historyToClaudeMessages(history)
+    logger.debug('[AI] Conversation history retrieved', {
+      conversationId,
+      userId,
+      metadata: { historyLength: claudeHistory.length },
+    })
 
     // Try specialized agents first
     const schedulingAgent = createSchedulingAgent()
     const financeAgent = createFinanceAgent()
 
     // Check for appointment
+    logger.debug('[AI] Checking for appointment', {
+      conversationId,
+      userId,
+    })
     const appointment = await schedulingAgent.extractAppointment(userMessage)
     if (appointment) {
+      logger.decision('Agent selection', 'SchedulingAgent', {
+        conversationId,
+        userId,
+        metadata: { appointment },
+      });
       const response = `✅ Cita agendada: "${appointment.title}"
 📅 Fecha: ${appointment.date}
 ⏰ Hora: ${appointment.time}
@@ -120,12 +152,26 @@ Te enviaré recordatorios 1 día antes y 1 hora antes.`
         'claude',
         'chat'
       )
+
+      logger.functionExit('processMessageWithAI', Date.now() - startTime, {
+        agent: 'SchedulingAgent',
+        responseLength: response.length,
+      }, { conversationId, userId })
       return
     }
 
     // Check for expense
+    logger.debug('[AI] Checking for expense', {
+      conversationId,
+      userId,
+    })
     const expense = await financeAgent.extractExpense(userMessage)
     if (expense) {
+      logger.decision('Agent selection', 'FinanceAgent', {
+        conversationId,
+        userId,
+        metadata: { expense },
+      });
       const response = `💰 Gasto registrado:
 Monto: ${expense.currency} ${expense.amount}
 Categoría: ${expense.category}
@@ -142,10 +188,19 @@ Descripción: ${expense.description}
         'claude',
         'chat'
       )
+
+      logger.functionExit('processMessageWithAI', Date.now() - startTime, {
+        agent: 'FinanceAgent',
+        responseLength: response.length,
+      }, { conversationId, userId })
       return
     }
 
     // Default: use proactive agent
+    logger.decision('Agent selection', 'ProactiveAgent (default)', {
+      conversationId,
+      userId,
+    })
     const proactiveAgent = createProactiveAgent()
     const response = await proactiveAgent.respond(userMessage, claudeHistory)
 
@@ -158,12 +213,35 @@ Descripción: ${expense.description}
       'claude',
       'chat'
     )
+
+    logger.functionExit('processMessageWithAI', Date.now() - startTime, {
+      agent: 'ProactiveAgent',
+      responseLength: response.length,
+    }, { conversationId, userId })
   } catch (error: any) {
-    logger.error('AI processing error', error)
+    logger.error('AI processing error', error, {
+      conversationId,
+      userId,
+      metadata: {
+        userPhone,
+        errorType: error?.constructor?.name,
+        errorMessage: error?.message,
+      },
+    })
+
+    // Always send warning reaction
     await reactWithWarning(userPhone, messageId)
+
+    // Determine error type for better user messaging
+    const isAPIKeyError = error?.message?.includes('ANTHROPIC_API_KEY') ||
+                          error?.message?.includes('API key')
+    const errorMessage = isAPIKeyError
+      ? 'El sistema está en mantenimiento temporalmente. Por favor intenta más tarde.'
+      : 'Disculpa, tuve un problema al procesar tu mensaje. ¿Puedes intentar de nuevo?'
 
     // Try fallback to OpenAI if Claude fails
     try {
+      logger.info('Attempting OpenAI fallback', { conversationId, userId })
       const history = await getConversationHistory(conversationId, 10)
       const chatHistory = historyToChatMessages(history)
       const fallbackResponse = await generateResponse({
@@ -174,14 +252,21 @@ Descripción: ${expense.description}
       })
 
       await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
-      logger.info('Fallback to OpenAI successful')
+      await reactWithCheck(userPhone, messageId) // Override warning with success
+      logger.info('Fallback to OpenAI successful', { conversationId, userId })
     } catch (fallbackError: any) {
-      logger.error('Fallback also failed', fallbackError)
-      await sendTextAndPersist(
+      logger.error('Fallback also failed', fallbackError, {
         conversationId,
-        userPhone,
-        'Disculpa, tuve un problema al procesar tu mensaje. ¿Puedes intentar de nuevo?'
-      )
+        userId,
+        metadata: {
+          fallbackErrorType: fallbackError?.constructor?.name,
+          fallbackErrorMessage: fallbackError?.message,
+        },
+      })
+
+      // ALWAYS send a response to the user
+      await sendTextAndPersist(conversationId, userPhone, errorMessage)
+      logger.info('Sent error message to user', { conversationId, userId })
     }
   } finally {
     if (typingManager) {
@@ -198,7 +283,24 @@ export async function processAudioMessage(
   userId: string,
   normalized: NormalizedMessage
 ) {
+  const startTime = Date.now()
+
+  logger.functionEntry('processAudioMessage', {
+    conversationId,
+    userId,
+    hasMediaUrl: !!normalized.mediaUrl,
+  })
+
   if (!normalized.mediaUrl || !normalized.waMessageId || !normalized.from) {
+    logger.warn('[Audio] Missing required fields', {
+      conversationId,
+      userId,
+      metadata: {
+        hasMediaUrl: !!normalized.mediaUrl,
+        hasMessageId: !!normalized.waMessageId,
+        hasFrom: !!normalized.from,
+      },
+    })
     return
   }
 
@@ -217,14 +319,32 @@ export async function processAudioMessage(
     await typingManager.start()
 
     // Download audio
+    logger.debug('[Audio] Downloading audio file', {
+      conversationId,
+      userId,
+    })
     const audioResponse = await fetch(normalized.mediaUrl)
     const audioBuffer = new Uint8Array(await audioResponse.arrayBuffer())
+    logger.debug('[Audio] Audio downloaded', {
+      conversationId,
+      userId,
+      metadata: { bufferSize: audioBuffer.length },
+    })
 
     // Transcribe with Groq (93% cheaper!)
+    logger.debug('[Audio] Starting Groq transcription', {
+      conversationId,
+      userId,
+    })
     const audioFile = bufferToFile(audioBuffer, 'audio.ogg', 'audio/ogg')
     const transcript = await transcribeWithGroq(audioFile, {
       model: 'whisper-large-v3',
       language: 'es',
+    })
+    logger.performance('Groq transcription', Date.now() - startTime, {
+      conversationId,
+      userId,
+      metadata: { transcriptLength: transcript.length },
     })
 
     // Update message with transcript
@@ -297,7 +417,24 @@ export async function processDocumentMessage(
   userId: string,
   normalized: NormalizedMessage
 ) {
+  const startTime = Date.now()
+
+  logger.functionEntry('processDocumentMessage', {
+    conversationId,
+    userId,
+    hasMediaUrl: !!normalized.mediaUrl,
+  })
+
   if (!normalized.mediaUrl || !normalized.waMessageId || !normalized.from) {
+    logger.warn('[Document] Missing required fields', {
+      conversationId,
+      userId,
+      metadata: {
+        hasMediaUrl: !!normalized.mediaUrl,
+        hasMessageId: !!normalized.waMessageId,
+        hasFrom: !!normalized.from,
+      },
+    })
     return
   }
 
@@ -316,16 +453,38 @@ export async function processDocumentMessage(
     await typingManager.start()
 
     // Download image/document
+    logger.debug('[Document] Downloading document', {
+      conversationId,
+      userId,
+    })
     const imageResponse = await fetch(normalized.mediaUrl)
     const imageArrayBuffer = await imageResponse.arrayBuffer()
     const imageBuffer = new Uint8Array(imageArrayBuffer)
+    logger.debug('[Document] Document downloaded', {
+      conversationId,
+      userId,
+      metadata: { bufferSize: imageBuffer.length },
+    })
 
     // Lazy load Tesseract (saves 2MB from bundle)
+    logger.debug('[Document] Loading Tesseract OCR', {
+      conversationId,
+      userId,
+    })
     const { extractTextFromImage } = await import('./tesseract-ocr')
 
     // Extract text with Tesseract (FREE!)
+    logger.debug('[Document] Starting OCR extraction', {
+      conversationId,
+      userId,
+    })
     const extractedText = await extractTextFromImage(imageBuffer, {
       language: 'spa+eng',
+    })
+    logger.performance('Tesseract OCR', Date.now() - startTime, {
+      conversationId,
+      userId,
+      metadata: { textLength: extractedText.length },
     })
 
     // Process extracted text with Claude for comprehension

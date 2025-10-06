@@ -62,7 +62,15 @@ Siempre busca formas de ser útil más allá de solo responder.`,
     userMessage: string,
     conversationHistory: ClaudeMessage[]
   ): Promise<string> {
+    const startTime = Date.now()
     const client = getClaudeClient()
+
+    logger.debug('[ProactiveAgent] Processing message', {
+      metadata: {
+        messageLength: userMessage.length,
+        historyLength: conversationHistory.length,
+      },
+    })
 
     const messages: ClaudeMessage[] = [
       ...conversationHistory,
@@ -83,13 +91,23 @@ Siempre busca formas de ser útil más allá de solo responder.`,
 
       const content = response.content[0]
       if (content?.type === 'text') {
+        logger.performance('ProactiveAgent.respond', Date.now() - startTime, {
+          metadata: {
+            inputTokens: response.usage.input_tokens,
+            outputTokens: response.usage.output_tokens,
+            responseLength: content.text.length,
+          },
+        })
         return content.text.trim()
       }
 
       throw new Error('ProactiveAgent: Invalid response format')
     } catch (error: any) {
       logger.error('ProactiveAgent error', error, {
-        metadata: { userMessage },
+        metadata: {
+          userMessage: userMessage.slice(0, 100),
+          duration: Date.now() - startTime,
+        },
       })
       throw error
     }
@@ -141,7 +159,12 @@ Extrae SIEMPRE esta información:
     time: string
     duration?: number
   } | null> {
+    const startTime = Date.now()
     const client = getClaudeClient()
+
+    logger.debug('[SchedulingAgent] Extracting appointment', {
+      metadata: { messageLength: userMessage.length },
+    })
 
     try {
       const response = await client.messages.create({
@@ -170,6 +193,9 @@ Mensaje: "${userMessage}"`,
         // Try to parse JSON
         try {
           const appointment = JSON.parse(text)
+          logger.performance('SchedulingAgent.extractAppointment', Date.now() - startTime, {
+            metadata: { found: true },
+          })
           return appointment
         } catch {
           logger.warn('SchedulingAgent: Could not parse appointment JSON', {
@@ -179,10 +205,16 @@ Mensaje: "${userMessage}"`,
         }
       }
 
+      logger.debug('[SchedulingAgent] No appointment found', {
+        metadata: { duration: Date.now() - startTime },
+      })
       return null
     } catch (error: any) {
       logger.error('SchedulingAgent extraction error', error, {
-        metadata: { userMessage },
+        metadata: {
+          userMessage: userMessage.slice(0, 100),
+          duration: Date.now() - startTime,
+        },
       })
       return null
     }
@@ -237,7 +269,12 @@ Formato de extracción:
     category: string
     description: string
   } | null> {
+    const startTime = Date.now()
     const client = getClaudeClient()
+
+    logger.debug('[FinanceAgent] Extracting expense', {
+      metadata: { messageLength: userMessage.length },
+    })
 
     try {
       const response = await client.messages.create({
@@ -265,6 +302,9 @@ Mensaje: "${userMessage}"`,
 
         try {
           const expense = JSON.parse(text)
+          logger.performance('FinanceAgent.extractExpense', Date.now() - startTime, {
+            metadata: { found: true },
+          })
           return expense
         } catch {
           logger.warn('FinanceAgent: Could not parse expense JSON', {
@@ -274,10 +314,16 @@ Mensaje: "${userMessage}"`,
         }
       }
 
+      logger.debug('[FinanceAgent] No expense found', {
+        metadata: { duration: Date.now() - startTime },
+      })
       return null
     } catch (error: any) {
       logger.error('FinanceAgent extraction error', error, {
-        metadata: { userMessage },
+        metadata: {
+          userMessage: userMessage.slice(0, 100),
+          duration: Date.now() - startTime,
+        },
       })
       return null
     }

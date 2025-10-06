@@ -13,6 +13,7 @@ import {
 // Import V2 AI processing with multi-provider support (76% cost savings)
 import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../../../lib/ai-processing-v2';
 import { getSupabaseServerClient } from '../../../../lib/supabase';
+import { sendWhatsAppText, reactWithWarning } from '../../../../lib/whatsapp';
 
 /**
  * Create JSON response helper
@@ -78,25 +79,55 @@ export async function GET(req: Request): Promise<Response> {
 export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId();
 
+  logger.debug('[webhook] Incoming POST request', {
+    requestId,
+    metadata: {
+      url: req.url,
+      method: req.method,
+    },
+  });
+
   try {
     // Read and validate signature
     const rawBody = await req.text();
+    logger.debug('[webhook] Request body received', {
+      requestId,
+      metadata: { bodyLength: rawBody.length },
+    });
+
     const signatureOk = await validateSignature(req, rawBody);
     if (!signatureOk) {
+      logger.warn('[webhook] Invalid signature', { requestId });
       return jsonResponse({ error: 'Invalid signature', request_id: requestId }, 401);
     }
+    logger.debug('[webhook] Signature validated successfully', { requestId });
 
     // Parse JSON
     let jsonBody: unknown;
     try {
       jsonBody = JSON.parse(rawBody);
-    } catch {
+      logger.debug('[webhook] JSON parsed successfully', {
+        requestId,
+        metadata: { object: (jsonBody as any)?.object },
+      });
+    } catch (parseErr: any) {
+      logger.warn('[webhook] JSON parse failed', {
+        requestId,
+        metadata: { error: parseErr.message },
+      });
       return jsonResponse({ error: 'Invalid JSON body', request_id: requestId }, 400);
     }
 
     // Validate with Zod schemas
     const validationResult = safeValidateWebhookPayload(jsonBody);
     if (!validationResult.success) {
+      logger.debug('[webhook] Zod validation result', {
+        requestId,
+        metadata: {
+          success: validationResult.success,
+          errorCount: validationResult.error?.issues.length,
+        },
+      });
       logger.warn('[webhook] Validation failed', {
         requestId,
         metadata: { issues: validationResult.error.issues.slice(0, 3) },
@@ -113,8 +144,16 @@ export async function POST(req: Request): Promise<Response> {
 
     // Extract message from payload
     const payload = validationResult.data;
+    logger.debug('[webhook] Payload validated, extracting message', {
+      requestId,
+      metadata: {
+        entryCount: payload.entry.length,
+      },
+    });
+
     const message = extractFirstMessage(payload);
     if (!message) {
+      logger.debug('[webhook] No message found in payload', { requestId });
       // Handle non-message webhook events (flows, template status, etc.)
       if (payload.entry.length > 0) {
         const entry = payload.entry[0]!;
@@ -163,7 +202,18 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Check for duplicate webhook (WhatsApp retries up to 5 times)
-    if (isDuplicateWebhook(message.id)) {
+    logger.debug('[webhook] Checking for duplicate webhook', {
+      requestId,
+      metadata: { messageId: message.id },
+    });
+
+    const isDuplicate = isDuplicateWebhook(message.id);
+    logger.decision('Duplicate check', isDuplicate ? 'DUPLICATE' : 'NEW', {
+      requestId,
+      metadata: { messageId: message.id },
+    });
+
+    if (isDuplicate) {
       logger.info('[webhook] Duplicate webhook detected', {
         requestId,
         metadata: { messageId: message.id },
@@ -175,14 +225,20 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Convert to normalized format
+    logger.debug('[webhook] Normalizing message', {
+      requestId,
+      metadata: { messageType: message.type, from: message.from },
+    });
     const normalized = whatsAppMessageToNormalized(message);
 
     // Persist message to database
+    logger.debug('[webhook] Persisting message to database', { requestId });
     let conversationId: string;
     let userId: string;
     try {
       const result = await persistNormalizedMessage(normalized);
       if (!result) {
+        logger.warn('[webhook] Persist returned null', { requestId });
         return jsonResponse(
           { status: 'ignored', reason: 'persist failed', request_id: requestId },
           200
@@ -190,7 +246,13 @@ export async function POST(req: Request): Promise<Response> {
       }
       conversationId = result.conversationId;
       userId = result.userId;
+      logger.debug('[webhook] Message persisted successfully', {
+        requestId,
+        conversationId,
+        userId,
+      });
     } catch (persistErr: any) {
+      logger.error('[webhook] Persist error', persistErr, { requestId });
       return jsonResponse(
         { error: 'DB error', detail: persistErr?.message, request_id: requestId },
         500
@@ -202,6 +264,11 @@ export async function POST(req: Request): Promise<Response> {
     let actionDefinition = null;
 
     if (interactiveReply) {
+      logger.debug('[webhook] Interactive reply detected', {
+        requestId,
+        conversationId,
+        metadata: { interactiveId: interactiveReply.id },
+      });
       actionDefinition = getActionDefinition(interactiveReply.id);
 
       // Log conversation action
@@ -236,6 +303,13 @@ export async function POST(req: Request): Promise<Response> {
 
     // Process text message with AI (fire and forget)
     if (normalized.content && normalized.from) {
+      logger.decision('Message processing', 'AI text processing', {
+        requestId,
+        conversationId,
+        userId,
+        metadata: { contentLength: normalized.content.length },
+      });
+
       try {
         processMessageWithAI(
           conversationId,
@@ -243,11 +317,33 @@ export async function POST(req: Request): Promise<Response> {
           normalized.from,
           normalized.content,
           normalized.waMessageId
-        ).catch((err) => {
+        ).catch(async (err) => {
           logger.error('Background AI processing failed', err, {
             requestId,
             conversationId,
             userId,
+          });
+
+          // CRITICAL FIX: Send fallback response to user
+          try {
+            await sendWhatsAppText(
+              normalized.from,
+              'Disculpa, tuve un problema procesando tu mensaje. ¿Puedes intentar de nuevo?'
+            );
+            await reactWithWarning(normalized.from, normalized.waMessageId);
+          } catch (fallbackErr: any) {
+            logger.error('Failed to send error message to user', fallbackErr, {
+              requestId,
+              conversationId,
+              userId,
+            });
+          }
+
+          // CRITICAL FIX: Remove from dedup cache to allow retry
+          processedWebhooks.delete(normalized.waMessageId);
+          logger.info('[webhook] Removed failed message from dedup cache', {
+            requestId,
+            metadata: { messageId: normalized.waMessageId },
           });
         });
       } catch (syncErr: any) {

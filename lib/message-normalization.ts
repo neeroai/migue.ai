@@ -10,6 +10,7 @@ import {
   getOrCreateConversation,
   insertInboundMessage,
 } from './persist'
+import { logger } from './logger'
 
 export interface NormalizedMessage {
   from: string;
@@ -32,6 +33,14 @@ export interface InteractiveReply {
  * Convert validated WhatsApp message to normalized format
  */
 export function whatsAppMessageToNormalized(message: WhatsAppMessage): NormalizedMessage {
+  logger.debug('[normalize] Converting WhatsApp message', {
+    metadata: {
+      messageId: message.id,
+      type: message.type,
+      from: message.from,
+    },
+  })
+
   const type = message.type;
   const from = message.from;
   const timestamp = Number(message.timestamp) * 1000;
@@ -67,7 +76,7 @@ export function whatsAppMessageToNormalized(message: WhatsAppMessage): Normalize
     }
   }
 
-  return {
+  const normalized = {
     from,
     type,
     content,
@@ -77,6 +86,16 @@ export function whatsAppMessageToNormalized(message: WhatsAppMessage): Normalize
     timestamp,
     raw: message,
   };
+
+  logger.debug('[normalize] Normalized result', {
+    metadata: {
+      type: normalized.type,
+      hasContent: !!normalized.content,
+      hasMedia: !!normalized.mediaUrl,
+    },
+  })
+
+  return normalized
 }
 
 /**

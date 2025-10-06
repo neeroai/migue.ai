@@ -15,6 +15,7 @@ import type {
   CallPermissionOptions,
   LocationData,
 } from '../types/whatsapp';
+import { logger } from './logger';
 
 export const GRAPH_BASE_URL = 'https://graph.facebook.com/v23.0';
 
@@ -91,8 +92,23 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
 
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    console.error(`WhatsApp API error ${res.status} (${latency}ms):`, detail);
-    throw new Error(`WhatsApp API error ${res.status}: ${detail}`);
+    const error = new Error(`WhatsApp API error ${res.status}: ${detail}`)
+
+    // Use logger instead of console.error (catch logging errors in tests)
+    try {
+      logger.error('[WhatsApp API] Request failed', error, {
+        metadata: {
+          status: res.status,
+          latency,
+          payloadType: payload.type,
+          to: payload.to,
+        },
+      })
+    } catch (logErr) {
+      // Ignore logging errors (e.g., in test environments)
+    }
+
+    throw error;
   }
 
   const data = await res.json();
