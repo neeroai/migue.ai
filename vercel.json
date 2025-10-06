@@ -9,7 +9,7 @@
     },
     {
       "path": "/api/cron/follow-ups",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 9,18 * * *"
     }
   ],
   "headers": [

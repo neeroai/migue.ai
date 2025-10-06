@@ -24,6 +24,10 @@ import {
 } from './claude-agents'
 import { type ClaudeMessage } from './claude-client'
 import { transcribeWithGroq, bufferToFile } from './groq-client'
+// Autonomous action execution imports
+import { createReminder } from './reminders'
+import { scheduleMeetingFromIntent } from './scheduling'
+import { scheduleFollowUp } from './followups'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
   sendWhatsAppText,
@@ -40,7 +44,7 @@ import type { NormalizedMessage } from './message-normalization'
 /**
  * Convert conversation history to Claude format
  */
-function historyToClaudeMessages(
+export function historyToClaudeMessages(
   history: Array<{ direction: 'inbound' | 'outbound'; content: string | null }>
 ): ClaudeMessage[] {
   return history
@@ -132,32 +136,118 @@ export async function processMessageWithAI(
     })
     const appointment = await schedulingAgent.extractAppointment(userMessage)
     if (appointment) {
-      logger.decision('Agent selection', 'SchedulingAgent', {
+      logger.decision('Agent selection', 'SchedulingAgent - Executing autonomous action', {
         conversationId,
         userId,
         metadata: { appointment },
       });
-      const response = `✅ Cita agendada: "${appointment.title}"
-📅 Fecha: ${appointment.date}
-⏰ Hora: ${appointment.time}
 
-Te enviaré recordatorios 1 día antes y 1 hora antes.`
+      try {
+        // Decide if it's a simple reminder or a formal meeting
+        const isReminder = userMessage.toLowerCase().includes('recuerd') ||
+                          userMessage.toLowerCase().includes('recordat') ||
+                          !userMessage.toLowerCase().match(/reuni[oó]n|junta|meeting|cita con/i)
 
-      await sendTextAndPersist(conversationId, userPhone, response)
-      await reactWithCheck(userPhone, messageId)
+        let response = ''
 
-      // Track cost
-      providerManager.trackSpending(
-        PROVIDER_COSTS.chat.claude,
-        'claude',
-        'chat'
-      )
+        if (isReminder) {
+          // Create simple reminder in database
+          const datetimeIso = `${appointment.date}T${appointment.time}:00-06:00`
+          await createReminder(
+            userId,
+            appointment.title,
+            appointment.description || null,
+            datetimeIso
+          )
 
-      logger.functionExit('processMessageWithAI', Date.now() - startTime, {
-        agent: 'SchedulingAgent',
-        responseLength: response.length,
-      }, { conversationId, userId })
-      return
+          logger.info('[AI] Reminder created successfully', {
+            conversationId,
+            userId,
+            metadata: { title: appointment.title, scheduledTime: datetimeIso },
+          })
+
+          response = `✅ Listo! Guardé tu recordatorio:
+"${appointment.title}"
+📅 ${appointment.date} a las ${appointment.time}
+
+Te lo recordaré a tiempo 👍`
+        } else {
+          // Create formal meeting in Google Calendar
+          const history = await getConversationHistory(conversationId, 5)
+          const chatHistory = historyToChatMessages(history)
+
+          const schedulingResult = await scheduleMeetingFromIntent({
+            userId,
+            userMessage,
+            conversationHistory: chatHistory,
+          })
+
+          if (schedulingResult.status === 'scheduled') {
+            response = schedulingResult.reply
+            logger.info('[AI] Meeting scheduled successfully', {
+              conversationId,
+              userId,
+              metadata: { start: schedulingResult.start, end: schedulingResult.end },
+            })
+          } else {
+            response = schedulingResult.reply
+            logger.warn('[AI] Meeting scheduling needs clarification', {
+              conversationId,
+              userId,
+              metadata: { status: schedulingResult.status },
+            })
+          }
+        }
+
+        // Schedule follow-up confirmation (2 hours later)
+        await scheduleFollowUp({
+          userId,
+          conversationId,
+          category: 'schedule_confirm',
+          delayMinutes: 120,
+          payload: {
+            appointmentTitle: appointment.title,
+            appointmentDate: appointment.date,
+            appointmentTime: appointment.time,
+            appointmentDescription: appointment.description || null,
+            isReminder,
+            originalMessage: userMessage,
+            createdAt: new Date().toISOString(),
+          },
+        })
+
+        await sendTextAndPersist(conversationId, userPhone, response)
+        await reactWithCheck(userPhone, messageId)
+
+        // Track cost
+        providerManager.trackSpending(
+          PROVIDER_COSTS.chat.claude,
+          'claude',
+          'chat'
+        )
+
+        logger.functionExit('processMessageWithAI', Date.now() - startTime, {
+          agent: 'SchedulingAgent',
+          actionExecuted: true,
+          responseLength: response.length,
+        }, { conversationId, userId })
+        return
+      } catch (actionError: any) {
+        logger.error('[AI] Failed to execute scheduling action', actionError, {
+          conversationId,
+          userId,
+          metadata: { appointment },
+        })
+
+        // Fallback to informational response if action fails
+        const fallbackResponse = `Detecté que quieres: "${appointment.title}" para ${appointment.date} a las ${appointment.time}.
+
+Hubo un problema al guardarlo automáticamente. ¿Quieres que lo intente de nuevo?`
+
+        await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
+        await reactWithWarning(userPhone, messageId)
+        return
+      }
     }
 
     // Check for expense

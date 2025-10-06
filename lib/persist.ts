@@ -90,10 +90,31 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
     .select('id')
 
   if (error) {
-    logger.error('[DB] Insert inbound message failed', error, {
+    // Enhanced error logging with classification
+    const isDuplicate = error.code === '23505'; // PostgreSQL unique violation
+    const errorType = isDuplicate ? 'duplicate' : 'critical';
+
+    logger.error(`[DB] Insert inbound message failed (${errorType})`, error, {
       conversationId,
+      metadata: {
+        errorType,
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        payload: {
+          ...payload,
+          wa_message_id: payload.wa_message_id?.slice(0, 20) + '...', // Truncate for privacy
+        },
+      },
     })
-    throw error
+
+    // Enhance error with classification for upstream handling
+    const enhancedError = new Error(error.message);
+    (enhancedError as any).code = error.code;
+    (enhancedError as any).isDuplicate = isDuplicate;
+    (enhancedError as any).originalError = error;
+    throw enhancedError
   }
 
   const inserted = data && data.length > 0

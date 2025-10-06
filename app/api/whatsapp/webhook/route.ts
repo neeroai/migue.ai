@@ -16,6 +16,7 @@ import {
 import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../../../lib/ai-processing-v2';
 import { getSupabaseServerClient } from '../../../../lib/supabase';
 import { sendWhatsAppText, reactWithWarning } from '../../../../lib/whatsapp';
+import { retryWithBackoff, isDuplicateError, isTransientError } from '../../../../lib/error-recovery';
 
 /**
  * Create JSON response helper
@@ -221,13 +222,65 @@ async function processWebhookInBackground(
   let userId: string | undefined;
 
   try {
-    // Persist message to database (with DB-based deduplication)
+    // Persist message to database (with retry for transient errors)
     logger.debug('[background] Persisting message to database', {
       requestId,
       metadata: { waMessageId: normalized.waMessageId },
     });
 
-    const result = await persistNormalizedMessage(normalized);
+    let result;
+    try {
+      result = await retryWithBackoff(
+        () => persistNormalizedMessage(normalized),
+        'persistNormalizedMessage',
+        {
+          maxRetries: 1, // 2 total attempts
+          initialDelayMs: 500,
+        }
+      );
+    } catch (persistError: any) {
+      // Check if error is duplicate (safe to ignore)
+      if (isDuplicateError(persistError)) {
+        logger.info('[background] Duplicate message detected, skipping', {
+          requestId,
+          metadata: {
+            waMessageId: normalized.waMessageId,
+            errorCode: persistError.code
+          },
+        });
+        return; // Exit silently for duplicates
+      }
+
+      // Critical persist failure - notify user
+      logger.error('[background] Persist failed after retries', persistError, {
+        requestId,
+        metadata: {
+          errorCode: persistError.code,
+          errorMessage: persistError.message,
+          isTransient: isTransientError(persistError),
+          waMessageId: normalized.waMessageId,
+        },
+      });
+
+      // Notify user of failure
+      try {
+        await sendWhatsAppText(
+          normalized.from,
+          'Disculpa, hubo un problema guardando tu mensaje. Por favor intenta de nuevo en unos momentos.'
+        );
+        if (normalized.waMessageId) {
+          await reactWithWarning(normalized.from, normalized.waMessageId);
+        }
+      } catch (notifyError: any) {
+        logger.error('[background] Failed to notify user of persist failure', notifyError, {
+          requestId,
+          metadata: { phoneNumber: normalized.from },
+        });
+      }
+
+      return; // Exit - don't continue processing
+    }
+
     if (!result) {
       logger.warn('[background] Persist returned null', { requestId });
       return;
