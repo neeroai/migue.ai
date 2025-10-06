@@ -9,8 +9,10 @@
  */
 
 import { logger } from './logger'
-import { getConversationHistory } from './context'
+import { getConversationHistory, historyToChatMessages } from './context'
 import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
+import { generateResponse } from './response'
+import { transcribeWhatsAppAudio } from './transcription'
 import {
   getProviderManager,
   PROVIDER_COSTS,
@@ -158,9 +160,7 @@ Descripción: ${expense.description}
 
     // Try fallback to OpenAI if Claude fails
     try {
-      const { generateResponse } = await import('./response')
       const history = await getConversationHistory(conversationId, 10)
-      const { historyToChatMessages } = await import('./context')
       const chatHistory = historyToChatMessages(history)
       const fallbackResponse = await generateResponse({
         intent: 'casual_chat',
@@ -209,7 +209,7 @@ export async function processAudioMessage(
 
     // Download audio
     const audioResponse = await fetch(normalized.mediaUrl)
-    const audioBuffer = Buffer.from(await audioResponse.arrayBuffer())
+    const audioBuffer = new Uint8Array(await audioResponse.arrayBuffer())
 
     // Transcribe with Groq (93% cheaper!)
     const audioFile = bufferToFile(audioBuffer, 'audio.ogg', 'audio/ogg')
@@ -251,7 +251,6 @@ export async function processAudioMessage(
 
     // Fallback to OpenAI Whisper
     try {
-      const { transcribeWhatsAppAudio } = await import('./transcription')
       const result = await transcribeWhatsAppAudio(normalized.mediaUrl, userId)
 
       await updateInboundMessageByWaId(normalized.waMessageId, {
@@ -302,7 +301,8 @@ export async function processDocumentMessage(
 
     // Download image/document
     const imageResponse = await fetch(normalized.mediaUrl)
-    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer())
+    const imageArrayBuffer = await imageResponse.arrayBuffer()
+    const imageBuffer = new Uint8Array(imageArrayBuffer)
 
     // Lazy load Tesseract (saves 2MB from bundle)
     const { extractTextFromImage } = await import('./tesseract-ocr')

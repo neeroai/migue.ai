@@ -115,7 +115,51 @@ export async function POST(req: Request): Promise<Response> {
     const payload = validationResult.data;
     const message = extractFirstMessage(payload);
     if (!message) {
-      return jsonResponse({ status: 'ignored', reason: 'no message', request_id: requestId }, 200);
+      // Handle non-message webhook events (flows, template status, etc.)
+      if (payload.entry.length > 0) {
+        const entry = payload.entry[0]!;
+        if (entry.changes.length > 0) {
+          const change = entry.changes[0]!;
+
+          // Log and acknowledge flow webhooks (monitoring/status events)
+          if (change.field === 'flows') {
+            logger.info('[webhook] Flow event received (acknowledged, not processed)', {
+              requestId,
+              metadata: {
+                field: change.field,
+                eventType: 'value' in change ? (change.value as any)?.event : 'unknown',
+                flowId: 'value' in change ? (change.value as any)?.flow_id : undefined,
+              },
+            });
+            return jsonResponse({
+              status: 'acknowledged',
+              reason: 'flow monitoring event',
+              request_id: requestId
+            }, 200);
+          }
+
+          // Log and acknowledge other unknown webhook field types
+          if (change.field !== 'messages' && change.field !== 'call_events') {
+            const valueKeys = 'value' in change && typeof change.value === 'object' && change.value !== null
+              ? Object.keys(change.value)
+              : [];
+            logger.info('[webhook] Unknown webhook field type (acknowledged, not processed)', {
+              requestId,
+              metadata: {
+                field: change.field,
+                valueKeys,
+              },
+            });
+            return jsonResponse({
+              status: 'acknowledged',
+              reason: `unsupported field: ${change.field}`,
+              request_id: requestId
+            }, 200);
+          }
+        }
+      }
+
+      return jsonResponse({ status: 'ignored', reason: 'no message or recognized event', request_id: requestId }, 200);
     }
 
     // Check for duplicate webhook (WhatsApp retries up to 5 times)
@@ -243,7 +287,6 @@ export async function POST(req: Request): Promise<Response> {
       (async () => {
         try {
           const supabase = getSupabaseServerClient();
-          // @ts-ignore - user_locations table exists but types not yet regenerated
           const { error } = await supabase
             .from('user_locations')
             .insert({

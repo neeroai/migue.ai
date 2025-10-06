@@ -186,6 +186,15 @@ export async function sendInteractiveButtons(
   buttons: Array<{ id: string; title: string }>,
   options: InteractiveButtonOptions = {}
 ) {
+  // Validate button count (WhatsApp API v23.0 limit: max 3 buttons)
+  if (buttons.length === 0) {
+    throw new Error('At least 1 button required');
+  }
+  if (buttons.length > 3) {
+    console.error('Interactive buttons limited to 3 options. Use sendInteractiveList for 4+ options.');
+    throw new Error('Maximum 3 buttons allowed. Use interactive list for more options.');
+  }
+
   try {
     const interactive: InteractiveButton = {
       type: 'button',
@@ -242,6 +251,15 @@ export async function sendInteractiveList(
   rows: Array<{ id: string; title: string; description?: string }>,
   sectionTitle = 'Opciones'
 ) {
+  // Validate row count (WhatsApp API v23.0 limit: max 10 rows per section)
+  if (rows.length === 0) {
+    throw new Error('At least 1 row required');
+  }
+  if (rows.length > 10) {
+    console.error('Interactive lists limited to 10 rows per section. Use WhatsApp Flows for complex forms.');
+    throw new Error('Maximum 10 rows allowed per section. Use WhatsApp Flows for more options.');
+  }
+
   try {
     const result = await sendWhatsAppRequest({
       messaging_product: 'whatsapp',
@@ -550,7 +568,7 @@ export async function markAsReadWithTyping(to: string, messageId: string) {
 
 export function createTypingManager(to: string, messageId: string) {
   let active = false;
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   return {
     async start() {

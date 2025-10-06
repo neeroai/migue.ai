@@ -23,10 +23,14 @@ export type OCROptions = {
  * Cost: $0 (100% free!)
  */
 export async function extractTextFromImage(
-  image: Buffer | string,
+  image: Uint8Array | string,
   options?: OCROptions
 ): Promise<string> {
-  const worker = await createWorker(options?.language || 'spa')
+  const worker = await createWorker(options?.language || 'spa', 1, {
+    // Specify CDN paths for Vercel Edge Runtime WASM compatibility
+    workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/worker.min.js',
+    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@6/tesseract-core-simd.wasm',
+  })
 
   try {
     // Configure Tesseract
@@ -36,8 +40,13 @@ export async function extractTextFromImage(
       })
     }
 
+    // Convert Uint8Array to Blob for Edge Runtime compatibility
+    const imageInput = image instanceof Uint8Array
+      ? new Blob([image as BlobPart], { type: 'image/jpeg' })
+      : image
+
     // Perform OCR
-    const { data } = await worker.recognize(image)
+    const { data } = await worker.recognize(imageInput)
 
     if (!data.text.trim()) {
       throw new Error('Tesseract returned empty text')
@@ -67,7 +76,7 @@ export async function extractTextFromImage(
  * Better for documents with complex formatting
  */
 export async function extractTextWithLayout(
-  image: Buffer | string,
+  image: Uint8Array | string,
   language?: OCRLanguage
 ): Promise<string> {
   return extractTextFromImage(image, {
@@ -81,7 +90,7 @@ export async function extractTextWithLayout(
  * Faster for simple text extraction (e.g., prices, labels)
  */
 export async function extractSingleLine(
-  image: Buffer | string,
+  image: Uint8Array | string,
   language?: OCRLanguage
 ): Promise<string> {
   return extractTextFromImage(image, {
@@ -95,7 +104,7 @@ export async function extractSingleLine(
  * Use Tesseract for text extraction, then Claude for comprehension
  */
 export async function ocrWithAIComprehension(
-  image: Buffer,
+  image: Uint8Array,
   comprehensionPrompt: string,
   aiProvider: 'claude' | 'openai' = 'claude'
 ): Promise<{ text: string; analysis: string }> {

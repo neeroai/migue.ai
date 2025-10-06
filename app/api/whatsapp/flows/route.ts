@@ -1,6 +1,6 @@
 export const runtime = 'edge';
 
-import { handleFlowDataExchange, completeFlowSession } from '../../../../lib/whatsapp-flows';
+import { handleFlowDataExchange, completeFlowSession, validateFlowSignature } from '../../../../lib/whatsapp-flows';
 import type { FlowDataExchangeRequest } from '../../../../types/whatsapp';
 
 /**
@@ -9,8 +9,23 @@ import type { FlowDataExchangeRequest } from '../../../../types/whatsapp';
  */
 export async function POST(req: Request): Promise<Response> {
   try {
+    // CRITICAL: Validate signature before processing to prevent spoofing
+    const rawBody = await req.text();
+    const isValid = await validateFlowSignature(req, rawBody);
+
+    if (!isValid) {
+      console.error('❌ Invalid flow signature - potential spoofing attempt');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        }
+      );
+    }
+
     // Parse request body
-    const body = await req.json() as FlowDataExchangeRequest;
+    const body = JSON.parse(rawBody) as FlowDataExchangeRequest;
 
     // Validate required fields
     if (!body.flow_token || !body.action || !body.screen) {

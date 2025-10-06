@@ -196,6 +196,34 @@ export const CallEventValueSchema = z.object({
   }),
 });
 
+// Flow Webhook Value Schema (v23.0 - administrative/monitoring events)
+export const FlowWebhookValueSchema = z.object({
+  messaging_product: z.literal('whatsapp').optional(),
+  metadata: z.object({
+    display_phone_number: z.string(),
+    phone_number_id: z.string(),
+  }).optional(),
+  event: z.enum([
+    'FLOW_STATUS_CHANGE',
+    'CLIENT_ERROR_RATE',
+    'ENDPOINT_ERROR_RATE',
+    'ENDPOINT_LATENCY',
+    'ENDPOINT_AVAILABILITY',
+    'FLOW_VERSION_EXPIRY_WARNING',
+  ]).optional(),
+  flow_id: z.string().optional(),
+  flow_name: z.string().optional(),
+  status: z.string().optional(),
+  error_rate: z.number().optional(),
+  latency_ms: z.number().optional(),
+}).passthrough(); // Allow additional fields for forward compatibility
+
+// Generic change schema for unknown webhook types (future-proofing)
+export const UnknownChangeSchema = z.object({
+  value: z.unknown(),
+  field: z.string(),
+});
+
 // Change schema
 export const ChangeSchema = z.object({
   value: ValueSchema,
@@ -208,10 +236,23 @@ export const CallEventChangeSchema = z.object({
   field: z.literal('call_events'),
 });
 
-// Entry schema - supports both message and call event changes
+// Flow Webhook Change schema (v23.0)
+export const FlowChangeSchema = z.object({
+  value: FlowWebhookValueSchema,
+  field: z.literal('flows'),
+});
+
+// Entry schema - supports messages, call_events, flows, and unknown webhook types
 export const EntrySchema = z.object({
   id: z.string(),
-  changes: z.array(z.union([ChangeSchema, CallEventChangeSchema])),
+  changes: z.array(
+    z.union([
+      ChangeSchema,           // field: 'messages'
+      CallEventChangeSchema,  // field: 'call_events'
+      FlowChangeSchema,       // field: 'flows'
+      UnknownChangeSchema,    // field: anything else (future-proof)
+    ])
+  ),
 });
 
 // Main webhook payload schema
@@ -235,6 +276,9 @@ export type WebhookVerification = z.infer<typeof WebhookVerificationSchema>;
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 export type CallEventValue = z.infer<typeof CallEventValueSchema>;
 export type CallEvent = z.infer<typeof CallEventValueSchema>['call_event'];
+export type FlowWebhookValue = z.infer<typeof FlowWebhookValueSchema>;
+export type FlowChange = z.infer<typeof FlowChangeSchema>;
+export type UnknownChange = z.infer<typeof UnknownChangeSchema>;
 
 /**
  * Validate WhatsApp webhook payload
@@ -276,9 +320,10 @@ export function extractFirstMessage(payload: WebhookPayload): WhatsAppMessage | 
   if (change.field !== 'messages') return null
 
   // Type guard to ensure we have the right value type
+  if (typeof change.value !== 'object' || change.value === null) return null
   if (!('messages' in change.value)) return null
 
-  const messages = change.value.messages
+  const messages = (change.value as { messages?: WhatsAppMessage[] }).messages
   if (!messages || messages.length === 0) return null
 
   return messages[0]!
@@ -300,9 +345,10 @@ export function extractFirstStatus(payload: WebhookPayload): StatusUpdate | null
   if (change.field !== 'messages') return null
 
   // Type guard to ensure we have the right value type
+  if (typeof change.value !== 'object' || change.value === null) return null
   if (!('statuses' in change.value)) return null
 
-  const statuses = change.value.statuses
+  const statuses = (change.value as { statuses?: StatusUpdate[] }).statuses
   if (!statuses || statuses.length === 0) return null
 
   return statuses[0]!
@@ -324,7 +370,29 @@ export function extractFirstCallEvent(payload: WebhookPayload): CallEvent | null
   if (change.field !== 'call_events') return null
 
   // Type guard to ensure we have the right value type
+  if (typeof change.value !== 'object' || change.value === null) return null
   if (!('call_event' in change.value)) return null
 
-  return change.value.call_event || null
+  return (change.value as { call_event: CallEvent }).call_event
+}
+
+/**
+ * Extract first flow event from webhook payload (helper)
+ * Safe array access with noUncheckedIndexedAccess
+ */
+export function extractFirstFlowEvent(payload: WebhookPayload): FlowWebhookValue | null {
+  // Check array has elements before accessing with [0]
+  if (payload.entry.length === 0) return null
+  const entry = payload.entry[0]!
+
+  if (entry.changes.length === 0) return null
+  const change = entry.changes[0]!
+
+  // Check if this is a flow event change
+  if (change.field !== 'flows') return null
+
+  // Type guard to ensure we have the right value type
+  if (!('value' in change)) return null
+
+  return change.value as FlowWebhookValue
 }
