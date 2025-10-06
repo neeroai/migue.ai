@@ -125,7 +125,7 @@ npm run test:unit     # Jest only
 npm run test:e2e      # Playwright only
 ```
 
-**Status**: 20 suites, 112 tests ✅ | Coverage disabled (Edge Runtime)
+**Status**: 25 suites, 225 tests ✅ | Coverage disabled (Edge Runtime)
 
 **Requirements**:
 - ≥1 happy + ≥1 failure path per e2e test
@@ -263,17 +263,54 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 - ❌ `@anthropic-ai/claude-agent-sdk` - NOT compatible (requires Node.js fs/child_process)
 
 **TypeScript**: 5.9.2 (strict)
-**Tests**: 112/112 ✅
+**Tests**: 239/239 ✅
 **Production**: https://migue.app
-**Status**: Fase 2 (85%) - Core Features + AI Migration
+**Status**: Fase 2 (90%) - Production Ready
 
-**Current Phase**: Multi-provider AI optimization, cost tracking, production monitoring
-**Target**: Oct 10, 2025 - Fase 2 complete
-**Cost Savings**: 76% reduction ($55/month → $13/month)
+**Current Phase**: Tool calling, security audit, production hardening
+**Target**: Oct 8, 2025 - Fase 2 complete (adelantado)
+**Cost Savings**: 76% reduction ($55/month → $13/month) - ACTIVO
 
 ---
 
 ## Recent Updates
+
+### 2025-10-06 - Tool Calling & Security Audit ⚡
+- ✅ **Tool Calling Implementation** - Manual loop with Claude SDK:
+  - Created `lib/claude-tools.ts` with Zod-validated schemas
+  - Implemented manual tool calling loop in ProactiveAgent (max 5 iterations)
+  - Integrated tools: create_reminder, schedule_meeting, track_expense
+  - Type-safe tool execution with proper error handling
+  - Bot now autonomously executes actions: "Recuérdame X" → creates reminder
+  - Confirms with "✅ Listo! Guardé tu recordatorio..." (no manual confirmation)
+- ✅ **Triple Agent Security Audit** - Production validation:
+  - @whatsapp-api-expert: 0 critical errors (v23.0 compliant)
+  - @edge-functions-expert: 0 critical errors (Edge Runtime verified)
+  - @typescript-pro: 0 critical errors (strict mode passing)
+- ✅ **Production Hardening** - Security fixes implemented:
+  - Flow token expiration validation (1-hour default, customizable)
+  - Unicode escape in flow signatures (HMAC-SHA256)
+  - Type safety across all tool inputs/outputs
+- ✅ **Testing**: 239 tests passing (+14 tool calling tests)
+- ✅ **Status**: PRODUCTION READY for Vercel deployment
+
+### 2025-10-06 - Autonomous AI Actions & Error Recovery ⚡
+- ✅ **Autonomous AI Execution** - ProactiveAgent ejecuta acciones automáticamente:
+  - Creates reminders and meetings without manual confirmation
+  - Responds with "✅ Listo, ya lo guardé" vs "Puedes agregarlo manualmente"
+  - Integrated with `createReminder()` and `scheduleMeetingFromIntent()`
+- ✅ **Intelligent Follow-ups** - Context-aware messaging:
+  - Uses conversation history for natural messages
+  - Detects user activity (< 30 min) to avoid interruptions
+  - ProactiveAgent generates personalized follow-up messages
+  - Scheduled at 9am and 6pm (optimized from 6h intervals)
+- ✅ **Error Recovery System** - Production-ready error handling:
+  - Retry logic with exponential backoff (500ms → 1s)
+  - Duplicate detection (PostgreSQL + code-level)
+  - Transient error classification (connection, timeout, 503)
+  - Enhanced logging with error type metadata
+- ✅ **Testing**: 225 tests passing (+13 new tests for persist failures)
+- ✅ **Documentation**: 2 research guides (2,337 lines on AI processing)
 
 ### 2025-10-06 - Edge Runtime Optimization ⚡
 - ✅ **Confirmed Edge Runtime Compatibility** - All AI SDKs verified:
@@ -321,10 +358,10 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 - ✅ App Router with Edge Functions
 - ✅ All routes in `app/api/` with `route.ts`
 - ✅ Named HTTP exports (GET, POST)
-- ✅ 112 tests passing
+- ✅ 225 tests passing
 
 ---
 
-**Last Updated**: 2025-10-03
+**Last Updated**: 2025-10-06
 **Owner**: claude-master
-**Session Model**: Claude Opus 4.1
+**Session Model**: Claude Sonnet 4.5

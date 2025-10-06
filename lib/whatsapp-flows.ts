@@ -38,6 +38,16 @@ function hex(buffer: ArrayBuffer): string {
 }
 
 /**
+ * Escape Unicode characters for signature validation
+ * WhatsApp escapes non-ASCII characters in signature calculation
+ */
+function escapeUnicode(str: string): string {
+  return str.replace(/[^\x00-\x7F]/g, (char) => {
+    return '\\u' + ('0000' + char.charCodeAt(0).toString(16)).slice(-4);
+  });
+}
+
+/**
  * Generate HMAC-SHA256 hex signature (same as webhook validation)
  */
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
@@ -48,7 +58,11 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
     false,
     ['sign']
   );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  const sig = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(escapeUnicode(message)) // ✅ Escape Unicode before signing
+  );
   return hex(sig);
 }
 
@@ -133,6 +147,7 @@ export async function sendFlow(
     flowType?: 'navigate' | 'data_exchange';
     initialScreen?: string;
     initialData?: Record<string, unknown>;
+    expiresInMinutes?: number; // Custom token expiration (default: 60 minutes)
   }
 ): Promise<string | null> {
   try {
@@ -148,6 +163,11 @@ export async function sendFlow(
       .single();
 
     if (user) {
+      // Default expiration: 1 hour (can be customized via options)
+      const expiresAt = options?.expiresInMinutes
+        ? new Date(Date.now() + options.expiresInMinutes * 60000).toISOString()
+        : new Date(Date.now() + 3600000).toISOString(); // 1 hour default
+
       await supabase.from('flow_sessions').insert({
         user_id: user.id,
         flow_id: flowId,
@@ -155,6 +175,7 @@ export async function sendFlow(
         flow_type: flowType,
         status: 'pending' as const,
         session_data: (options?.initialData || {}) as any,
+        expires_at: expiresAt,
       });
     }
 
@@ -210,16 +231,17 @@ export async function handleFlowDataExchange(
   try {
     const { flow_token, action, screen, data } = request;
 
-    // Validate flow token
+    // Validate flow token and expiration
     const supabase = getSupabaseServerClient();
     const { data: session } = await supabase
       .from('flow_sessions')
       .select('*')
       .eq('flow_token', flow_token)
+      .gt('expires_at', new Date().toISOString()) // Token must not be expired
       .single();
 
     if (!session) {
-      console.error('Invalid flow token');
+      console.error('Invalid or expired flow token');
       return null;
     }
 

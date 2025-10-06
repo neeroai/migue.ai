@@ -12,6 +12,8 @@
 
 import { getClaudeClient, type ClaudeMessage } from './claude-client'
 import { logger } from './logger'
+import { getAllTools, executeTool } from './claude-tools'
+import type { MessageParam, ToolUseBlock, TextBlock } from '@anthropic-ai/sdk/resources/messages'
 
 /**
  * Base Agent Configuration
@@ -69,19 +71,21 @@ Sé conciso, amigable y confirma las acciones que YA SE EJECUTARON automáticame
 
   async respond(
     userMessage: string,
+    userId: string,
     conversationHistory: ClaudeMessage[]
   ): Promise<string> {
     const startTime = Date.now()
     const client = getClaudeClient()
 
-    logger.debug('[ProactiveAgent] Processing message', {
+    logger.debug('[ProactiveAgent] Processing message with tool calling', {
       metadata: {
         messageLength: userMessage.length,
         historyLength: conversationHistory.length,
+        userId,
       },
     })
 
-    const messages: ClaudeMessage[] = [
+    let messages: MessageParam[] = [
       ...conversationHistory,
       {
         role: 'user',
@@ -89,28 +93,137 @@ Sé conciso, amigable y confirma las acciones que YA SE EJECUTARON automáticame
       },
     ]
 
-    try {
-      const response = await client.messages.create({
-        model: this.config.model!,
-        max_tokens: this.config.maxTokens!,
-        temperature: this.config.temperature || 0.7,
-        system: this.config.systemPrompt,
-        messages,
-      })
+    // Get tools and inject userId
+    const tools = getAllTools()
 
-      const content = response.content[0]
-      if (content?.type === 'text') {
-        logger.performance('ProactiveAgent.respond', Date.now() - startTime, {
+    try {
+      // Tool calling loop - max 5 iterations
+      for (let iteration = 0; iteration < 5; iteration++) {
+        const response = await client.messages.create({
+          model: this.config.model!,
+          max_tokens: this.config.maxTokens!,
+          temperature: this.config.temperature || 0.7,
+          system: this.config.systemPrompt,
+          messages,
+          tools,
+        })
+
+        logger.debug('[ProactiveAgent] API response received', {
           metadata: {
-            inputTokens: response.usage.input_tokens,
-            outputTokens: response.usage.output_tokens,
-            responseLength: content.text.length,
+            iteration,
+            stopReason: response.stop_reason,
+            contentBlocks: response.content.length,
           },
         })
-        return content.text.trim()
+
+        // Check if Claude wants to use a tool
+        const toolUseBlock = response.content.find(
+          (block): block is ToolUseBlock => block.type === 'tool_use'
+        )
+
+        if (!toolUseBlock) {
+          // No tool use - return text response
+          const textBlock = response.content.find(
+            (block): block is TextBlock => block.type === 'text'
+          )
+
+          if (textBlock) {
+            logger.performance('ProactiveAgent.respond', Date.now() - startTime, {
+              metadata: {
+                inputTokens: response.usage.input_tokens,
+                outputTokens: response.usage.output_tokens,
+                iterations: iteration + 1,
+                usedTools: false,
+              },
+            })
+            return textBlock.text.trim()
+          }
+        }
+
+        // Execute tool
+        if (toolUseBlock) {
+          logger.info('[ProactiveAgent] Executing tool', {
+            metadata: {
+              toolName: toolUseBlock.name,
+              toolId: toolUseBlock.id,
+            },
+          })
+
+          try {
+            // Inject userId into tool input
+            const toolInput = typeof toolUseBlock.input === 'object' && toolUseBlock.input !== null
+              ? { ...toolUseBlock.input, userId }
+              : { userId }
+            const toolResult = await executeTool(toolUseBlock.name, toolInput)
+
+            logger.debug('[ProactiveAgent] Tool executed successfully', {
+              metadata: {
+                toolName: toolUseBlock.name,
+                resultLength: toolResult.length,
+              },
+            })
+
+            // Add assistant message with tool use
+            messages.push({
+              role: 'assistant',
+              content: response.content,
+            })
+
+            // Add tool result
+            messages.push({
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: toolUseBlock.id,
+                  content: toolResult,
+                },
+              ],
+            })
+
+            // Continue loop to get final response
+            continue
+          } catch (toolError: any) {
+            logger.error('[ProactiveAgent] Tool execution failed', toolError, {
+              metadata: {
+                toolName: toolUseBlock.name,
+                toolInput: toolUseBlock.input,
+              },
+            })
+
+            // Return error to Claude
+            messages.push({
+              role: 'assistant',
+              content: response.content,
+            })
+
+            messages.push({
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: toolUseBlock.id,
+                  content: `Error ejecutando herramienta: ${toolError.message}`,
+                  is_error: true,
+                },
+              ],
+            })
+
+            continue
+          }
+        }
+
+        // Fallback: extract any text from response
+        const textBlock = response.content.find(
+          (block): block is TextBlock => block.type === 'text'
+        )
+        if (textBlock) {
+          return textBlock.text.trim()
+        }
       }
 
-      throw new Error('ProactiveAgent: Invalid response format')
+      // Max iterations reached
+      throw new Error('ProactiveAgent: Max tool iterations reached')
     } catch (error: any) {
       logger.error('ProactiveAgent error', error, {
         metadata: {

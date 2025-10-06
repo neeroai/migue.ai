@@ -19,15 +19,9 @@ import {
 } from './ai-providers'
 import {
   createProactiveAgent,
-  createSchedulingAgent,
-  createFinanceAgent,
 } from './claude-agents'
 import { type ClaudeMessage } from './claude-client'
 import { transcribeWithGroq, bufferToFile } from './groq-client'
-// Autonomous action execution imports
-import { createReminder } from './reminders'
-import { scheduleMeetingFromIntent } from './scheduling'
-import { scheduleFollowUp } from './followups'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
   sendWhatsAppText,
@@ -125,174 +119,13 @@ export async function processMessageWithAI(
       metadata: { historyLength: claudeHistory.length },
     })
 
-    // Try specialized agents first
-    const schedulingAgent = createSchedulingAgent()
-    const financeAgent = createFinanceAgent()
-
-    // Check for appointment
-    logger.debug('[AI] Checking for appointment', {
-      conversationId,
-      userId,
-    })
-    const appointment = await schedulingAgent.extractAppointment(userMessage)
-    if (appointment) {
-      logger.decision('Agent selection', 'SchedulingAgent - Executing autonomous action', {
-        conversationId,
-        userId,
-        metadata: { appointment },
-      });
-
-      try {
-        // Decide if it's a simple reminder or a formal meeting
-        const isReminder = userMessage.toLowerCase().includes('recuerd') ||
-                          userMessage.toLowerCase().includes('recordat') ||
-                          !userMessage.toLowerCase().match(/reuni[oó]n|junta|meeting|cita con/i)
-
-        let response = ''
-
-        if (isReminder) {
-          // Create simple reminder in database
-          const datetimeIso = `${appointment.date}T${appointment.time}:00-06:00`
-          await createReminder(
-            userId,
-            appointment.title,
-            appointment.description || null,
-            datetimeIso
-          )
-
-          logger.info('[AI] Reminder created successfully', {
-            conversationId,
-            userId,
-            metadata: { title: appointment.title, scheduledTime: datetimeIso },
-          })
-
-          response = `✅ Listo! Guardé tu recordatorio:
-"${appointment.title}"
-📅 ${appointment.date} a las ${appointment.time}
-
-Te lo recordaré a tiempo 👍`
-        } else {
-          // Create formal meeting in Google Calendar
-          const history = await getConversationHistory(conversationId, 5)
-          const chatHistory = historyToChatMessages(history)
-
-          const schedulingResult = await scheduleMeetingFromIntent({
-            userId,
-            userMessage,
-            conversationHistory: chatHistory,
-          })
-
-          if (schedulingResult.status === 'scheduled') {
-            response = schedulingResult.reply
-            logger.info('[AI] Meeting scheduled successfully', {
-              conversationId,
-              userId,
-              metadata: { start: schedulingResult.start, end: schedulingResult.end },
-            })
-          } else {
-            response = schedulingResult.reply
-            logger.warn('[AI] Meeting scheduling needs clarification', {
-              conversationId,
-              userId,
-              metadata: { status: schedulingResult.status },
-            })
-          }
-        }
-
-        // Schedule follow-up confirmation (2 hours later)
-        await scheduleFollowUp({
-          userId,
-          conversationId,
-          category: 'schedule_confirm',
-          delayMinutes: 120,
-          payload: {
-            appointmentTitle: appointment.title,
-            appointmentDate: appointment.date,
-            appointmentTime: appointment.time,
-            appointmentDescription: appointment.description || null,
-            isReminder,
-            originalMessage: userMessage,
-            createdAt: new Date().toISOString(),
-          },
-        })
-
-        await sendTextAndPersist(conversationId, userPhone, response)
-        await reactWithCheck(userPhone, messageId)
-
-        // Track cost
-        providerManager.trackSpending(
-          PROVIDER_COSTS.chat.claude,
-          'claude',
-          'chat'
-        )
-
-        logger.functionExit('processMessageWithAI', Date.now() - startTime, {
-          agent: 'SchedulingAgent',
-          actionExecuted: true,
-          responseLength: response.length,
-        }, { conversationId, userId })
-        return
-      } catch (actionError: any) {
-        logger.error('[AI] Failed to execute scheduling action', actionError, {
-          conversationId,
-          userId,
-          metadata: { appointment },
-        })
-
-        // Fallback to informational response if action fails
-        const fallbackResponse = `Detecté que quieres: "${appointment.title}" para ${appointment.date} a las ${appointment.time}.
-
-Hubo un problema al guardarlo automáticamente. ¿Quieres que lo intente de nuevo?`
-
-        await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
-        await reactWithWarning(userPhone, messageId)
-        return
-      }
-    }
-
-    // Check for expense
-    logger.debug('[AI] Checking for expense', {
-      conversationId,
-      userId,
-    })
-    const expense = await financeAgent.extractExpense(userMessage)
-    if (expense) {
-      logger.decision('Agent selection', 'FinanceAgent', {
-        conversationId,
-        userId,
-        metadata: { expense },
-      });
-      const response = `💰 Gasto registrado:
-Monto: ${expense.currency} ${expense.amount}
-Categoría: ${expense.category}
-Descripción: ${expense.description}
-
-¿Quieres ver un resumen de tus gastos?`
-
-      await sendTextAndPersist(conversationId, userPhone, response)
-      await reactWithCheck(userPhone, messageId)
-
-      // Track cost
-      providerManager.trackSpending(
-        PROVIDER_COSTS.chat.claude,
-        'claude',
-        'chat'
-      )
-
-      logger.functionExit('processMessageWithAI', Date.now() - startTime, {
-        agent: 'FinanceAgent',
-        responseLength: response.length,
-      }, { conversationId, userId })
-      return
-    }
-
-    // Default: use proactive agent
-    logger.decision('Agent selection', 'ProactiveAgent (default)', {
+    // Use ProactiveAgent with tool calling (handles all actions autonomously)
+    logger.decision('Agent selection', 'ProactiveAgent with tool calling', {
       conversationId,
       userId,
     })
     const proactiveAgent = createProactiveAgent()
-    const response = await proactiveAgent.respond(userMessage, claudeHistory)
+    const response = await proactiveAgent.respond(userMessage, userId, claudeHistory)
 
     await sendTextAndPersist(conversationId, userPhone, response)
     await reactWithCheck(userPhone, messageId)
@@ -584,6 +417,7 @@ export async function processDocumentMessage(
 
     const comprehension = await proactiveAgent.respond(
       `El usuario envió una imagen con este texto: "${extractedText}". Analiza y responde de forma útil.`,
+      userId,
       claudeHistory
     )
 

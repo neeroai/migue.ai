@@ -30,7 +30,8 @@ async function getUserPhone(userId: string) {
 async function buildIntelligentFollowUp(
   category: string,
   payload: Record<string, unknown> | null,
-  conversationId: string
+  conversationId: string,
+  userId: string
 ): Promise<string> {
   // Load conversation history for context
   const history = await getConversationHistory(conversationId, 5);
@@ -61,7 +62,7 @@ async function buildIntelligentFollowUp(
         const agent = createProactiveAgent();
         const prompt = `El usuario tiene ${isReminder ? 'un recordatorio' : 'una cita'} agendado: "${title}" para el ${date} a las ${time}${description ? ` (${description})` : ''}. Escribe un mensaje amigable y breve (máximo 2 líneas) confirmando que todo sigue en pie. Sé cercano y usa emojis moderadamente.`;
 
-        const response = await agent.respond(prompt, claudeHistory);
+        const response = await agent.respond(prompt, userId, claudeHistory);
         return response;
       }
       // Fallback
@@ -102,7 +103,8 @@ export async function GET(req: Request): Promise<Response> {
         const message = await buildIntelligentFollowUp(
           job.category as string,
           job.payload,
-          job.conversation_id as string
+          job.conversation_id as string,
+          job.user_id as string
         );
 
         await sendWhatsAppText(phone, message);
