@@ -33,40 +33,6 @@ function getRequestId(): string {
 }
 
 /**
- * Webhook deduplication cache
- * WhatsApp retries failed webhooks up to 5 times
- */
-const processedWebhooks = new Map<string, number>();
-const DEDUP_WINDOW_MS = 60000; // 1 minute
-
-/**
- * Check if webhook was already processed recently
- */
-function isDuplicateWebhook(messageId: string): boolean {
-  const now = Date.now();
-
-  // Check if message was processed recently
-  if (processedWebhooks.has(messageId)) {
-    const processedAt = processedWebhooks.get(messageId)!;
-    if (now - processedAt < DEDUP_WINDOW_MS) {
-      return true;
-    }
-  }
-
-  // Mark message as processed
-  processedWebhooks.set(messageId, now);
-
-  // Clean old entries (prevent memory leak)
-  for (const [id, timestamp] of processedWebhooks) {
-    if (now - timestamp > DEDUP_WINDOW_MS) {
-      processedWebhooks.delete(id);
-    }
-  }
-
-  return false;
-}
-
-/**
  * GET handler for webhook verification
  */
 export async function GET(req: Request): Promise<Response> {
@@ -201,29 +167,6 @@ export async function POST(req: Request): Promise<Response> {
       return jsonResponse({ status: 'ignored', reason: 'no message or recognized event', request_id: requestId }, 200);
     }
 
-    // Check for duplicate webhook (WhatsApp retries up to 5 times)
-    logger.debug('[webhook] Checking for duplicate webhook', {
-      requestId,
-      metadata: { messageId: message.id },
-    });
-
-    const isDuplicate = isDuplicateWebhook(message.id);
-    logger.decision('Duplicate check', isDuplicate ? 'DUPLICATE' : 'NEW', {
-      requestId,
-      metadata: { messageId: message.id },
-    });
-
-    if (isDuplicate) {
-      logger.info('[webhook] Duplicate webhook detected', {
-        requestId,
-        metadata: { messageId: message.id },
-      });
-      return jsonResponse(
-        { status: 'duplicate', message_id: message.id, request_id: requestId },
-        200
-      );
-    }
-
     // Convert to normalized format
     logger.debug('[webhook] Normalizing message', {
       requestId,
@@ -231,10 +174,14 @@ export async function POST(req: Request): Promise<Response> {
     });
     const normalized = whatsAppMessageToNormalized(message);
 
-    // Persist message to database
-    logger.debug('[webhook] Persisting message to database', { requestId });
+    // Persist message to database (with DB-based deduplication)
+    logger.debug('[webhook] Persisting message to database', {
+      requestId,
+      metadata: { waMessageId: normalized.waMessageId },
+    });
     let conversationId: string;
     let userId: string;
+    let wasInserted: boolean;
     try {
       const result = await persistNormalizedMessage(normalized);
       if (!result) {
@@ -246,10 +193,25 @@ export async function POST(req: Request): Promise<Response> {
       }
       conversationId = result.conversationId;
       userId = result.userId;
+      wasInserted = result.wasInserted;
+
+      // Check if message was duplicate (detected by database unique constraint)
+      if (!wasInserted) {
+        logger.info('[webhook] Duplicate webhook detected by database', {
+          requestId,
+          metadata: { waMessageId: normalized.waMessageId },
+        });
+        return jsonResponse(
+          { status: 'duplicate', message_id: normalized.waMessageId, request_id: requestId },
+          200
+        );
+      }
+
       logger.debug('[webhook] Message persisted successfully', {
         requestId,
         conversationId,
         userId,
+        metadata: { wasInserted },
       });
     } catch (persistErr: any) {
       logger.error('[webhook] Persist error', persistErr, { requestId });
@@ -324,7 +286,7 @@ export async function POST(req: Request): Promise<Response> {
             userId,
           });
 
-          // CRITICAL FIX: Send fallback response to user
+          // Send fallback response to user
           try {
             await sendWhatsAppText(
               normalized.from,
@@ -338,13 +300,6 @@ export async function POST(req: Request): Promise<Response> {
               userId,
             });
           }
-
-          // CRITICAL FIX: Remove from dedup cache to allow retry
-          processedWebhooks.delete(normalized.waMessageId);
-          logger.info('[webhook] Removed failed message from dedup cache', {
-            requestId,
-            metadata: { messageId: normalized.waMessageId },
-          });
         });
       } catch (syncErr: any) {
         // Catch any synchronous errors to prevent webhook crash

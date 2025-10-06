@@ -128,13 +128,14 @@ export function extractInteractiveReply(raw: unknown): InteractiveReply | null {
 
 /**
  * Persist normalized message to database
+ * Returns userId, conversationId, and wasInserted flag (false if duplicate)
  */
 export async function persistNormalizedMessage(normalized: NormalizedMessage) {
   if (!normalized?.from) return null
 
   const userId = await upsertUserByPhone(normalized.from)
   const conversationId = await getOrCreateConversation(userId, normalized.conversationId)
-  await insertInboundMessage(conversationId, normalized)
+  const { inserted } = await insertInboundMessage(conversationId, normalized)
 
-  return { userId, conversationId }
+  return { userId, conversationId, wasInserted: inserted }
 }

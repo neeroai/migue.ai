@@ -63,12 +63,12 @@ export async function getOrCreateConversation(userId: string, waConversationId?:
   return data.id as string
 }
 
-export async function insertInboundMessage(conversationId: string, msg: NormalizedMessage) {
+export async function insertInboundMessage(conversationId: string, msg: NormalizedMessage): Promise<{ inserted: boolean }> {
   const startTime = Date.now()
 
   logger.debug('[DB] Inserting inbound message', {
     conversationId,
-    metadata: { type: msg.type },
+    metadata: { type: msg.type, waMessageId: msg.waMessageId },
   })
 
   const supabase = getSupabaseServerClient()
@@ -81,7 +81,13 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
     wa_message_id: msg.waMessageId ?? null,
     timestamp: new Date(msg.timestamp).toISOString(),
   }
-  const { error } = await supabase.from('messages_v2').insert(payload)
+
+  // Use select() to detect if row was actually inserted
+  // ON CONFLICT (wa_message_id) DO NOTHING will return empty data array for duplicates
+  const { data, error } = await supabase
+    .from('messages_v2')
+    .insert(payload)
+    .select('id')
 
   if (error) {
     logger.error('[DB] Insert inbound message failed', error, {
@@ -90,9 +96,14 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
     throw error
   }
 
+  const inserted = data && data.length > 0
+
   logger.performance('DB insertInboundMessage', Date.now() - startTime, {
     conversationId,
+    metadata: { inserted, waMessageId: msg.waMessageId },
   })
+
+  return { inserted }
 }
 
 export async function insertOutboundMessage(
