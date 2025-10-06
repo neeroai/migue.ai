@@ -20,7 +20,7 @@ describe('WhatsApp Webhook Schemas', () => {
     it('should reject invalid phone numbers', () => {
       expect(() => PhoneNumberSchema.parse('+123')).toThrow(); // Too short
       expect(() => PhoneNumberSchema.parse('+12345678901234567')).toThrow(); // Too long
-      expect(() => PhoneNumberSchema.parse('1234567890')).toThrow(); // Missing +
+      expect(() => PhoneNumberSchema.parse('+0123456789')).toThrow(); // Starts with +0 (invalid country code)
       expect(() => PhoneNumberSchema.parse('+abcd567890')).toThrow(); // Has letters
     });
   });

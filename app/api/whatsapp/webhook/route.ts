@@ -1,5 +1,6 @@
 export const runtime = 'edge';
 
+import { waitUntil } from '@vercel/functions';
 import { logger } from '../../../../lib/logger';
 import { recordConversationAction } from '../../../../lib/conversation-actions';
 import { getActionDefinition } from '../../../../lib/actions';
@@ -9,6 +10,7 @@ import {
   whatsAppMessageToNormalized,
   extractInteractiveReply,
   persistNormalizedMessage,
+  type NormalizedMessage,
 } from '../../../../lib/message-normalization';
 // Import V2 AI processing with multi-provider support (76% cost savings)
 import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../../../lib/ai-processing-v2';
@@ -41,6 +43,7 @@ export async function GET(req: Request): Promise<Response> {
 
 /**
  * POST handler for incoming WhatsApp messages
+ * Uses fire-and-forget pattern for fast responses (<100ms)
  */
 export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId();
@@ -54,6 +57,8 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   try {
+    // FAST PATH: Quick validations (<100ms target)
+
     // Read and validate signature
     const rawBody = await req.text();
     logger.debug('[webhook] Request body received', {
@@ -174,64 +179,90 @@ export async function POST(req: Request): Promise<Response> {
     });
     const normalized = whatsAppMessageToNormalized(message);
 
+    // ✅ RETURN 200 OK IMMEDIATELY (<100ms)
+    // Fire-and-forget: Process in background using Vercel's waitUntil API
+    logger.info('[webhook] Webhook validated, processing in background', {
+      requestId,
+      metadata: { waMessageId: normalized.waMessageId, from: normalized.from.slice(0, 8) + '***' },
+    });
+
+    waitUntil(
+      processWebhookInBackground(requestId, normalized, message).catch((err) => {
+        logger.error('[webhook] Background processing failed', err, { requestId });
+      })
+    );
+
+    return jsonResponse({ success: true, request_id: requestId }, 200);
+
+  } catch (error: any) {
+    // ⚠️ NEVER return 500 to WhatsApp - prevents retry storms
+    logger.error('[webhook] Webhook processing error', error, { requestId });
+    return jsonResponse(
+      {
+        success: false,
+        error: 'Processing failed',
+        request_id: requestId
+      },
+      200 // ✅ Always return 200
+    );
+  }
+}
+
+/**
+ * Background webhook processing (fire-and-forget)
+ * Handles: DB persist, dedup, interactive messages, AI processing, media processing
+ */
+async function processWebhookInBackground(
+  requestId: string,
+  normalized: NormalizedMessage,
+  message: any
+): Promise<void> {
+  let conversationId: string | undefined;
+  let userId: string | undefined;
+
+  try {
     // Persist message to database (with DB-based deduplication)
-    logger.debug('[webhook] Persisting message to database', {
+    logger.debug('[background] Persisting message to database', {
       requestId,
       metadata: { waMessageId: normalized.waMessageId },
     });
-    let conversationId: string;
-    let userId: string;
-    let wasInserted: boolean;
-    try {
-      const result = await persistNormalizedMessage(normalized);
-      if (!result) {
-        logger.warn('[webhook] Persist returned null', { requestId });
-        return jsonResponse(
-          { status: 'ignored', reason: 'persist failed', request_id: requestId },
-          200
-        );
-      }
-      conversationId = result.conversationId;
-      userId = result.userId;
-      wasInserted = result.wasInserted;
 
-      // Check if message was duplicate (detected by database unique constraint)
-      if (!wasInserted) {
-        logger.info('[webhook] Duplicate webhook detected by database', {
-          requestId,
-          metadata: { waMessageId: normalized.waMessageId },
-        });
-        return jsonResponse(
-          { status: 'duplicate', message_id: normalized.waMessageId, request_id: requestId },
-          200
-        );
-      }
-
-      logger.debug('[webhook] Message persisted successfully', {
-        requestId,
-        conversationId,
-        userId,
-        metadata: { wasInserted },
-      });
-    } catch (persistErr: any) {
-      logger.error('[webhook] Persist error', persistErr, { requestId });
-      return jsonResponse(
-        { error: 'DB error', detail: persistErr?.message, request_id: requestId },
-        500
-      );
+    const result = await persistNormalizedMessage(normalized);
+    if (!result) {
+      logger.warn('[background] Persist returned null', { requestId });
+      return;
     }
+
+    conversationId = result.conversationId;
+    userId = result.userId;
+    const wasInserted = result.wasInserted;
+
+    // Check if message was duplicate (detected by database unique constraint)
+    if (!wasInserted) {
+      logger.info('[background] Duplicate webhook detected by database', {
+        requestId,
+        metadata: { waMessageId: normalized.waMessageId },
+      });
+      return;
+    }
+
+    logger.debug('[background] Message persisted successfully', {
+      requestId,
+      conversationId,
+      userId,
+      metadata: { wasInserted },
+    });
 
     // Handle interactive message replies (buttons, lists)
     const interactiveReply = extractInteractiveReply(normalized.raw);
-    let actionDefinition = null;
 
     if (interactiveReply) {
-      logger.debug('[webhook] Interactive reply detected', {
+      logger.debug('[background] Interactive reply detected', {
         requestId,
         conversationId,
         metadata: { interactiveId: interactiveReply.id },
       });
-      actionDefinition = getActionDefinition(interactiveReply.id);
+      const actionDefinition = getActionDefinition(interactiveReply.id);
 
       // Log conversation action
       try {
@@ -246,7 +277,7 @@ export async function POST(req: Request): Promise<Response> {
           },
         });
       } catch (logErr: any) {
-        logger.error('Action log error', logErr, { requestId, conversationId, userId });
+        logger.error('[background] Action log error', logErr, { requestId, conversationId, userId });
       }
 
       // Replace message content if needed
@@ -263,7 +294,7 @@ export async function POST(req: Request): Promise<Response> {
       normalized.type = 'text';
     }
 
-    // Process text message with AI (fire and forget)
+    // Process text message with AI
     if (normalized.content && normalized.from) {
       logger.decision('Message processing', 'AI text processing', {
         requestId,
@@ -273,60 +304,47 @@ export async function POST(req: Request): Promise<Response> {
       });
 
       try {
-        processMessageWithAI(
+        await processMessageWithAI(
           conversationId,
           userId,
           normalized.from,
           normalized.content,
           normalized.waMessageId
-        ).catch(async (err) => {
-          logger.error('Background AI processing failed', err, {
-            requestId,
-            conversationId,
-            userId,
-          });
-
-          // Send fallback response to user
-          try {
-            await sendWhatsAppText(
-              normalized.from,
-              'Disculpa, tuve un problema procesando tu mensaje. ¿Puedes intentar de nuevo?'
-            );
-            await reactWithWarning(normalized.from, normalized.waMessageId);
-          } catch (fallbackErr: any) {
-            logger.error('Failed to send error message to user', fallbackErr, {
-              requestId,
-              conversationId,
-              userId,
-            });
-          }
-        });
-      } catch (syncErr: any) {
-        // Catch any synchronous errors to prevent webhook crash
-        logger.error('Synchronous error in AI processing', syncErr, {
+        );
+      } catch (err: any) {
+        logger.error('[background] AI processing failed', err, {
           requestId,
           conversationId,
           userId,
         });
+
+        // Send fallback response to user
+        try {
+          await sendWhatsAppText(
+            normalized.from,
+            'Disculpa, tuve un problema procesando tu mensaje. ¿Puedes intentar de nuevo?'
+          );
+          await reactWithWarning(normalized.from, normalized.waMessageId);
+        } catch (fallbackErr: any) {
+          logger.error('[background] Failed to send error message to user', fallbackErr, {
+            requestId,
+            conversationId,
+            userId,
+          });
+        }
       }
     }
 
-    // Process audio/voice message (fire and forget)
+    // Process audio/voice message
     if (
       (normalized.type === 'audio' || normalized.type === 'voice') &&
       normalized.mediaUrl &&
       normalized.from
     ) {
       try {
-        processAudioMessage(conversationId, userId, normalized).catch((err) => {
-          logger.error('Background audio processing failed', err, {
-            requestId,
-            conversationId,
-            userId,
-          });
-        });
-      } catch (syncErr: any) {
-        logger.error('Synchronous error in audio processing', syncErr, {
+        await processAudioMessage(conversationId, userId, normalized);
+      } catch (err: any) {
+        logger.error('[background] Audio processing failed', err, {
           requestId,
           conversationId,
           userId,
@@ -334,22 +352,16 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Process document/image message (fire and forget)
+    // Process document/image message
     if (
       (normalized.type === 'document' || normalized.type === 'image') &&
       normalized.mediaUrl &&
       normalized.from
     ) {
       try {
-        processDocumentMessage(conversationId, userId, normalized).catch((err) => {
-          logger.error('Background document processing failed', err, {
-            requestId,
-            conversationId,
-            userId,
-          });
-        });
-      } catch (syncErr: any) {
-        logger.error('Synchronous error in document processing', syncErr, {
+        await processDocumentMessage(conversationId, userId, normalized);
+      } catch (err: any) {
+        logger.error('[background] Document processing failed', err, {
           requestId,
           conversationId,
           userId,
@@ -358,51 +370,53 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Process location message (v23.0)
-    if (normalized.type === 'location' && message.location) {
-      // Fire and forget - save location asynchronously
-      (async () => {
-        try {
-          const supabase = getSupabaseServerClient();
-          const { error } = await supabase
-            .from('user_locations')
-            .insert({
-              user_id: userId,
-              conversation_id: conversationId,
-              latitude: message.location!.latitude,
-              longitude: message.location!.longitude,
-              name: message.location!.name || null,
-              address: message.location!.address || null,
-              timestamp: new Date().toISOString(),
-            });
+    if (normalized.type === 'location' && message.location && conversationId && userId) {
+      try {
+        const supabase = getSupabaseServerClient();
+        const { error } = await supabase
+          .from('user_locations')
+          .insert({
+            user_id: userId,
+            conversation_id: conversationId,
+            latitude: message.location.latitude,
+            longitude: message.location.longitude,
+            name: message.location.name || null,
+            address: message.location.address || null,
+            timestamp: new Date().toISOString(),
+          });
 
-          if (error) {
-            logger.error('Failed to save location', error, {
-              requestId,
-              conversationId,
-              userId,
-            });
-          } else {
-            logger.info('[webhook] Location saved', {
-              requestId,
-              conversationId,
-              userId,
-            });
-          }
-        } catch (err: any) {
-          logger.error('Failed to save location', err, {
+        if (error) {
+          logger.error('[background] Failed to save location', error, {
+            requestId,
+            conversationId,
+            userId,
+          });
+        } else {
+          logger.info('[background] Location saved', {
             requestId,
             conversationId,
             userId,
           });
         }
-      })();
+      } catch (err: any) {
+        logger.error('[background] Location save error', err, {
+          requestId,
+          conversationId,
+          userId,
+        });
+      }
     }
 
-    return jsonResponse({ success: true, request_id: requestId });
   } catch (error: any) {
-    return jsonResponse(
-      { error: error?.message ?? 'Unhandled error', request_id: requestId },
-      500
-    );
+    logger.error('[background] Processing error', error, {
+      requestId,
+      ...(conversationId && { conversationId }),
+      ...(userId && { userId }),
+      metadata: {
+        errorMessage: error?.message,
+        errorCode: error?.code,
+      },
+    });
+    // Errors are logged but don't propagate - webhook already returned 200 OK
   }
 }

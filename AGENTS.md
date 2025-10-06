@@ -371,7 +371,7 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
   - ProactiveAgent: Asistente conversacional con contexto
   - SchedulingAgent: Gestión autónoma de citas
   - FinanceAgent: Control proactivo de gastos
-- ✅ **Dependencies**: claude-agent-sdk, groq-sdk, tesseract.js, MCP
+- ✅ **Dependencies**: @anthropic-ai/sdk (Edge-compatible), groq-sdk, tesseract.js, MCP
 - ✅ **Cost Tracking**: Budget management ($10/día límite)
 - ✅ **Webhook V2**: Integración completa multi-provider
 

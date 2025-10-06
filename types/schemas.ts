@@ -5,8 +5,21 @@ import { z } from 'zod';
  * Based on WhatsApp Business API v23.0
  */
 
-// E.164 phone number format (+ followed by 10-15 digits)
-export const PhoneNumberSchema = z.string().regex(/^\+\d{10,15}$/, 'Invalid E.164 phone number');
+// E.164 phone number format with normalization
+// Accepts: "16315551234" or "+16315551234"
+// Normalizes to: "+16315551234"
+// Validates: +[Country Code 1-9][7-14 digits] (total 8-15 digits after +)
+export const PhoneNumberSchema = z.string()
+  .transform(val => {
+    // Remove whitespace and special characters (except +)
+    const cleaned = val.replace(/[\s\-()]/g, '');
+    // Add + prefix if missing
+    return cleaned.startsWith('+') ? cleaned : '+' + cleaned;
+  })
+  .refine(
+    val => /^\+[1-9][0-9]{7,14}$/.test(val),
+    { message: 'Invalid E.164 phone number (must start with + followed by country code 1-9 and 7-14 digits)' }
+  );
 
 // Message types
 export const MessageTypeSchema = z.enum([

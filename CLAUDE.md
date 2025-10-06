@@ -231,12 +231,19 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 - OCR: Tesseract (100% free)
 - Fallback: OpenAI (backwards compatibility)
 
+**AI SDKs** (Edge Runtime Compatible):
+- ✅ `@anthropic-ai/sdk` v0.65.0 - Anthropic Messages API (primary)
+- ✅ `groq-sdk` v0.33.0 - Audio transcription
+- ✅ `openai` v5.23.1 - Fallback only
+- ✅ `tesseract.js` v6.0.1 - Free OCR
+- ❌ `@anthropic-ai/claude-agent-sdk` - NOT compatible (requires Node.js fs/child_process)
+
 **TypeScript**: 5.9.2 (strict)
 **Tests**: 112/112 ✅
 **Production**: https://migue.app
 **Status**: Fase 2 (85%) - Core Features + AI Migration
 
-**Current Phase**: Claude SDK integration, cost optimization, MCP setup
+**Current Phase**: Multi-provider AI optimization, cost tracking, production monitoring
 **Target**: Oct 10, 2025 - Fase 2 complete
 **Cost Savings**: 76% reduction ($55/month → $13/month)
 
@@ -244,8 +251,18 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 
 ## Recent Updates
 
-### 2025-10-05 - Claude SDK Migration ⚡
-- ✅ **Multi-Provider AI System** - 76% cost reduction:
+### 2025-10-06 - Edge Runtime Optimization ⚡
+- ✅ **Confirmed Edge Runtime Compatibility** - All AI SDKs verified:
+  - Using `@anthropic-ai/sdk` v0.65.0 (Edge-compatible)
+  - Removed unused `@anthropic-ai/claude-agent-sdk` (requires Node.js)
+  - All routes running on Vercel Edge Functions ✅
+- ✅ **Documentation Cleanup**:
+  - Updated SDK compatibility matrix
+  - Clarified Edge Runtime constraints
+  - Verified fire-and-forget webhook pattern
+
+### 2025-10-05 - Multi-Provider AI System ⚡
+- ✅ **76% Cost Reduction**:
   - Claude Sonnet 4.5: Primary chat ($3/$15 vs $15/$60)
   - Groq Whisper: Audio transcription ($0.05/hr vs $0.36/hr)
   - Tesseract: Free OCR (vs $0.002/image)
@@ -254,11 +271,11 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
   - ProactiveAgent: Main conversational assistant
   - SchedulingAgent: Autonomous appointment management
   - FinanceAgent: Proactive expense tracking
-- ✅ **New Dependencies Installed**:
-  - @anthropic-ai/claude-agent-sdk: v0.1.8
-  - groq-sdk: v0.33.0
-  - tesseract.js: v6.0.1
-  - @modelcontextprotocol/sdk: v1.19.1
+- ✅ **Edge-Compatible SDKs**:
+  - @anthropic-ai/sdk: v0.65.0 (Messages API)
+  - groq-sdk: v0.33.0 (Audio transcription)
+  - tesseract.js: v6.0.1 (OCR)
+  - @modelcontextprotocol/sdk: v1.19.1 (MCP integration)
 - ✅ Webhook updated to use V2 AI processing
 - ✅ Cost tracking and budget management system
 

@@ -47,11 +47,11 @@
     "vercel": "^48.1.6"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.8",
     "@anthropic-ai/sdk": "^0.65.0",
     "@modelcontextprotocol/sdk": "^1.19.1",
     "@supabase/supabase-js": "^2.58.0",
     "@tailwindcss/postcss": "^4.1.13",
+    "@vercel/functions": "^3.1.1",
     "autoprefixer": "^10.4.21",
     "groq-sdk": "^0.33.0",
     "lucide-react": "^0.544.0",
