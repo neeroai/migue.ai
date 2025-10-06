@@ -79,10 +79,14 @@ export async function processMessageWithAI(
   userMessage: string,
   messageId: string
 ) {
-  const typingManager = createTypingManager(userPhone, messageId)
-  const providerManager = getProviderManager()
+  let typingManager
+  let providerManager
 
   try {
+    // Initialize managers inside try-catch to prevent synchronous errors
+    typingManager = createTypingManager(userPhone, messageId)
+    providerManager = getProviderManager()
+
     // Mark message as read
     await markAsRead(messageId)
     await reactWithThinking(userPhone, messageId)
@@ -180,7 +184,9 @@ Descripción: ${expense.description}
       )
     }
   } finally {
-    await typingManager.stop()
+    if (typingManager) {
+      await typingManager.stop()
+    }
   }
 }
 
@@ -196,13 +202,16 @@ export async function processAudioMessage(
     return
   }
 
-  const providerManager = getProviderManager()
-  const typingManager = createTypingManager(
-    normalized.from,
-    normalized.waMessageId
-  )
+  let providerManager
+  let typingManager
 
   try {
+    // Initialize managers inside try-catch to prevent synchronous errors
+    providerManager = getProviderManager()
+    typingManager = createTypingManager(
+      normalized.from,
+      normalized.waMessageId
+    )
     await markAsRead(normalized.waMessageId)
     await reactWithThinking(normalized.from, normalized.waMessageId)
     await typingManager.start()
@@ -269,10 +278,14 @@ export async function processAudioMessage(
       logger.info('Fallback to OpenAI Whisper successful')
     } catch (fallbackError: any) {
       logger.error('Audio processing completely failed', fallbackError)
-      await reactWithWarning(normalized.from, normalized.waMessageId)
+      if (normalized.from && normalized.waMessageId) {
+        await reactWithWarning(normalized.from, normalized.waMessageId)
+      }
     }
   } finally {
-    await typingManager.stop()
+    if (typingManager) {
+      await typingManager.stop()
+    }
   }
 }
 
@@ -288,13 +301,16 @@ export async function processDocumentMessage(
     return
   }
 
-  const providerManager = getProviderManager()
-  const typingManager = createTypingManager(
-    normalized.from,
-    normalized.waMessageId
-  )
+  let providerManager
+  let typingManager
 
   try {
+    // Initialize managers inside try-catch to prevent synchronous errors
+    providerManager = getProviderManager()
+    typingManager = createTypingManager(
+      normalized.from,
+      normalized.waMessageId
+    )
     await markAsRead(normalized.waMessageId)
     await reactWithThinking(normalized.from, normalized.waMessageId)
     await typingManager.start()
@@ -386,6 +402,8 @@ export async function processDocumentMessage(
     }
     */
   } finally {
-    await typingManager.stop()
+    if (typingManager) {
+      await typingManager.stop()
+    }
   }
 }

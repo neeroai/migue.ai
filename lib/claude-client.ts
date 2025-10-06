@@ -37,7 +37,9 @@ export function getClaudeClient(): Anthropic {
     const apiKey = process.env.ANTHROPIC_API_KEY
 
     if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable not set')
+      const error = new Error('ANTHROPIC_API_KEY environment variable not set')
+      logger.error('ANTHROPIC_API_KEY not set - Claude SDK unavailable', error)
+      throw error
     }
 
     claudeClient = new Anthropic({
@@ -45,6 +47,8 @@ export function getClaudeClient(): Anthropic {
       timeout: 30000, // 30s timeout
       maxRetries: 2,
     })
+
+    logger.info('Claude SDK initialized successfully')
   }
 
   return claudeClient

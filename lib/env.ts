@@ -22,8 +22,10 @@ const envSchema = z.object({
     .string()
     .startsWith('eyJ', 'SUPABASE_KEY must be a valid JWT token'),
 
-  // OpenAI Configuration
-  OPENAI_API_KEY: z.string().startsWith('sk-', 'OPENAI_API_KEY must start with sk-'),
+  // AI Provider Configuration
+  ANTHROPIC_API_KEY: z.string().min(1).optional(), // Primary AI provider (Claude)
+  GROQ_API_KEY: z.string().min(1).optional(), // Audio transcription
+  OPENAI_API_KEY: z.string().startsWith('sk-').optional(), // Fallback AI provider
 
   // Google Calendar Configuration (optional)
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),

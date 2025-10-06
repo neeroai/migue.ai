@@ -59,18 +59,20 @@ export class AIProviderManager {
     const groqKey = process.env.GROQ_API_KEY
 
     if (!anthropicKey) {
-      logger.warn('ANTHROPIC_API_KEY not set - Claude unavailable')
+      logger.warn('ANTHROPIC_API_KEY not set - Claude unavailable, will use OpenAI fallback')
     }
     if (!groqKey) {
-      logger.warn('GROQ_API_KEY not set - Groq transcription unavailable')
+      logger.warn('GROQ_API_KEY not set - Groq transcription unavailable, will use OpenAI Whisper')
     }
 
+    // Only initialize clients if API keys are provided
+    // Using dummy key 'missing' to prevent SDK errors during initialization
     this.anthropic = new Anthropic({
-      apiKey: anthropicKey || '',
+      apiKey: anthropicKey || 'sk-ant-missing',
     })
 
     this.groq = new Groq({
-      apiKey: groqKey || '',
+      apiKey: groqKey || 'gsk-missing',
     })
   }
 
@@ -116,15 +118,23 @@ export class AIProviderManager {
 
   /**
    * Get Claude client
+   * @throws Error if ANTHROPIC_API_KEY is not set
    */
   getClaude(): Anthropic {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY not set - cannot use Claude')
+    }
     return this.anthropic
   }
 
   /**
    * Get Groq client
+   * @throws Error if GROQ_API_KEY is not set
    */
   getGroq(): Groq {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY not set - cannot use Groq')
+    }
     return this.groq
   }
 

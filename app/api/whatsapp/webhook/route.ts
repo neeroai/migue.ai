@@ -236,19 +236,28 @@ export async function POST(req: Request): Promise<Response> {
 
     // Process text message with AI (fire and forget)
     if (normalized.content && normalized.from) {
-      processMessageWithAI(
-        conversationId,
-        userId,
-        normalized.from,
-        normalized.content,
-        normalized.waMessageId
-      ).catch((err) => {
-        logger.error('Background AI processing failed', err, {
+      try {
+        processMessageWithAI(
+          conversationId,
+          userId,
+          normalized.from,
+          normalized.content,
+          normalized.waMessageId
+        ).catch((err) => {
+          logger.error('Background AI processing failed', err, {
+            requestId,
+            conversationId,
+            userId,
+          });
+        });
+      } catch (syncErr: any) {
+        // Catch any synchronous errors to prevent webhook crash
+        logger.error('Synchronous error in AI processing', syncErr, {
           requestId,
           conversationId,
           userId,
         });
-      });
+      }
     }
 
     // Process audio/voice message (fire and forget)
@@ -257,13 +266,21 @@ export async function POST(req: Request): Promise<Response> {
       normalized.mediaUrl &&
       normalized.from
     ) {
-      processAudioMessage(conversationId, userId, normalized).catch((err) => {
-        logger.error('Background audio processing failed', err, {
+      try {
+        processAudioMessage(conversationId, userId, normalized).catch((err) => {
+          logger.error('Background audio processing failed', err, {
+            requestId,
+            conversationId,
+            userId,
+          });
+        });
+      } catch (syncErr: any) {
+        logger.error('Synchronous error in audio processing', syncErr, {
           requestId,
           conversationId,
           userId,
         });
-      });
+      }
     }
 
     // Process document/image message (fire and forget)
@@ -272,13 +289,21 @@ export async function POST(req: Request): Promise<Response> {
       normalized.mediaUrl &&
       normalized.from
     ) {
-      processDocumentMessage(conversationId, userId, normalized).catch((err) => {
-        logger.error('Background document processing failed', err, {
+      try {
+        processDocumentMessage(conversationId, userId, normalized).catch((err) => {
+          logger.error('Background document processing failed', err, {
+            requestId,
+            conversationId,
+            userId,
+          });
+        });
+      } catch (syncErr: any) {
+        logger.error('Synchronous error in document processing', syncErr, {
           requestId,
           conversationId,
           userId,
         });
-      });
+      }
     }
 
     // Process location message (v23.0)
