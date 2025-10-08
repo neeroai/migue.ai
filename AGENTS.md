@@ -359,12 +359,28 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 ---
 
 **Fecha de creación**: 2025-01-27
-**Última actualización**: 2025-10-07
-**Versión**: 2.1 - WhatsApp v23.0 Full Support
-**Estado**: En desarrollo - Fase 2 (Core Features + AI Migration - Progreso 95%)
+**Última actualización**: 2025-10-08
+**Versión**: 2.2 - Tool Calling Fix (Model IDs)
+**Estado**: En desarrollo - Fase 2 (Core Features + AI Migration - Progreso 98%)
 **Deployment**: ✅ Producción activa en Vercel
 
-**Últimos Logros (2025-10-07 - WhatsApp v23.0 Message Types Fix)** 🔧:
+**Últimos Logros (2025-10-08 - Claude Model ID Fix)** 🔧:
+- ✅ **Root Cause**: Model ID `'claude-sonnet-4-5'` era inválido
+  - API calls fallaban silenciosamente
+  - Activaba fallback a OpenAI sin tool calling
+  - Bot decía "no puedo crear recordatorios" (feature estaba implementado)
+- ✅ **Fix Completo**:
+  - Model IDs actualizados a formato oficial: `'claude-sonnet-4-5-20250929'`
+  - 6 archivos corregidos: `lib/claude-client.ts`, `lib/claude-agents.ts`
+  - System prompt reforzado en español con ejemplos prohibidos explícitos
+  - Debug mejorado: detecta cuando Claude rechaza usar tools
+- ✅ **Validación**:
+  - 252 tests passing | Type check ✅ | Build ✅
+  - Tests actualizados para system prompt en español
+  - Deployed a producción
+- ✅ **Resultado**: Tool calling funcional - bot crea recordatorios autónomamente
+
+**Logros Previos (2025-10-07 - WhatsApp v23.0 Message Types Fix)** 🔧:
 - ✅ **Auditoría de Usuarios**:
   - Script de diagnóstico (`npm run audit:users`)
   - Identificación de causa raíz: enum `msg_type` incompleto

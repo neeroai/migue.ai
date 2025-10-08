@@ -331,6 +331,23 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 
 ## Recent Updates
 
+### 2025-10-08 - Claude Model ID Fix 🔧
+- ✅ **Root Cause Identified**: Model ID `'claude-sonnet-4-5'` was invalid
+  - API calls to Anthropic failed silently
+  - Triggered fallback to OpenAI without tool calling
+  - Bot responded "no puedo crear recordatorios" despite feature being implemented
+- ✅ **Fix Applied**:
+  - Updated all model IDs to official snapshot format: `'claude-sonnet-4-5-20250929'`
+  - Fixed 6 locations: `lib/claude-client.ts` (3), `lib/claude-agents.ts` (3)
+  - Updated system prompt to Spanish with stronger tool usage enforcement
+  - Enhanced debugging: detects when Claude refuses to use tools
+- ✅ **Testing**:
+  - All 252 unit tests passing
+  - Type check ✅ | Build ✅ | Pre-push validation ✅
+  - Updated tests to match Spanish system prompt
+- ✅ **Deployment**: Pushed to production, Vercel auto-deployment triggered
+- ✅ **Expected Result**: Tool calling now functional - bot creates reminders autonomously
+
 ### 2025-10-07 - WhatsApp v23.0 Message Types Fix 🔧
 - ✅ **User Interaction Audit**:
   - Created diagnostic script: `npm run audit:users`
@@ -460,6 +477,6 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 
 ---
 
-**Last Updated**: 2025-10-07
+**Last Updated**: 2025-10-08
 **Owner**: claude-master
-**Session Model**: Claude Sonnet 4.5
+**Session Model**: Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`)
