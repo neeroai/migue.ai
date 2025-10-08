@@ -12,33 +12,79 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      ai_usage_tracking: {
+        Row: {
+          conversation_id: string | null
+          cost_usd: number
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          model: string | null
+          provider: string
+          task_type: string
+          tokens_input: number | null
+          tokens_output: number | null
+          user_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          cost_usd: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          model?: string | null
+          provider: string
+          task_type: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          cost_usd?: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          model?: string | null
+          provider?: string
+          task_type?: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_tracking_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_tracking_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_activity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_logs: {
         Row: {
           call_id: string
@@ -386,6 +432,63 @@ export type Database = {
           },
         ]
       }
+      messaging_windows: {
+        Row: {
+          created_at: string
+          free_entry_point_expires_at: string | null
+          id: string
+          last_proactive_sent_at: string | null
+          last_user_message_id: string | null
+          phone_number: string
+          proactive_messages_sent_today: number
+          updated_at: string
+          user_id: string
+          window_expires_at: string
+          window_opened_at: string
+        }
+        Insert: {
+          created_at?: string
+          free_entry_point_expires_at?: string | null
+          id?: string
+          last_proactive_sent_at?: string | null
+          last_user_message_id?: string | null
+          phone_number: string
+          proactive_messages_sent_today?: number
+          updated_at?: string
+          user_id: string
+          window_expires_at: string
+          window_opened_at: string
+        }
+        Update: {
+          created_at?: string
+          free_entry_point_expires_at?: string | null
+          id?: string
+          last_proactive_sent_at?: string | null
+          last_user_message_id?: string | null
+          phone_number?: string
+          proactive_messages_sent_today?: number
+          updated_at?: string
+          user_id?: string
+          window_expires_at?: string
+          window_opened_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messaging_windows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_activity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messaging_windows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reminders: {
         Row: {
           created_at: string
@@ -427,6 +530,80 @@ export type Database = {
           },
           {
             foreignKeyName: "reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_messages: {
+        Row: {
+          conversation_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          phone_number: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          phone_number: string
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          phone_number?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_activity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -582,6 +759,57 @@ export type Database = {
           },
         ]
       }
+      user_memory: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+          relevance: number | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          relevance?: number | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          relevance?: number | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_memory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_activity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_memory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string
@@ -606,6 +834,48 @@ export type Database = {
           phone_number?: string
           preferences?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      webhook_failures: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          error_message: string
+          id: string
+          phone_number: string
+          raw_payload: Json
+          request_id: string
+          retry_count: number | null
+          status: string | null
+          updated_at: string | null
+          wa_message_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          error_message: string
+          id?: string
+          phone_number: string
+          raw_payload: Json
+          request_id: string
+          retry_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          wa_message_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          error_message?: string
+          id?: string
+          phone_number?: string
+          raw_payload?: Json
+          request_id?: string
+          retry_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          wa_message_id?: string | null
         }
         Relationships: []
       }
@@ -637,6 +907,17 @@ export type Database = {
           },
         ]
       }
+      messaging_windows_stats: {
+        Row: {
+          active_windows: number | null
+          avg_proactive_per_active_user: number | null
+          free_entry_active: number | null
+          total_proactive_today: number | null
+          total_windows: number | null
+          windows_near_expiration: number | null
+        }
+        Relationships: []
+      }
       user_activity_stats: {
         Row: {
           conversation_count: number | null
@@ -649,6 +930,58 @@ export type Database = {
       }
     }
     Functions: {
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
+      find_windows_near_expiration: {
+        Args: { hours_threshold?: number }
+        Returns: {
+          hours_remaining: number
+          last_proactive_sent_at: string
+          phone_number: string
+          proactive_messages_sent_today: number
+          user_id: string
+          window_expires_at: string
+        }[]
+      }
+      get_ai_cost_trends: {
+        Args: { days?: number }
+        Returns: {
+          claude_cost: number
+          date: string
+          groq_cost: number
+          openai_cost: number
+          total_cost: number
+          total_requests: number
+        }[]
+      }
+      get_daily_ai_costs: {
+        Args: { target_date?: string }
+        Returns: {
+          provider: string
+          task_type: string
+          total_cost: number
+          total_requests: number
+        }[]
+      }
+      get_pending_scheduled_messages: {
+        Args: { before_time?: string }
+        Returns: {
+          conversation_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          phone_number: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string | null
+        }[]
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -669,6 +1002,90 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      is_free_entry_active: {
+        Args: { p_phone_number: string }
+        Returns: boolean
+      }
+      is_window_open: {
+        Args: { p_phone_number: string }
+        Returns: boolean
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      mark_message_failed: {
+        Args: { error: string; message_id: string }
+        Returns: undefined
+      }
+      mark_message_sent: {
+        Args: { message_id: string }
+        Returns: undefined
+      }
+      search_user_memory: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+          target_user_id: string
+        }
+        Returns: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          similarity: number
+          type: string
+        }[]
+      }
       set_limit: {
         Args: { "": number }
         Returns: number
@@ -680,6 +1097,42 @@ export type Database = {
       show_trgm: {
         Args: { "": string }
         Returns: string[]
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
     }
     Enums: {
@@ -697,9 +1150,12 @@ export type Database = {
         | "audio"
         | "video"
         | "document"
+        | "sticker"
         | "location"
         | "interactive"
         | "button"
+        | "reaction"
+        | "order"
         | "contacts"
         | "system"
         | "unknown"
@@ -829,9 +1285,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       conv_status: ["active", "archived", "closed"],
@@ -843,9 +1296,12 @@ export const Constants = {
         "audio",
         "video",
         "document",
+        "sticker",
         "location",
         "interactive",
         "button",
+        "reaction",
+        "order",
         "contacts",
         "system",
         "unknown",

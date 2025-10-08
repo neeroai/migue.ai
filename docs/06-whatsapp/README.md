@@ -17,6 +17,11 @@ migue.ai integrates with WhatsApp Business API v23.0 for messaging, including su
 - **[api-v23-guide.md](./api-v23-guide.md)** - Comprehensive API v23 guide (migration, features, reference)
 - **[integration-plan.md](./integration-plan.md)** - Integration architecture and implementation plan
 
+### Pricing & Templates (2025) 💰
+- **[pricing-guide-2025.md](./pricing-guide-2025.md)** - Complete pricing guide, 24h windows, cost optimization
+- **[template-troubleshooting.md](./template-troubleshooting.md)** - Fix template categorization issues (UTILITY vs MARKETING)
+- **[service-conversations.md](./service-conversations.md)** - FREE SERVICE templates (Nov 2024 update)
+
 ### Advanced Features
 - **[flows-implementation.md](./flows-implementation.md)** - WhatsApp Flows implementation guide
 - **[interactive-features.md](./interactive-features.md)** - Buttons, lists, and quick replies
@@ -77,6 +82,20 @@ await sendReaction({
 - **Buttons per message**: 3 (use lists for 4+)
 - **List rows**: Up to 10 per section
 
+## Pricing (2025 Update)
+
+### 24-Hour Messaging Window ⭐
+- **FREE**: All messages within 24h of user message
+- **90%+ of conversations**: Stay within free window (migue.ai system)
+
+### Template Messages (Outside 24h)
+- **SERVICE**: $0.00 (FREE unlimited - use for support) 🆕
+- **UTILITY**: $0.0125 (transactional)
+- **MARKETING**: $0.0667 (promotional)
+- **AUTHENTICATION**: $0.0100 (OTP codes)
+
+**See**: [Pricing Guide 2025](./pricing-guide-2025.md) for complete details
+
 ## Best Practices
 
 ### Use Interactive Messages
@@ -117,5 +136,6 @@ try {
 
 ---
 
-**Last Updated**: 2025-10-03
+**Last Updated**: 2025-10-08
 **API Version**: v23.0
+**Pricing Model**: Per-message templates (Jul 1, 2025)

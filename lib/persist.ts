@@ -2,6 +2,18 @@ import { getSupabaseServerClient } from './supabase'
 import type { NormalizedMessage } from './message-normalization'
 import { logger } from './logger'
 
+/**
+ * Valid WhatsApp Cloud API v23.0 message types matching PostgreSQL enum
+ * Reference: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
+ * Last verified: 2025-10-07
+ */
+const VALID_MSG_TYPES = [
+  'text', 'image', 'audio', 'sticker', 'video', 'document', 'location',
+  'interactive', 'button', 'reaction', 'order', 'contacts', 'system', 'unknown'
+] as const;
+
+type ValidMsgType = typeof VALID_MSG_TYPES[number];
+
 export async function upsertUserByPhone(phoneNumber: string) {
   const startTime = Date.now()
 
@@ -72,10 +84,28 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
   })
 
   const supabase = getSupabaseServerClient()
+
+  // Type-safe validation with fallback to 'unknown'
+  const messageType: ValidMsgType = VALID_MSG_TYPES.includes(msg.type as any)
+    ? (msg.type as ValidMsgType)
+    : 'unknown';
+
+  // Log if we're falling back to unknown (helps identify new WhatsApp types)
+  if (messageType === 'unknown' && msg.type !== 'unknown') {
+    logger.warn('[DB] Unknown message type detected, using fallback', {
+      conversationId,
+      metadata: {
+        originalType: msg.type,
+        fallbackType: 'unknown',
+        waMessageId: msg.waMessageId,
+      },
+    });
+  }
+
   const payload = {
     conversation_id: conversationId,
     direction: 'inbound' as const,
-    type: (msg.type ?? 'text') as 'text' | 'image' | 'audio' | 'video' | 'document' | 'location' | 'interactive' | 'button' | 'contacts' | 'system' | 'unknown',
+    type: messageType,
     content: msg.content,
     media_url: msg.mediaUrl,
     wa_message_id: msg.waMessageId ?? null,
@@ -92,7 +122,16 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
   if (error) {
     // Enhanced error logging with classification
     const isDuplicate = error.code === '23505'; // PostgreSQL unique violation
-    const errorType = isDuplicate ? 'duplicate' : 'critical';
+    const isEnumViolation = error.code === '22P02'; // Invalid enum value
+    const isConstraintViolation = error.code === '23514'; // Check constraint
+
+    const errorType = isDuplicate
+      ? 'duplicate'
+      : isEnumViolation
+      ? 'invalid_type'
+      : isConstraintViolation
+      ? 'constraint_violation'
+      : 'critical';
 
     logger.error(`[DB] Insert inbound message failed (${errorType})`, error, {
       conversationId,
@@ -102,6 +141,8 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
         errorMessage: error.message,
         errorDetails: error.details,
         errorHint: error.hint,
+        messageType: msg.type, // Original type from WhatsApp
+        validatedType: messageType, // Type after validation
         payload: {
           ...payload,
           wa_message_id: payload.wa_message_id?.slice(0, 20) + '...', // Truncate for privacy

@@ -8,6 +8,7 @@
 
 import { sendWhatsAppRequest } from './whatsapp';
 import { getSupabaseServerClient } from './supabase';
+import { logger } from './logger';
 import type {
   FlowMessagePayload,
   FlowDataExchangeRequest,
@@ -83,24 +84,32 @@ export async function validateFlowSignature(req: Request, rawBody: string): Prom
     const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
 
     if (isProd) {
-      console.error('❌ Missing WHATSAPP_APP_SECRET in production - blocking flow request');
+      logger.error('[Flow Validation] Missing WHATSAPP_APP_SECRET in production', new Error('Missing credentials'), {
+        metadata: { isProd, hasHeader: !!header, hasSecret: !!WHATSAPP_APP_SECRET }
+      });
       return false;
     }
 
-    console.warn('⚠️  Development mode: Flow signature validation disabled');
+    logger.warn('[Flow Validation] Development mode: signature validation disabled', {
+      metadata: { isProd, hasHeader: !!header, hasSecret: !!WHATSAPP_APP_SECRET }
+    });
     return true;
   }
 
   // Header format: sha256=abcdef...
   const parts = header.split('=');
   if (parts.length !== 2 || parts[0] !== 'sha256') {
-    console.error('❌ Invalid flow signature header format');
+    logger.error('[Flow Validation] Invalid signature header format', new Error('Invalid header format'), {
+      metadata: { header, partsLength: parts.length, algorithm: parts[0] }
+    });
     return false;
   }
 
   const provided = parts[1];
   if (!provided) {
-    console.error('❌ Missing flow signature value');
+    logger.error('[Flow Validation] Missing signature value', new Error('Empty signature'), {
+      metadata: { header }
+    });
     return false;
   }
 
@@ -109,7 +118,9 @@ export async function validateFlowSignature(req: Request, rawBody: string): Prom
 
   // Constant-time comparison to prevent timing attacks
   if (provided.length !== expected.length) {
-    console.error('❌ Flow signature length mismatch');
+    logger.error('[Flow Validation] Signature length mismatch', new Error('Length mismatch'), {
+      metadata: { providedLength: provided.length, expectedLength: expected.length }
+    });
     return false;
   }
 
@@ -122,7 +133,9 @@ export async function validateFlowSignature(req: Request, rawBody: string): Prom
   const isValid = diff === 0;
 
   if (!isValid) {
-    console.error('❌ Flow signature validation failed');
+    logger.error('[Flow Validation] Signature validation failed', new Error('Invalid signature'), {
+      metadata: { providedLength: provided.length, expectedLength: expected.length }
+    });
   }
 
   return isValid;
@@ -215,7 +228,9 @@ export async function sendFlow(
     const result = await sendWhatsAppRequest(payload as any);
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
-    console.error('Error sending flow:', error);
+    logger.error('[WhatsApp Flow] Error sending flow', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { to, flowId, flowCta }
+    });
     return null;
   }
 }
@@ -241,7 +256,9 @@ export async function handleFlowDataExchange(
       .single();
 
     if (!session) {
-      console.error('Invalid or expired flow token');
+      logger.error('[WhatsApp Flow] Invalid or expired flow token', new Error('Token validation failed'), {
+        metadata: { flow_token, hasSession: !!session }
+      });
       return null;
     }
 
@@ -273,7 +290,9 @@ export async function handleFlowDataExchange(
         return null;
     }
   } catch (error) {
-    console.error('Error handling flow data exchange:', error);
+    logger.error('[WhatsApp Flow] Error handling flow data exchange', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { flow_token: request.flow_token, action: request.action }
+    });
     return null;
   }
 }

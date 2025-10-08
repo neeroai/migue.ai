@@ -142,7 +142,9 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
 
   // Log performance metrics (Vercel Observability)
   if (latency > 100) {
-    console.warn(`WhatsApp API slow response: ${latency}ms`);
+    logger.warn('[WhatsApp API] Slow response detected', {
+      metadata: { latency, payloadType: payload.type, to: payload.to }
+    });
   }
 
   return data;
@@ -173,19 +175,25 @@ export async function sendWhatsAppRequestWithRetry(
 
       // Don't retry client errors (4xx)
       if (status >= 400 && status < 500) {
-        console.error(`Client error ${status}, not retrying`);
+        logger.error('[WhatsApp Retry] Client error, not retrying', error instanceof Error ? error : new Error(String(error)), {
+          metadata: { status, attempt, maxRetries }
+        });
         throw error;
       }
 
       // On last attempt, throw the error
       if (isLastAttempt) {
-        console.error(`Max retries (${maxRetries}) reached, giving up`);
+        logger.error('[WhatsApp Retry] Max retries reached', error instanceof Error ? error : new Error(String(error)), {
+          metadata: { maxRetries, totalAttempts: attempt + 1 }
+        });
         throw error;
       }
 
       // Exponential backoff: 1s, 2s, 4s
       const delayMs = 1000 * Math.pow(2, attempt);
-      console.warn(`Retry ${attempt + 1}/${maxRetries} after ${delayMs}ms delay`);
+      logger.warn('[WhatsApp Retry] Retrying after backoff', {
+        metadata: { attempt: attempt + 1, maxRetries, delayMs }
+      });
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
@@ -256,7 +264,9 @@ export async function sendInteractiveButtons(
     const result = await sendWhatsAppRequest(payload);
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
-    console.error('Error sending interactive buttons:', error);
+    logger.error('[WhatsApp] Error sending interactive buttons', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { to, buttonsCount: buttons.length }
+    });
     return null;
   }
 }
@@ -296,7 +306,9 @@ export async function sendInteractiveList(
     const result = await sendWhatsAppRequest(payload);
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
-    console.error('Error sending interactive list:', error);
+    logger.error('[WhatsApp] Error sending interactive list', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { to, rowsCount: rows.length }
+    });
     return null;
   }
 }
@@ -324,7 +336,9 @@ export async function sendCTAButton(
   try {
     // Validate button text length
     if (buttonText.length > 20) {
-      console.error('CTA button text exceeds 20 characters');
+      logger.error('[WhatsApp] CTA button text exceeds 20 characters', new Error('Validation failed'), {
+        metadata: { buttonTextLength: buttonText.length, maxLength: 20 }
+      });
       return null;
     }
 
@@ -332,7 +346,9 @@ export async function sendCTAButton(
     try {
       new URL(url);
     } catch {
-      console.error('Invalid URL format for CTA button');
+      logger.error('[WhatsApp] Invalid URL format for CTA button', new Error('URL validation failed'), {
+        metadata: { url }
+      });
       return null;
     }
 
@@ -365,7 +381,9 @@ export async function sendCTAButton(
     const result = await sendWhatsAppRequest(payload);
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
-    console.error('Error sending CTA button:', error);
+    logger.error('[WhatsApp] Error sending CTA button', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { to, buttonText, url }
+    });
     return null;
   }
 }
@@ -405,7 +423,9 @@ export async function requestLocation(
     const result = await sendWhatsAppRequest(payload);
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
-    console.error('Error requesting location:', error);
+    logger.error('[WhatsApp] Error requesting location', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { to }
+    });
     return null;
   }
 }
@@ -429,7 +449,9 @@ export async function sendLocation(
     });
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
-    console.error('Error sending location:', error);
+    logger.error('[WhatsApp] Error sending location', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { to, location }
+    });
     return null;
   }
 }
@@ -469,7 +491,9 @@ export async function requestCallPermission(
     const result = await sendWhatsAppRequest(payload);
     return result?.messages?.[0]?.id ?? null;
   } catch (error) {
-    console.error('Error requesting call permission:', error);
+    logger.error('[WhatsApp] Error requesting call permission', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { to }
+    });
     return null;
   }
 }
@@ -502,13 +526,17 @@ export async function blockPhoneNumber(phoneNumber: string): Promise<boolean> {
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
-      console.error(`WhatsApp Block API error ${res.status}:`, detail);
+      logger.error('[WhatsApp Block API] Request failed', new Error(`Status ${res.status}`), {
+        metadata: { status: res.status, detail, phoneNumber }
+      });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Error blocking phone number:', error);
+    logger.error('[WhatsApp] Error blocking phone number', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { phoneNumber }
+    });
     return false;
   }
 }
@@ -537,13 +565,17 @@ export async function unblockPhoneNumber(phoneNumber: string): Promise<boolean> 
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
-      console.error(`WhatsApp Unblock API error ${res.status}:`, detail);
+      logger.error('[WhatsApp Unblock API] Request failed', new Error(`Status ${res.status}`), {
+        metadata: { status: res.status, detail, phoneNumber }
+      });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Error unblocking phone number:', error);
+    logger.error('[WhatsApp] Error unblocking phone number', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { phoneNumber }
+    });
     return false;
   }
 }
@@ -588,7 +620,9 @@ export function createTypingManager(to: string, messageId: string) {
         await markAsReadWithTyping(to, messageId);
         active = true;
       } catch (err: any) {
-        console.error('Typing indicator error:', err?.message);
+        logger.error('[WhatsApp Typing] Indicator error', err instanceof Error ? err : new Error(String(err)), {
+          metadata: { to, messageId }
+        });
       }
     },
     async stop() {
@@ -607,7 +641,9 @@ export function createTypingManager(to: string, messageId: string) {
           await markAsReadWithTyping(to, messageId);
           active = true;
         } catch (err: any) {
-          console.error('Typing indicator error:', err?.message);
+          logger.error('[WhatsApp Typing] Indicator error', err instanceof Error ? err : new Error(String(err)), {
+            metadata: { to, messageId, durationSeconds }
+          });
           return;
         }
       }

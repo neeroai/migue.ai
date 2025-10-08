@@ -21,7 +21,22 @@ import { getSupabaseServerClient } from './supabase'
  */
 export const createReminderToolSchema = {
   name: 'create_reminder' as const,
-  description: 'Crea recordatorios automáticamente cuando el usuario lo solicita. Usa esto cuando el usuario dice "recuérdame", "no olvides", "tengo que...", etc.',
+  description: `Creates a reminder in the database when the user asks to remember something.
+
+Use this tool IMMEDIATELY when user says:
+- "recuérdame..." / "recordarme..."
+- "no olvides..." / "no olvidar..."
+- "tengo que..." / "debo..."
+- "avísame..." / "avisarme..."
+- "me recuerdas..." / "puedes recordarme..."
+
+This tool SAVES the reminder to the database automatically. After calling, confirm to user: "✅ Listo! Guardé tu recordatorio..."
+
+Important: The datetimeIso must be in Colombia timezone (America/Bogota, UTC-5) in ISO format: YYYY-MM-DDTHH:MM:SS-05:00
+
+Examples:
+- User: "recuérdame llamar a mi tía en 30 minutos" → Use this tool with datetime=now+30min
+- User: "no olvides que tengo cita mañana a las 3pm" → Use this tool with datetime=tomorrow 15:00`,
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -39,7 +54,7 @@ export const createReminderToolSchema = {
       },
       datetimeIso: {
         type: 'string' as const,
-        description: 'Fecha y hora en formato ISO: YYYY-MM-DDTHH:MM:SS-06:00',
+        description: 'Fecha y hora en formato ISO: YYYY-MM-DDTHH:MM:SS-05:00 (Colombia timezone UTC-5)',
       },
     },
     required: ['userId', 'title', 'datetimeIso'],
@@ -88,7 +103,21 @@ export async function executeCreateReminder(input: unknown): Promise<string> {
  */
 export const scheduleMeetingToolSchema = {
   name: 'schedule_meeting' as const,
-  description: 'Agenda reuniones formales en Google Calendar cuando el usuario solicita una reunión, junta o cita formal.',
+  description: `Schedules a formal meeting in Google Calendar when user requests appointment/meeting.
+
+Use this tool IMMEDIATELY when user says:
+- "agenda reunión..." / "agendar..."
+- "reserva cita..." / "reservar..."
+- "programa junta..." / "programar..."
+- "necesito reunirme..." / "vamos a reunirnos..."
+
+This tool CREATES the calendar event automatically. After calling, confirm: "✅ Listo! Agendé tu reunión..."
+
+Important: Times must be in Colombia timezone (America/Bogota, UTC-5) in ISO format.
+
+Examples:
+- User: "agenda reunión con el equipo mañana a las 10am" → Use this tool with startTime=tomorrow 10:00, endTime=tomorrow 11:00
+- User: "necesito agendar cita con el doctor" → Use this tool (may need to clarify time with user first)`,
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -102,11 +131,11 @@ export const scheduleMeetingToolSchema = {
       },
       startTime: {
         type: 'string' as const,
-        description: 'Hora de inicio en formato ISO',
+        description: 'Hora de inicio en formato ISO (Colombia timezone UTC-5)',
       },
       endTime: {
         type: 'string' as const,
-        description: 'Hora de fin en formato ISO',
+        description: 'Hora de fin en formato ISO (Colombia timezone UTC-5)',
       },
       description: {
         type: 'string' as const,
@@ -160,7 +189,21 @@ export async function executeScheduleMeeting(input: unknown): Promise<string> {
  */
 export const trackExpenseToolSchema = {
   name: 'track_expense' as const,
-  description: 'Registra gastos automáticamente cuando el usuario menciona haber gastado dinero.',
+  description: `Tracks expenses when user mentions spending money.
+
+Use this tool IMMEDIATELY when user says:
+- "gasté..." / "me gasté..."
+- "pagué..." / "pago..."
+- "compré..." / "cuesta..."
+- "salió..." / "costó..."
+
+This tool SAVES the expense to the database. Confirm: "✅ Listo! Registré tu gasto..."
+
+Note: Currently in development - if tool returns pending message, acknowledge to user that expense tracking is being set up.
+
+Examples:
+- User: "gasté $500 en el super" → Use this tool with amount=500, category="Alimentación"
+- User: "pagué 200 pesos de uber" → Use this tool with amount=200, category="Transporte"`,
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -170,11 +213,11 @@ export const trackExpenseToolSchema = {
       },
       amount: {
         type: 'number' as const,
-        description: 'Cantidad gastada',
+        description: 'Cantidad gastada (solo número, sin símbolos)',
       },
       currency: {
         type: 'string' as const,
-        description: 'Moneda (ej: MXN, USD)',
+        description: 'Moneda (MXN, USD, COP)',
       },
       category: {
         type: 'string' as const,
@@ -182,7 +225,7 @@ export const trackExpenseToolSchema = {
       },
       description: {
         type: 'string' as const,
-        description: 'Descripción del gasto',
+        description: 'Descripción breve del gasto',
       },
     },
     required: ['userId', 'amount', 'currency', 'category', 'description'],

@@ -54,15 +54,26 @@ export function whatsAppMessageToNormalized(message: WhatsAppMessage): Normalize
     mediaUrl = message.image.id;
     content = message.image.caption ?? null;
   } else if (type === 'audio' && message.audio) {
+    // NOTE: WhatsApp sends voice messages as type='audio', not type='voice'
+    // The audio.voice property distinguishes voice recordings from audio files
     mediaUrl = message.audio.id;
-  } else if (type === 'voice' && message.voice) {
-    mediaUrl = message.voice.id;
+  } else if (type === 'sticker' && message.sticker) {
+    mediaUrl = message.sticker.id;
   } else if (type === 'document' && message.document) {
     mediaUrl = message.document.id;
     content = message.document.caption ?? null;
   } else if (type === 'video' && message.video) {
     mediaUrl = message.video.id;
     content = message.video.caption ?? null;
+  } else if (type === 'reaction' && message.reaction) {
+    // Store reaction as JSON: { emoji, message_id }
+    content = JSON.stringify({
+      emoji: message.reaction.emoji,
+      message_id: message.reaction.message_id,
+    });
+  } else if (type === 'order' && message.order) {
+    // Store order details as JSON
+    content = JSON.stringify(message.order);
   } else if (type === 'interactive' && message.interactive) {
     // Validate interactive message with Zod schema
     const result = InteractiveContentSchema.safeParse(message.interactive)

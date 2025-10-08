@@ -21,20 +21,21 @@ export const PhoneNumberSchema = z.string()
     { message: 'Invalid E.164 phone number (must start with + followed by country code 1-9 and 7-14 digits)' }
   );
 
-// Message types
+// Message types (WhatsApp Cloud API v23.0)
+// NOTE: 'voice' is NOT a valid WhatsApp type - voice messages arrive as type='audio'
 export const MessageTypeSchema = z.enum([
   'text',
   'image',
   'video',
   'document',
-  'audio',
-  'voice',
+  'audio',     // Includes voice messages (audio.voice property)
   'sticker',
   'location',
   'contacts',
   'interactive',
   'button',
   'reaction',
+  'order',     // Commerce/catalog orders
   'unsupported',
 ]);
 
@@ -63,6 +64,18 @@ export const LocationContentSchema = z.object({
 export const ReactionContentSchema = z.object({
   message_id: z.string(),
   emoji: z.string(),
+});
+
+// Order message (commerce/catalog)
+export const OrderContentSchema = z.object({
+  catalog_id: z.string(),
+  product_items: z.array(z.object({
+    product_retailer_id: z.string(),
+    quantity: z.number(),
+    item_price: z.number().optional(),
+    currency: z.string().optional(),
+  })),
+  text: z.string().optional(),
 });
 
 // Interactive message schemas (discriminated union for type safety)
@@ -105,7 +118,7 @@ export type ButtonReplyContent = z.infer<typeof ButtonReplyContentSchema>
 export type ListReplyContent = z.infer<typeof ListReplyContentSchema>
 export type CTAButtonReplyContent = z.infer<typeof CTAButtonReplyContentSchema>
 
-// WhatsApp message schema
+// WhatsApp message schema (v23.0)
 export const WhatsAppMessageSchema = z.object({
   id: z.string(),
   from: PhoneNumberSchema,
@@ -117,11 +130,11 @@ export const WhatsAppMessageSchema = z.object({
   image: MediaContentSchema.optional(),
   video: MediaContentSchema.optional(),
   document: MediaContentSchema.optional(),
-  audio: MediaContentSchema.optional(),
-  voice: MediaContentSchema.optional(),
+  audio: MediaContentSchema.optional(),  // Includes voice messages
   sticker: MediaContentSchema.optional(),
   location: LocationContentSchema.optional(),
   reaction: ReactionContentSchema.optional(),
+  order: OrderContentSchema.optional(),
   interactive: InteractiveContentSchema.optional(),
 
   // Context (reply to message)

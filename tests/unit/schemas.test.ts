@@ -27,7 +27,8 @@ describe('WhatsApp Webhook Schemas', () => {
 
   describe('MessageTypeSchema', () => {
     it('should validate all supported message types', () => {
-      const validTypes = ['text', 'image', 'video', 'document', 'audio', 'voice', 'sticker', 'location'];
+      // WhatsApp v23.0 types - NOTE: 'voice' is NOT valid (voice messages arrive as type='audio')
+      const validTypes = ['text', 'image', 'video', 'document', 'audio', 'sticker', 'location', 'contacts', 'interactive', 'button', 'reaction', 'order', 'unsupported'];
       validTypes.forEach((type) => {
         expect(() => MessageTypeSchema.parse(type)).not.toThrow();
       });

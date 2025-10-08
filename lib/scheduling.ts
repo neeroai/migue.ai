@@ -1,7 +1,9 @@
 import { chatCompletion, type ChatMessage } from './openai'
-import { createCalendarEventForUser, type CalendarEventInput } from './google-calendar'
+import { logger } from './logger'
 
-const DEFAULT_TIMEZONE = 'America/Mexico_City'
+// Default timezone changed to Bogotá, Colombia (UTC-5)
+// Business hours: 7am-8pm Bogotá time
+const DEFAULT_TIMEZONE = 'America/Bogota'
 
 const EXTRACTION_PROMPT = `Eres un planificador experto para usuarios de América Latina.
 Convierte la petición en JSON con el siguiente formato exacto:
@@ -78,15 +80,15 @@ function ensureTimes(data: Extraction, fallbackTimeZone?: string) {
   }
 }
 
-function buildCalendarInput(data: Extraction, times: NonNullable<ReturnType<typeof ensureTimes>>): CalendarEventInput {
+function buildMeetingDetails(data: Extraction, times: NonNullable<ReturnType<typeof ensureTimes>>) {
   return {
     summary: data.summary ?? 'Reunión',
     description: data.notes ?? null,
-    start: { dateTime: times.startIso, timeZone: times.timezone },
-    end: { dateTime: times.endIso, timeZone: times.timezone },
-    ...(data.attendees ? { attendees: data.attendees.map((email) => ({ email })) } : {}),
+    startIso: times.startIso,
+    endIso: times.endIso,
+    timezone: times.timezone,
     location: data.location ?? null,
-    conferencing: 'google_meet',
+    attendees: data.attendees ?? [],
   }
 }
 
@@ -96,7 +98,7 @@ function formatConfirmation(summary: string, startIso: string, timezone: string)
     timeStyle: 'short',
     timeZone: timezone,
   })
-  return `¡Listo! Reservé "${summary}" para ${formatter.format(new Date(startIso))}. Te envié la invitación en Google Calendar.`
+  return `¡Listo! Anoté "${summary}" para ${formatter.format(new Date(startIso))}.`
 }
 
 function formatMissingFields(missing: string[] | undefined) {
@@ -119,21 +121,31 @@ export async function scheduleMeetingFromIntent(
     if (!times) {
       return { status: 'needs_clarification', reply: 'No pude entender la fecha u hora; ¿me ayudas a confirmarlas?' }
     }
-    const calendarInput = buildCalendarInput(extraction, times)
-    const result = await createCalendarEventForUser(options.userId, calendarInput)
-    const reply = formatConfirmation(calendarInput.summary, result.start, calendarInput.start.timeZone)
-    return { status: 'scheduled', reply, start: result.start, end: result.end }
-  } catch (error: any) {
-    if (error?.message?.includes('Missing Google Calendar credential')) {
-      return {
-        status: 'error',
-        reply: 'Necesito que conectes tu Google Calendar antes de agendar. Abre el panel de configuración y vincula tu cuenta.',
+    const meetingDetails = buildMeetingDetails(extraction, times)
+    const reply = formatConfirmation(meetingDetails.summary, meetingDetails.startIso, meetingDetails.timezone)
+
+    logger.info('[Scheduling] Meeting details extracted', {
+      metadata: {
+        userId: options.userId,
+        summary: meetingDetails.summary,
+        start: meetingDetails.startIso,
+        end: meetingDetails.endIso,
       }
+    })
+
+    return {
+      status: 'scheduled',
+      reply,
+      start: meetingDetails.startIso,
+      end: meetingDetails.endIso,
     }
-    console.error('Scheduling error:', error)
+  } catch (error: any) {
+    logger.error('[Scheduling] Error extracting meeting details', error instanceof Error ? error : new Error(String(error)), {
+      metadata: { userId: options.userId }
+    })
     return {
       status: 'error',
-      reply: 'No pude agendar la reunión por un error interno. Intentemos de nuevo en unos minutos.',
+      reply: 'No pude procesar la información de la reunión. ¿Podrías repetirla?',
     }
   }
 }

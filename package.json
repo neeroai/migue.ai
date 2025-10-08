@@ -25,7 +25,10 @@
     "postinstall": "playwright install",
     "pre-deploy": "npm run typecheck && npm run build && npm run test:unit",
     "verify-deploy": "node scripts/verify-deploy.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:verify": "npx tsx scripts/verify-supabase.ts",
+    "db:cli": "./scripts/supabase-cli.sh",
+    "audit:users": "npx tsx scripts/audit-users.ts"
   },
   "keywords": [],
   "author": "",

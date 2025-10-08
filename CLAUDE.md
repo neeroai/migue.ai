@@ -14,14 +14,18 @@ npm run test         # Run all tests
 
 ### Key Files
 - `app/api/whatsapp/webhook/route.ts` - Message reception & AI processing
-- `app/api/cron/check-reminders/route.ts` - Daily reminders (9 AM UTC)
+- `app/api/cron/check-reminders/route.ts` - Daily reminders (12pm UTC = 7am Bogotá)
+- `app/api/cron/maintain-windows/route.ts` - WhatsApp window maintenance
 - `lib/whatsapp.ts` - WhatsApp API client (messages, typing, reactions)
+- `lib/messaging-windows.ts` - WhatsApp 24h window management
 - `lib/ai-providers.ts` - Multi-provider AI system (Claude, Groq, Tesseract)
 - `lib/claude-agents.ts` - Specialized AI agents
 - `lib/groq-client.ts` - Audio transcription (93% cheaper)
 - `lib/tesseract-ocr.ts` - Free OCR
 - `lib/supabase.ts` - Database client
 - `types/schemas.ts` - Zod validation schemas
+
+**Timezone**: America/Bogota (UTC-5) - Horario laboral 7am-8pm
 
 ### Environment Variables
 See `.env.local` - Required:
@@ -115,6 +119,50 @@ await sendWhatsAppRequest(list.toPayload(phone));
 
 **Benefits**: Validation at construction, type safety, prevents invalid payloads
 
+### Messaging Window Management (2025-10-07)
+
+**WhatsApp 24h Free Window System** - Mantiene conversaciones gratuitas automáticamente
+
+```typescript
+import {
+  getMessagingWindow,
+  shouldSendProactiveMessage,
+  COLOMBIA_TZ,
+  BUSINESS_HOURS
+} from '@/lib/messaging-windows';
+
+// Verificar estado de ventana
+const window = await getMessagingWindow(phoneNumber);
+// → { isOpen, isFreeEntry, expiresAt, hoursRemaining, canSendProactive }
+
+// Validar si se puede enviar mensaje proactivo
+const decision = await shouldSendProactiveMessage(userId, phoneNumber);
+// → { allowed: true/false, reason, nextAvailableTime }
+```
+
+**Reglas de WhatsApp:**
+- Ventana de 24h se abre cuando **usuario** envía mensaje
+- Todos los mensajes dentro de ventana: **GRATIS** (ilimitados)
+- Free entry point: **72h gratis** para nuevos usuarios
+- Fuera de ventana: solo template messages (pagados $0.0667 c/u)
+
+**Sistema Automático:**
+- ✅ Horario laboral: 7am-8pm Bogotá (UTC-5)
+- ✅ Máximo 4 mensajes proactivos/usuario/día
+- ✅ Mínimo 4h entre mensajes proactivos
+- ✅ NO interrumpe usuarios activos (< 30 min)
+- ✅ Cron jobs: 7am, 10am, 1pm, 4pm Bogotá (12pm, 3pm, 6pm, 9pm UTC)
+- ✅ Mensajes personalizados con ProactiveAgent + historial
+
+**Archivos clave:**
+- `lib/messaging-windows.ts` - Core logic
+- `app/api/cron/maintain-windows/route.ts` - Mantenimiento automático
+- `lib/template-messages.ts` - Fallback (ventana cerrada)
+- `lib/metrics.ts` - Monitoreo y costos
+- `supabase/migrations/003_messaging_windows.sql` - Tablas
+
+**Beneficio**: 90%+ conversaciones gratis (vs $0.0667 por template)
+
 ---
 
 ## Testing
@@ -145,6 +193,14 @@ npm run test:e2e      # Playwright only
 1. Edit `supabase/schema.sql` or `supabase/security.sql`
 2. Test in Supabase SQL Editor
 3. Update TypeScript types
+
+### Work with Supabase
+```bash
+npm run db:verify              # Verify connection & show data
+npm run db:cli -- projects list  # Use Supabase CLI
+npm run audit:users            # Audit user interactions & message persistence
+```
+See [SUPABASE-ACCESS.md](./docs/SUPABASE-ACCESS.md) for complete guide
 
 ### Deploy
 
@@ -265,15 +321,57 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 **TypeScript**: 5.9.2 (strict)
 **Tests**: 239/239 ✅
 **Production**: https://migue.app
-**Status**: Fase 2 (90%) - Production Ready
+**Status**: Fase 2 (95%) - Production Ready
 
-**Current Phase**: Tool calling, security audit, production hardening
+**Current Phase**: WhatsApp v23.0 full support, message type fixes
 **Target**: Oct 8, 2025 - Fase 2 complete (adelantado)
 **Cost Savings**: 76% reduction ($55/month → $13/month) - ACTIVO
 
 ---
 
 ## Recent Updates
+
+### 2025-10-07 - WhatsApp v23.0 Message Types Fix 🔧
+- ✅ **User Interaction Audit**:
+  - Created diagnostic script: `npm run audit:users`
+  - Identified root cause: PostgreSQL enum `msg_type` missing v23.0 types
+  - 2 of 4 users affected (0 messages persisted due to enum constraint violations)
+- ✅ **Message Persistence Fix**:
+  - Added WhatsApp v23.0 types: `sticker`, `reaction`, `order`
+  - Removed invalid `voice` type (voice messages arrive as `type='audio'`)
+  - Implemented type-safe validation with fallback to `'unknown'`
+  - Enhanced error logging for enum violations and type mismatches
+- ✅ **Database Migration**:
+  - Created `supabase/migrations/002_add_whatsapp_v23_message_types.sql`
+  - Executed in Supabase Dashboard (production)
+  - Verified all v23.0 types now supported
+- ✅ **Code Updates**:
+  - `lib/persist.ts`: Type-safe VALID_MSG_TYPES array with validation
+  - `lib/message-normalization.ts`: Fixed voice handling, added sticker/reaction/order
+  - `types/schemas.ts`: Updated MessageTypeSchema, added OrderContentSchema
+  - `app/api/whatsapp/webhook/route.ts`: Corrected audio/voice conditional
+- ✅ **Diagnostic Tools**:
+  - `scripts/audit-users.ts`: Complete interaction analysis tool
+  - `audit-report.json`: Exportable metrics per user
+- ✅ **Status**: Code ready, pending deployment to validate fix
+
+### 2025-10-07 - Supabase MCP Integration 🚀
+- ✅ **MCP Server Configuration** - Direct Supabase access from Claude Code:
+  - Configured Supabase MCP at `https://mcp.supabase.com/mcp`
+  - OAuth authentication (automatic browser login)
+  - 20+ AI-powered tools: database, edge functions, storage, debugging
+  - Scoped to project: `pdliixrgdvunoymxaxmw`
+  - Feature groups enabled: database, functions, debugging, development, docs, storage
+- ✅ **Documentation Updated**:
+  - Enhanced `docs/SUPABASE-ACCESS.md` with MCP section
+  - Usage examples for natural language queries
+  - Comparison matrix: MCP vs CLI vs TypeScript API
+- ✅ **Benefits**:
+  - Execute SQL queries from natural language
+  - AI-assisted table design and migrations
+  - Deploy Edge Functions without CLI
+  - Real-time debugging with logs
+  - Auto-generate TypeScript types
 
 ### 2025-10-06 - Tool Calling & Security Audit ⚡
 - ✅ **Tool Calling Implementation** - Manual loop with Claude SDK:
@@ -362,6 +460,6 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 
 ---
 
-**Last Updated**: 2025-10-06
+**Last Updated**: 2025-10-07
 **Owner**: claude-master
 **Session Model**: Claude Sonnet 4.5

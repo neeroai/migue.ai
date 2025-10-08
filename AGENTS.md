@@ -359,12 +359,35 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 ---
 
 **Fecha de creación**: 2025-01-27
-**Última actualización**: 2025-10-06
-**Versión**: 2.0 - Multi-Provider AI System
-**Estado**: En desarrollo - Fase 2 (Core Features + AI Migration - Progreso 90%)
+**Última actualización**: 2025-10-07
+**Versión**: 2.1 - WhatsApp v23.0 Full Support
+**Estado**: En desarrollo - Fase 2 (Core Features + AI Migration - Progreso 95%)
 **Deployment**: ✅ Producción activa en Vercel
 
-**Últimos Logros (2025-10-06 - Autonomous AI Actions)** ⚡:
+**Últimos Logros (2025-10-07 - WhatsApp v23.0 Message Types Fix)** 🔧:
+- ✅ **Auditoría de Usuarios**:
+  - Script de diagnóstico (`npm run audit:users`)
+  - Identificación de causa raíz: enum `msg_type` incompleto
+  - 2 de 4 usuarios afectados (0 mensajes persistidos)
+- ✅ **Fix de Persistencia de Mensajes**:
+  - Agregados tipos WhatsApp v23.0: `sticker`, `reaction`, `order`
+  - Removido tipo inválido `voice` (voice messages son `type='audio'`)
+  - Type-safe validation con fallback a `'unknown'`
+  - Enhanced error logging (enum violations, type mismatches)
+- ✅ **Migración SQL**:
+  - `supabase/migrations/002_add_whatsapp_v23_message_types.sql`
+  - Ejecutada en producción (Supabase Dashboard)
+- ✅ **Código Actualizado**:
+  - `lib/persist.ts`: Validación type-safe con VALID_MSG_TYPES
+  - `lib/message-normalization.ts`: Fix voice, add sticker/reaction/order
+  - `types/schemas.ts`: Schemas actualizados (OrderContentSchema)
+  - `app/api/whatsapp/webhook/route.ts`: Audio/voice check corregido
+- ✅ **Herramientas de Diagnóstico**:
+  - `scripts/audit-users.ts`: Análisis completo de interacciones
+  - `audit-report.json`: Reporte exportable con métricas
+- ✅ **Status**: Fix aplicado, pendiente de deployment para nuevos mensajes
+
+**Logros Previos (2025-10-06 - Autonomous AI Actions)** ⚡:
 - ✅ **Autonomous AI Execution**:
   - ProactiveAgent ejecuta acciones directamente (reminders, meetings)
   - Sin confirmación manual - "Ya lo guardé" vs "Puedes agregarlo"

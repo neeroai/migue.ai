@@ -21,9 +21,9 @@ CREATE INDEX IF NOT EXISTS ai_usage_task_type_idx ON ai_usage_tracking(task_type
 CREATE INDEX IF NOT EXISTS ai_usage_user_id_idx ON ai_usage_tracking(user_id);
 CREATE INDEX IF NOT EXISTS ai_usage_conversation_id_idx ON ai_usage_tracking(conversation_id);
 
--- Composite index for daily cost queries
-CREATE INDEX IF NOT EXISTS ai_usage_date_provider_idx
-ON ai_usage_tracking(DATE(created_at), provider);
+-- NOTE: Composite date+provider index removed due to IMMUTABLE constraint
+-- All date conversion functions on timestamptz are STABLE (timezone-dependent)
+-- Queries will use ai_usage_created_at_idx + ai_usage_provider_idx instead
 
 -- RLS policies
 ALTER TABLE ai_usage_tracking ENABLE ROW LEVEL SECURITY;

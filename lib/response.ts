@@ -1,6 +1,17 @@
 import { chatCompletion, streamChatCompletion, type ChatMessage } from './openai'
-import type { Intent } from './intent'
 import { retrieveContext } from './rag/use-rag'
+import { logger } from './logger'
+
+// Intent types (for fallback generation)
+export type Intent =
+  | 'casual_chat'
+  | 'set_reminder'
+  | 'ask_info'
+  | 'manage_tasks'
+  | 'transcribe_audio'
+  | 'analyze_document'
+  | 'schedule_meeting'
+  | 'other'
 
 const SYSTEM_PROMPTS: Record<Intent, string> = {
   casual_chat: `Eres migue.ai, un asistente personal amigable y útil en español (Latinoamérica).
@@ -61,8 +72,8 @@ export async function generateResponse(
 ): Promise<string> {
   const { intent, conversationHistory = [], userMessage, userName, userId, documentId } = options
 
-  const systemPrompt = SYSTEM_PROMPTS[intent] || SYSTEM_PROMPTS.other
-  const enhancedSystemPrompt = userName
+  const systemPrompt = SYSTEM_PROMPTS[intent] ?? SYSTEM_PROMPTS.other
+  const enhancedSystemPrompt: string = userName
     ? `${systemPrompt}\n\nEl usuario se llama ${userName}.`
     : systemPrompt
 
@@ -108,7 +119,9 @@ export async function generateResponse(
       const streamed = await streamChatCompletion(finalMessages, completionOptions)
       return streamed.trim()
     } catch (streamError: any) {
-      console.error('Streaming error:', streamError?.message)
+      logger.error('[Response] Streaming error, falling back to non-streaming', streamError instanceof Error ? streamError : new Error(String(streamError)), {
+        metadata: { intent }
+      })
       const fallback = await chatCompletion(finalMessages, completionOptions)
       return fallback.trim()
     }

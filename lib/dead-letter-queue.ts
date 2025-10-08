@@ -38,12 +38,11 @@ export async function addToWebhookDLQ(failure: WebhookFailure): Promise<void> {
   try {
     const supabase = getSupabaseServerClient();
 
-    // @ts-ignore - webhook_failures table not in generated types yet
-    const { error } = await (supabase as any).from('webhook_failures').insert({
+    const { error } = await supabase.from('webhook_failures').insert({
       request_id: failure.requestId,
       wa_message_id: failure.waMessageId || null,
       phone_number: failure.phoneNumber,
-      raw_payload: failure.rawPayload,
+      raw_payload: failure.rawPayload as any, // Cast unknown to Json for Supabase
       error_message: failure.errorMessage,
       error_code: failure.errorCode || null,
       retry_count: 0,
@@ -87,8 +86,7 @@ export async function addToWebhookDLQ(failure: WebhookFailure): Promise<void> {
 export async function getPendingFailures(limit = 100) {
   const supabase = getSupabaseServerClient();
 
-  // @ts-ignore - webhook_failures table not in generated types yet
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('webhook_failures')
     .select('*')
     .eq('status', 'pending')
@@ -111,8 +109,7 @@ export async function getPendingFailures(limit = 100) {
 export async function markFailureResolved(id: string): Promise<void> {
   const supabase = getSupabaseServerClient();
 
-  // @ts-ignore - webhook_failures table not in generated types yet
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('webhook_failures')
     .update({ status: 'resolved', updated_at: new Date().toISOString() })
     .eq('id', id);
@@ -136,16 +133,14 @@ export async function incrementRetryCount(id: string): Promise<void> {
   const supabase = getSupabaseServerClient();
 
   // Manual increment (RPC not needed for now)
-  // @ts-ignore - webhook_failures table not in generated types yet
-  const { data: current } = await (supabase as any)
+  const { data: current } = await supabase
     .from('webhook_failures')
     .select('retry_count')
     .eq('id', id)
     .single();
 
   if (current) {
-    // @ts-ignore - webhook_failures table not in generated types yet
-    await (supabase as any)
+    await supabase
       .from('webhook_failures')
       .update({
         retry_count: ((current as any).retry_count || 0) + 1,

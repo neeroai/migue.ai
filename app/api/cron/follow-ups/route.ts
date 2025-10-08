@@ -6,7 +6,7 @@ import { fetchDueFollowUps, markFollowUpStatus } from '../../../../lib/followups
 import { sendWhatsAppText } from '../../../../lib/whatsapp';
 import { getSupabaseServerClient } from '../../../../lib/supabase';
 import { createProactiveAgent } from '../../../../lib/claude-agents';
-import { getConversationHistory } from '../../../../lib/context';
+import { getConversationHistory } from '../../../../lib/conversation-utils';
 import { historyToClaudeMessages } from '../../../../lib/ai-processing-v2';
 
 function jsonResponse(body: unknown, status = 200) {

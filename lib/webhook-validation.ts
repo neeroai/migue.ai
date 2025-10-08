@@ -4,6 +4,7 @@
  */
 
 import { getEnv } from './env';
+import { logger } from './logger';
 
 /**
  * Convert ArrayBuffer to hex string
@@ -67,24 +68,32 @@ export async function validateSignature(req: Request, rawBody: string): Promise<
     const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
 
     if (isProd) {
-      console.error('❌ Missing WHATSAPP_APP_SECRET in production - blocking webhook');
+      logger.error('[Webhook Validation] Missing WHATSAPP_APP_SECRET in production', new Error('Missing credentials'), {
+        metadata: { isProd, hasHeader: !!header, hasSecret: !!WHATSAPP_APP_SECRET }
+      });
       return false;
     }
 
-    console.warn('⚠️  Development mode: Webhook signature validation disabled');
+    logger.warn('[Webhook Validation] Development mode: signature validation disabled', {
+      metadata: { isProd, hasHeader: !!header, hasSecret: !!WHATSAPP_APP_SECRET }
+    });
     return true;
   }
 
   // Header format: sha256=abcdef...
   const parts = header.split('=');
   if (parts.length !== 2 || parts[0] !== 'sha256') {
-    console.error('❌ Invalid signature header format');
+    logger.error('[Webhook Validation] Invalid signature header format', new Error('Invalid header format'), {
+      metadata: { header, partsLength: parts.length, algorithm: parts[0] }
+    });
     return false;
   }
 
   const provided = parts[1];
   if (!provided) {
-    console.error('❌ Missing signature value');
+    logger.error('[Webhook Validation] Missing signature value', new Error('Empty signature'), {
+      metadata: { header }
+    });
     return false;
   }
 
@@ -94,7 +103,9 @@ export async function validateSignature(req: Request, rawBody: string): Promise<
   // Constant-time comparison to prevent timing attacks
   // Note: Length check is OK as length is public information
   if (provided.length !== expected.length) {
-    console.error('❌ Signature length mismatch');
+    logger.error('[Webhook Validation] Signature length mismatch', new Error('Length mismatch'), {
+      metadata: { providedLength: provided.length, expectedLength: expected.length }
+    });
     return false;
   }
 
@@ -108,7 +119,9 @@ export async function validateSignature(req: Request, rawBody: string): Promise<
   const isValid = diff === 0;
 
   if (!isValid) {
-    console.error('❌ Signature validation failed');
+    logger.error('[Webhook Validation] Signature validation failed', new Error('Invalid signature'), {
+      metadata: { providedLength: provided.length, expectedLength: expected.length }
+    });
   }
 
   return isValid;

@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-10-08T04:15:29.858Z",
+  "summary": {
+    "totalUsers": 4,
+    "workingUsers": 2,
+    "failingUsers": 0
+  },
+  "users": [
+    {
+      "userId": "115e85db-d6f6-4fcb-88a4-8fd128d4ffd6",
+      "phoneNumber": "+573114242222",
+      "name": null,
+      "conversationId": "aa1f9525-ae6b-4e7c-8023-fd66c58055ef",
+      "totalInbound": 39,
+      "totalOutbound": 38,
+      "responseRate": 97.43589743589743,
+      "lastInboundAt": "2025-10-06T22:49:07+00:00",
+      "lastOutboundAt": "2025-10-06T22:49:13.913+00:00",
+      "timeSinceLastInbound": "1d 5h",
+      "status": "working"
+    },
+    {
+      "userId": "1ecabc9e-8c6f-48e5-8322-e79530ef9bde",
+      "phoneNumber": "+573004165302",
+      "name": null,
+      "conversationId": "3a38e054-386c-49f0-8ed7-e9764cc03c59",
+      "totalInbound": 0,
+      "totalOutbound": 0,
+      "responseRate": 0,
+      "lastInboundAt": null,
+      "lastOutboundAt": null,
+      "timeSinceLastInbound": null,
+      "status": "no_data"
+    },
+    {
+      "userId": "f10c36d6-a6fb-407e-8aee-45cf74b18181",
+      "phoneNumber": "+573135007383",
+      "name": null,
+      "conversationId": "845a43ee-9b22-464e-b16c-2d1d6868fb35",
+      "totalInbound": 0,
+      "totalOutbound": 0,
+      "responseRate": 0,
+      "lastInboundAt": null,
+      "lastOutboundAt": null,
+      "timeSinceLastInbound": null,
+      "status": "no_data"
+    },
+    {
+      "userId": "811afaab-3fb2-4a7c-83ed-9239048046d1",
+      "phoneNumber": "+573002352225",
+      "name": null,
+      "conversationId": "60ad303c-8619-4aba-ba47-24ec09cf3be7",
+      "totalInbound": 4,
+      "totalOutbound": 4,
+      "responseRate": 100,
+      "lastInboundAt": "2025-10-06T22:46:11+00:00",
+      "lastOutboundAt": "2025-10-06T22:46:16.752+00:00",
+      "timeSinceLastInbound": "1d 5h",
+      "status": "working"
+    }
+  ]
+}

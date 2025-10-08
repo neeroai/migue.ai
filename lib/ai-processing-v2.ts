@@ -9,7 +9,7 @@
  */
 
 import { logger } from './logger'
-import { getConversationHistory, historyToChatMessages } from './context'
+import { getConversationHistory, historyToChatMessages } from './conversation-utils'
 import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
 import { generateResponse } from './response'
 import { transcribeWhatsAppAudio } from './transcription'
@@ -442,48 +442,14 @@ export async function processDocumentMessage(
   } catch (error: any) {
     logger.error('Tesseract OCR error', error)
 
-    // TEMPORARY: RAG fallback disabled to fix Vercel Edge Runtime build
-    // pdf-parse import chain causes Edge bundler to fail
-    // Will be re-enabled via separate Node.js serverless function in Phase 2
-    // See: EDGE-RUNTIME-OPTIMIZATION.md for details
-
-    logger.warn('RAG fallback temporarily disabled for Edge Runtime compatibility')
+    logger.warn('[OCR] Tesseract processing failed, notifying user')
     await reactWithWarning(normalized.from, normalized.waMessageId)
 
     await sendTextAndPersist(
       conversationId,
       normalized.from,
-      'Lo siento, el procesamiento de documentos PDF está temporalmente deshabilitado. Por favor, envía la imagen nuevamente o intenta más tarde.'
+      'Lo siento, no pude procesar el documento. ¿Puedes intentar enviarlo de nuevo?'
     )
-
-    /* DISABLED CODE - Will be moved to Node.js serverless function
-    // Fallback to existing RAG system
-    try {
-      const { ingestWhatsAppDocument, formatIngestionResponse } = await import(
-        './rag/document-ingestion'
-      )
-      const result = await ingestWhatsAppDocument(
-        normalized.mediaUrl,
-        userId,
-        normalized.content
-      )
-
-      const response = formatIngestionResponse(result)
-      await sendTextAndPersist(conversationId, normalized.from, response)
-      await reactWithCheck(normalized.from, normalized.waMessageId)
-
-      logger.info('Fallback to RAG ingestion successful')
-    } catch (fallbackError: any) {
-      logger.error('Document processing completely failed', fallbackError)
-      await reactWithWarning(normalized.from, normalized.waMessageId)
-
-      await sendTextAndPersist(
-        conversationId,
-        normalized.from,
-        'Lo siento, no pude procesar el documento. ¿Puedes intentar enviarlo de nuevo?'
-      )
-    }
-    */
   } finally {
     if (typingManager) {
       await typingManager.stop()

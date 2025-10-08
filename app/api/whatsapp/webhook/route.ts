@@ -2,8 +2,7 @@ export const runtime = 'edge';
 
 import { waitUntil } from '@vercel/functions';
 import { logger } from '../../../../lib/logger';
-import { recordConversationAction } from '../../../../lib/conversation-actions';
-import { getActionDefinition } from '../../../../lib/actions';
+import { recordConversationAction, getActionDefinition } from '../../../../lib/conversation-utils';
 import { safeValidateWebhookPayload, extractFirstMessage } from '../../../../types/schemas';
 import { validateSignature, verifyToken } from '../../../../lib/webhook-validation';
 import {
@@ -17,6 +16,7 @@ import { processMessageWithAI, processAudioMessage, processDocumentMessage } fro
 import { getSupabaseServerClient } from '../../../../lib/supabase';
 import { sendWhatsAppText, reactWithWarning } from '../../../../lib/whatsapp';
 import { retryWithBackoff, isDuplicateError, isTransientError } from '../../../../lib/error-recovery';
+import { updateMessagingWindow } from '../../../../lib/messaging-windows';
 
 /**
  * Create JSON response helper
@@ -306,6 +306,22 @@ async function processWebhookInBackground(
       metadata: { wasInserted },
     });
 
+    // Update WhatsApp 24h messaging window (fire-and-forget)
+    waitUntil(
+      updateMessagingWindow(
+        normalized.from,
+        normalized.waMessageId ?? `gen-${Date.now()}`,
+        true // isUserMessage = true
+      ).catch((err) =>
+        logger.error('[background] Failed to update messaging window', err, {
+          requestId,
+          ...(conversationId && { conversationId }),
+          ...(userId && { userId }),
+          metadata: { phoneNumber: normalized.from.slice(0, 8) + '***' },
+        })
+      )
+    );
+
     // Handle interactive message replies (buttons, lists)
     const interactiveReply = extractInteractiveReply(normalized.raw);
 
@@ -388,9 +404,9 @@ async function processWebhookInBackground(
       }
     }
 
-    // Process audio/voice message
+    // Process audio message (includes voice messages - type='audio' with audio.voice=true)
     if (
-      (normalized.type === 'audio' || normalized.type === 'voice') &&
+      normalized.type === 'audio' &&
       normalized.mediaUrl &&
       normalized.from
     ) {
@@ -422,43 +438,7 @@ async function processWebhookInBackground(
       }
     }
 
-    // Process location message (v23.0)
-    if (normalized.type === 'location' && message.location && conversationId && userId) {
-      try {
-        const supabase = getSupabaseServerClient();
-        const { error } = await supabase
-          .from('user_locations')
-          .insert({
-            user_id: userId,
-            conversation_id: conversationId,
-            latitude: message.location.latitude,
-            longitude: message.location.longitude,
-            name: message.location.name || null,
-            address: message.location.address || null,
-            timestamp: new Date().toISOString(),
-          });
-
-        if (error) {
-          logger.error('[background] Failed to save location', error, {
-            requestId,
-            conversationId,
-            userId,
-          });
-        } else {
-          logger.info('[background] Location saved', {
-            requestId,
-            conversationId,
-            userId,
-          });
-        }
-      } catch (err: any) {
-        logger.error('[background] Location save error', err, {
-          requestId,
-          conversationId,
-          userId,
-        });
-      }
-    }
+    // Location messages are persisted in messages_v2 but not processed further
 
   } catch (error: any) {
     logger.error('[background] Processing error', error, {

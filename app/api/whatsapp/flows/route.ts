@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 
 import { handleFlowDataExchange, completeFlowSession, validateFlowSignature } from '../../../../lib/whatsapp-flows';
+import { logger } from '../../../../lib/logger';
 import type { FlowDataExchangeRequest } from '../../../../types/whatsapp';
 
 /**
@@ -14,7 +15,9 @@ export async function POST(req: Request): Promise<Response> {
     const isValid = await validateFlowSignature(req, rawBody);
 
     if (!isValid) {
-      console.error('❌ Invalid flow signature - potential spoofing attempt');
+      logger.error('[Flow Endpoint] Invalid flow signature - potential spoofing attempt', new Error('Invalid signature'), {
+        metadata: { headers: Object.fromEntries(req.headers.entries()) }
+      });
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         {
@@ -55,7 +58,11 @@ export async function POST(req: Request): Promise<Response> {
     if (response.screen === 'SUCCESS' ||
         response.screen === 'THANK_YOU' ||
         response.screen === 'APPOINTMENT_CONFIRMED') {
-      await completeFlowSession(body.flow_token).catch(console.error);
+      await completeFlowSession(body.flow_token).catch((err) => {
+        logger.error('[Flow Endpoint] Error completing flow session', err instanceof Error ? err : new Error(String(err)), {
+          metadata: { flow_token: body.flow_token, screen: response.screen }
+        });
+      });
     }
 
     return new Response(JSON.stringify(response), {
@@ -63,7 +70,7 @@ export async function POST(req: Request): Promise<Response> {
       headers: { 'content-type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Flow endpoint error:', error);
+    logger.error('[Flow Endpoint] Error processing flow request', error instanceof Error ? error : new Error(String(error)));
     return new Response(
       JSON.stringify({ error: error?.message || 'Internal server error' }),
       {
