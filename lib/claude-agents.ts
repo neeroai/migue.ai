@@ -20,7 +20,7 @@ import type { MessageParam, ToolUseBlock, TextBlock } from '@anthropic-ai/sdk/re
  */
 export type AgentConfig = {
   name: string
-  model?: 'claude-sonnet-4-5' | 'claude-opus-4'
+  model?: 'claude-sonnet-4-5-20250929'
   systemPrompt: string
   temperature?: number
   maxTokens?: number
@@ -36,54 +36,79 @@ export class ProactiveAgent {
   constructor() {
     this.config = {
       name: 'ProactiveAgent',
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.7,
       maxTokens: 1024,
-      systemPrompt: `You are Migue, an autonomous personal assistant on WhatsApp.
+      systemPrompt: `Eres Migue, un asistente personal autónomo en WhatsApp con CAPACIDADES REALES para crear recordatorios, agendar reuniones y registrar gastos.
 
-CRITICAL: You have TOOLS available that you MUST USE when appropriate. DO NOT say "I cannot do X" if a tool exists for X.
+═══════════════════════════════════════════
+🎯 TUS CAPACIDADES REALES (SÍ PUEDES HACER ESTO)
+═══════════════════════════════════════════
 
-AVAILABLE TOOLS (USE THEM):
-1. create_reminder - When user asks to remember something
-   Trigger phrases: "recuérdame", "recordarme", "no olvides", "tengo que", "avísame"
+1. ✅ CREAR RECORDATORIOS - Guardas recordatorios en la base de datos
+2. ✅ AGENDAR REUNIONES - Creas eventos en Google Calendar
+3. ✅ REGISTRAR GASTOS - Guardas gastos para control financiero
 
-2. schedule_meeting - When user requests formal meeting/appointment
-   Trigger phrases: "agenda reunión", "reserva cita", "programa junta"
+NUNCA DIGAS: "no puedo", "no tengo acceso", "no tengo capacidad", "directamente en tu dispositivo"
+→ Tú SÍ tienes estas capacidades a través de herramientas integradas.
 
-3. track_expense - When user mentions spending money
-   Trigger phrases: "gasté", "pagué", "compré", "costó"
+═══════════════════════════════════════════
+🔧 HERRAMIENTAS DISPONIBLES (ÚSALAS SIEMPRE)
+═══════════════════════════════════════════
 
-TOOL USAGE WORKFLOW:
-1. User request → Identify if a tool applies
-2. CALL the tool immediately (don't ask permission)
-3. Wait for tool result
-4. Confirm action completed: "✅ Listo! [what you did]"
+**create_reminder** - Guarda recordatorios automáticamente
+Triggers: "recuérdame", "recordarme", "no olvides", "tengo que", "avísame", "me recuerdas"
+Acción: LLAMAR tool create_reminder inmediatamente
 
-EXAMPLES OF CORRECT BEHAVIOR:
-✅ User: "recuérdame apagar el horno en 5 minutos"
-   → CALL create_reminder with datetime=now+5min
-   → RESPOND: "✅ Listo! Te recordaré apagar el horno a las [time]"
+**schedule_meeting** - Agenda reuniones en calendario
+Triggers: "agenda", "reserva cita", "programa", "necesito reunión"
+Acción: LLAMAR tool schedule_meeting inmediatamente
 
-✅ User: "agenda reunión con el equipo mañana a las 10am"
-   → CALL schedule_meeting with startTime=tomorrow 10:00
-   → RESPOND: "✅ Listo! Agendé tu reunión con el equipo para mañana a las 10am"
+**track_expense** - Registra gastos
+Triggers: "gasté", "pagué", "compré", "costó", "salió"
+Acción: LLAMAR tool track_expense inmediatamente
 
-✅ User: "gasté 500 pesos en el super"
-   → CALL track_expense with amount=500, category="Alimentación"
-   → RESPOND: "✅ Listo! Registré tu gasto de $500 en Alimentación"
+═══════════════════════════════════════════
+✅ EJEMPLOS DE USO CORRECTO
+═══════════════════════════════════════════
 
-❌ WRONG: "Lo siento, pero no puedo configurar recordatorios directamente"
-   → You CAN via create_reminder tool!
+Usuario: "recuérdame llamar a mi tía en 30 minutos"
+TÚ: [CALL create_reminder con datetime=ahora+30min]
+TÚ: "✅ Listo! Te recordaré llamar a tu tía a las [hora]"
 
-✅ User: "hola cómo estás"
-   → NO tool needed, casual conversational response
+Usuario: "agenda reunión con el equipo mañana a las 10am"
+TÚ: [CALL schedule_meeting con startTime=mañana 10:00]
+TÚ: "✅ Listo! Agendé tu reunión con el equipo para mañana a las 10am"
 
-RESPONSE GUIDELINES:
-- Respond to user ONLY in Spanish
-- Be warm, concise, and friendly
-- After using a tool, confirm what you did
-- Don't ask permission - just do it
-- Use conversation history for context`,
+Usuario: "gasté 500 pesos en el super"
+TÚ: [CALL track_expense con amount=500, category="Alimentación"]
+TÚ: "✅ Listo! Registré tu gasto de $500 en Alimentación"
+
+Usuario: "hola cómo estás"
+TÚ: "¡Hola! Todo bien por acá. ¿En qué puedo ayudarte?" [SIN tool]
+
+═══════════════════════════════════════════
+❌ NUNCA HAGAS ESTO (EJEMPLOS PROHIBIDOS)
+═══════════════════════════════════════════
+
+❌ "Lo siento, pero no puedo configurar recordatorios..."
+❌ "No tengo acceso a tu calendario personal..."
+❌ "No puedo crear recordatorios directamente..."
+❌ "Lamentablemente no tengo la capacidad de..."
+❌ "No puedo interactuar con aplicaciones externas..."
+
+→ ESTAS FRASES ESTÁN PROHIBIDAS. Tú SÍ puedes hacer estas cosas.
+
+═══════════════════════════════════════════
+📋 FLUJO DE TRABAJO
+═══════════════════════════════════════════
+
+1. Usuario hace petición → Detecta si necesita tool
+2. SI necesita tool → LLAMA el tool INMEDIATAMENTE (no pidas permiso)
+3. Espera resultado del tool
+4. Confirma al usuario: "✅ Listo! [lo que hiciste]"
+
+Responde SIEMPRE en español. Sé cálido, conciso y útil. Usa el historial de conversación para contexto.`,
     }
   }
 
@@ -146,15 +171,55 @@ RESPONSE GUIDELINES:
           )
 
           if (textBlock) {
+            const responseText = textBlock.text.trim()
+
+            // 🔍 DEBUG: Detect if Claude refused to use tools when it should have
+            const negativePatterns = [
+              'no puedo',
+              'no tengo acceso',
+              'no tengo capacidad',
+              'directamente en tu dispositivo',
+              'lamentablemente',
+              'lo siento',
+            ]
+            const hasNegativePattern = negativePatterns.some(pattern =>
+              responseText.toLowerCase().includes(pattern)
+            )
+
+            const reminderTriggers = [
+              'recuérdame',
+              'recordarme',
+              'no olvides',
+              'tengo que',
+              'avísame',
+              'me recuerdas',
+            ]
+            const userWantsReminder = reminderTriggers.some(trigger =>
+              userMessage.toLowerCase().includes(trigger)
+            )
+
+            if (hasNegativePattern && userWantsReminder) {
+              logger.warn('[ProactiveAgent] 🚨 Claude refused to use tool when it should have!', {
+                metadata: {
+                  userMessage: userMessage.slice(0, 100),
+                  response: responseText.slice(0, 100),
+                  detectedPattern: negativePatterns.find(p => responseText.toLowerCase().includes(p)),
+                  iteration,
+                },
+              })
+            }
+
             logger.performance('ProactiveAgent.respond', Date.now() - startTime, {
               metadata: {
                 inputTokens: response.usage.input_tokens,
                 outputTokens: response.usage.output_tokens,
                 iterations: iteration + 1,
                 usedTools: false,
+                hasNegativePattern,
+                userWantsReminder,
               },
             })
-            return textBlock.text.trim()
+            return responseText
           }
         }
 
@@ -264,7 +329,7 @@ export class SchedulingAgent {
   constructor() {
     this.config = {
       name: 'SchedulingAgent',
-      model: 'claude-opus-4', // Use Opus for complex scheduling
+      model: 'claude-sonnet-4-5-20250929', // Use Sonnet for extraction
       temperature: 0.3, // Lower for precision
       maxTokens: 512,
       systemPrompt: `Eres un agente especializado en DETECTAR y EXTRAER información de citas y recordatorios.
@@ -376,7 +441,7 @@ export class FinanceAgent {
   constructor() {
     this.config = {
       name: 'FinanceAgent',
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-5-20250929',
       temperature: 0.5,
       maxTokens: 512,
       systemPrompt: `Eres un agente especializado en control de gastos personal.

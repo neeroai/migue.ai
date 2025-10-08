@@ -20,7 +20,7 @@ import { logger } from './logger'
 export type ClaudeMessage = MessageParam
 
 export type ClaudeOptions = {
-  model?: 'claude-sonnet-4-5' | 'claude-opus-4' | 'claude-sonnet-4'
+  model?: 'claude-sonnet-4-5-20250929' | 'claude-opus-4' | 'claude-sonnet-4'
   temperature?: number
   maxTokens?: number
   systemPrompt?: string
@@ -65,7 +65,7 @@ export async function claudeChatCompletion(
   const client = getClaudeClient()
 
   const params: MessageCreateParams = {
-    model: options?.model || 'claude-sonnet-4-5',
+    model: options?.model || 'claude-sonnet-4-5-20250929',
     max_tokens: options?.maxTokens || 1024,
     temperature: options?.temperature || 0.7,
     messages,
@@ -119,7 +119,7 @@ export async function claudeStreamCompletion(
   const client = getClaudeClient()
 
   const params: MessageCreateParams = {
-    model: options?.model || 'claude-sonnet-4-5',
+    model: options?.model || 'claude-sonnet-4-5-20250929',
     max_tokens: options?.maxTokens || 1024,
     temperature: options?.temperature || 0.7,
     messages,
