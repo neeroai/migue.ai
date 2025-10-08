@@ -5,18 +5,15 @@
   "crons": [
     {
       "path": "/api/cron/check-reminders",
-      "schedule": "0 12 * * *",
-      "comment": "12pm UTC = 7am Bogotá (Colombia timezone)"
+      "schedule": "0 12 * * *"
     },
     {
       "path": "/api/cron/follow-ups",
-      "schedule": "0 12,18 * * *",
-      "comment": "12pm UTC = 7am Bogotá, 6pm UTC = 1pm Bogotá"
+      "schedule": "0 12,18 * * *"
     },
     {
       "path": "/api/cron/maintain-windows",
-      "schedule": "0 12,15,18,21 * * *",
-      "comment": "12pm UTC = 7am, 3pm UTC = 10am, 6pm UTC = 1pm, 9pm UTC = 4pm Bogotá"
+      "schedule": "0 12,15,18,21 * * *"
     }
   ],
   "headers": [
