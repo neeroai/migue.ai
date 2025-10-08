@@ -1,43 +1,30 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { scheduleMeetingFromIntent } from '../../lib/scheduling'
 import { chatCompletion } from '../../lib/openai'
-import { createCalendarEventForUser } from '../../lib/google-calendar'
 
 jest.mock('../../lib/openai', () => ({
   chatCompletion: jest.fn(),
 }))
 
-jest.mock('../../lib/google-calendar', () => ({
-  createCalendarEventForUser: jest.fn(),
-}))
-
 type Mocked<T> = jest.MockedFunction<T>
 
 const mockedChatCompletion = chatCompletion as Mocked<typeof chatCompletion>
-const mockedCreateEvent = createCalendarEventForUser as Mocked<typeof createCalendarEventForUser>
 
 describe('scheduleMeetingFromIntent', () => {
   beforeEach(() => {
     mockedChatCompletion.mockReset()
-    mockedCreateEvent.mockReset()
   })
 
-  it('schedules a meeting when extraction is ready', async () => {
+  it('extracts meeting details when ready', async () => {
     mockedChatCompletion.mockResolvedValueOnce(
       JSON.stringify({
         ready: true,
         summary: 'Reunión de seguimiento',
         start_iso: '2025-10-05T15:00:00-05:00',
         end_iso: '2025-10-05T15:30:00-05:00',
-        timezone: 'America/Mexico_City',
+        timezone: 'America/Bogota',
       })
     )
-    mockedCreateEvent.mockResolvedValueOnce({
-      provider: 'google',
-      externalId: 'event-123',
-      start: '2025-10-05T15:00:00-05:00',
-      end: '2025-10-05T15:30:00-05:00',
-    })
 
     const result = await scheduleMeetingFromIntent({
       userId: 'user-1',
@@ -45,10 +32,8 @@ describe('scheduleMeetingFromIntent', () => {
     })
 
     expect(result.status).toBe('scheduled')
-    expect(result.reply).toContain('Reservé')
-    expect(mockedCreateEvent).toHaveBeenCalledWith('user-1', expect.objectContaining({
-      summary: 'Reunión de seguimiento',
-    }))
+    expect(result.reply).toContain('¡Listo! Anoté')
+    expect(result.reply).toContain('Reunión de seguimiento')
   })
 
   it('asks for missing data when extraction not ready', async () => {
@@ -63,52 +48,29 @@ describe('scheduleMeetingFromIntent', () => {
 
     expect(result.status).toBe('needs_clarification')
     expect(result.reply).toContain('fecha')
-    expect(mockedCreateEvent).not.toHaveBeenCalled()
   })
 
-  it('returns credential error message when calendar is not connected', async () => {
-    mockedChatCompletion.mockResolvedValueOnce(
-      JSON.stringify({
-        ready: true,
-        summary: 'Sync',
-        start_iso: '2025-10-06T09:00:00-05:00',
-        end_iso: '2025-10-06T09:30:00-05:00',
-        timezone: 'America/Mexico_City',
-      })
-    )
-    mockedCreateEvent.mockRejectedValueOnce(new Error('Missing Google Calendar credential for user user-3'))
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  it('handles extraction errors gracefully', async () => {
+    mockedChatCompletion.mockRejectedValueOnce(new Error('API Error'))
 
     const result = await scheduleMeetingFromIntent({
       userId: 'user-3',
-      userMessage: 'Agenda con Pedro mañana a las 9am',
+      userMessage: 'Agenda reunión',
     })
 
     expect(result.status).toBe('error')
-    expect(result.reply).toContain('conectes tu Google Calendar')
-    consoleSpy.mockRestore()
+    expect(result.reply).toContain('No pude procesar')
   })
 
-  it('handles unexpected errors gracefully', async () => {
-    mockedChatCompletion.mockResolvedValueOnce(
-      JSON.stringify({
-        ready: true,
-        summary: 'Demo',
-        start_iso: '2025-10-07T10:00:00-05:00',
-        end_iso: '2025-10-07T11:00:00-05:00',
-        timezone: 'America/Mexico_City',
-      })
-    )
-    mockedCreateEvent.mockRejectedValueOnce(new Error('500'))
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  it('handles invalid JSON response', async () => {
+    mockedChatCompletion.mockResolvedValueOnce('invalid json')
 
     const result = await scheduleMeetingFromIntent({
       userId: 'user-4',
-      userMessage: 'Agenda la demo el 7 a las 10',
+      userMessage: 'Agenda la demo',
     })
 
     expect(result.status).toBe('error')
-    expect(result.reply).toContain('error interno')
-    consoleSpy.mockRestore()
+    expect(result.reply).toContain('No pude procesar')
   })
 })
