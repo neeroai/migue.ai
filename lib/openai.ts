@@ -309,22 +309,28 @@ Eres Migue, un asistente personal conversacional en WhatsApp. Tu objetivo es man
 - IF similar question → acknowledge and build on previous answer
 - IF conversation stale → ask engaging follow-up question
 
-# AVAILABLE TOOLS (use automatically when obvious)
+# AVAILABLE TOOLS (MANDATORY - use immediately when triggers detected)
 
-## create_reminder
-**Triggers**: "recuérdame", "no olvides", "avísame", "tengo que"
-**Action**: Create reminder immediately, confirm naturally
+## create_reminder ⚠️ MANDATORY WHEN TRIGGERS DETECTED
+**Triggers**: "recuérdame", "recordarme", "no olvides", "avísame", "tengo que", "debo", "me recuerdas"
+**Action**: YOU MUST call create_reminder tool immediately. DO NOT ask for confirmation. DO NOT say you can't do it.
+**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
 **Example**: User: "recuérdame comprar pan mañana 8am" → [create_reminder] → "✅ Listo! Te recordaré mañana a las 8am"
+**WRONG**: "Lo siento, no puedo establecer recordatorios" ❌ NEVER SAY THIS
 
-## schedule_meeting
-**Triggers**: "agenda", "reserva cita", "programa reunión"
-**Action**: Schedule meeting immediately, confirm with details
+## schedule_meeting ⚠️ MANDATORY WHEN TRIGGERS DETECTED
+**Triggers**: "agenda", "agendar", "reserva", "reservar", "programa", "programar", "reunión", "cita"
+**Action**: YOU MUST call schedule_meeting tool immediately. DO NOT ask for confirmation.
+**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
 **Example**: User: "agenda reunión con Juan viernes 3pm" → [schedule_meeting] → "✅ Perfecto! Agendé reunión con Juan el viernes a las 3pm"
+**WRONG**: "Lo siento, no puedo agendar" ❌ NEVER SAY THIS
 
-## track_expense
-**Triggers**: "gasté", "pagué", "compré", "costó"
-**Action**: Log expense immediately, confirm amount + category
+## track_expense ⚠️ MANDATORY WHEN TRIGGERS DETECTED
+**Triggers**: "gasté", "pagué", "compré", "costó", "salió", "me gasté"
+**Action**: YOU MUST call track_expense tool immediately. DO NOT ask for confirmation.
+**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
 **Example**: User: "gasté 50mil en mercado" → [track_expense] → "💰 Listo! Registré $50,000 en Mercado"
+**WRONG**: "Lo siento, no puedo registrar gastos" ❌ NEVER SAY THIS
 
 # OUTPUT FORMAT
 - Language: Spanish (Colombia)
@@ -366,14 +372,42 @@ You: "Te recomiendo crear recordatorios para lo importante y revisarlos cada ma�
 - Build on the conversation naturally
 
 # CRITICAL REMINDERS
-❌ NEVER say: "no puedo", "no tengo acceso", "¡Estoy aquí para ayudarte!"
+❌ NEVER say: "no puedo crear recordatorios", "no puedo establecer", "no tengo acceso a"
+❌ NEVER say: "¡Estoy aquí para ayudarte!" or generic phrases
 ❌ NEVER repeat the same greeting twice in a conversation
+❌ NEVER refuse to use a tool when trigger words are detected
 ❌ NEVER use generic template responses
+✅ ALWAYS use tools IMMEDIATELY when trigger words detected (recuérdame, agenda, gasté, etc.)
 ✅ ALWAYS read conversation history before responding
 ✅ ALWAYS respond to the specific message, not a generic intent
-✅ ALWAYS use tools when user intent is clear (don't ask for confirmation)
+✅ ALWAYS confirm actions with "✅ Listo!" after executing tools
+✅ YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses - USE IT!
 
 You are an agent - continue the conversation naturally until the user's need is completely resolved.`
+
+/**
+ * Detect if message contains reminder keywords
+ */
+function hasReminderKeywords(message: string): boolean {
+  const keywords = /recuerd|record|no olvid|avis|tengo que|debo|me recuerdas/i
+  return keywords.test(message)
+}
+
+/**
+ * Detect if message contains meeting keywords
+ */
+function hasMeetingKeywords(message: string): boolean {
+  const keywords = /agenda|agendar|reserva|reservar|programa|programar|reun|cita/i
+  return keywords.test(message)
+}
+
+/**
+ * Detect if message contains expense keywords
+ */
+function hasExpenseKeywords(message: string): boolean {
+  const keywords = /gast|pagu|pagué|compr|cost|costó|sali|salió/i
+  return keywords.test(message)
+}
 
 /**
  * ProactiveAgent con GPT-4o-mini (PRIMARY)
@@ -391,13 +425,38 @@ export class ProactiveAgent {
       { role: 'user', content: userMessage }
     ]
 
+    // Detect keywords to force appropriate tool calling
+    const hasReminder = hasReminderKeywords(userMessage)
+    const hasMeeting = hasMeetingKeywords(userMessage)
+    const hasExpense = hasExpenseKeywords(userMessage)
+
+    // Determine tool_choice based on keywords
+    let toolChoice: 'auto' | { type: 'function'; function: { name: string } } = 'auto'
+
+    if (hasReminder) {
+      toolChoice = { type: 'function', function: { name: 'create_reminder' } }
+      logger.decision('[ProactiveAgent] Forcing create_reminder tool', 'Reminder keywords detected', {
+        metadata: { userMessage: userMessage.slice(0, 100) }
+      })
+    } else if (hasMeeting) {
+      toolChoice = { type: 'function', function: { name: 'schedule_meeting' } }
+      logger.decision('[ProactiveAgent] Forcing schedule_meeting tool', 'Meeting keywords detected', {
+        metadata: { userMessage: userMessage.slice(0, 100) }
+      })
+    } else if (hasExpense) {
+      toolChoice = { type: 'function', function: { name: 'track_expense' } }
+      logger.decision('[ProactiveAgent] Forcing track_expense tool', 'Expense keywords detected', {
+        metadata: { userMessage: userMessage.slice(0, 100) }
+      })
+    }
+
     // Tool calling loop (max 5 iterations)
     for (let i = 0; i < 5; i++) {
       const response = await client.chat.completions.create({
         model: 'gpt-4o-mini',
         messages,
         tools: getOpenAITools(),
-        tool_choice: 'auto',
+        tool_choice: toolChoice,
         temperature: 0.8,          // Increased for more variety (was 0.7)
         max_tokens: 1024,
         frequency_penalty: 0.3,    // Discourage token repetition
@@ -411,6 +470,18 @@ export class ProactiveAgent {
 
       // No tool calls → return text
       if (!toolCalls) {
+        // Log refusal if keywords were detected but tool wasn't called
+        if (hasReminder || hasMeeting || hasExpense) {
+          logger.warn('[ProactiveAgent] Tool refused despite keywords', {
+            metadata: {
+              userMessage: userMessage.slice(0, 100),
+              hasReminder,
+              hasMeeting,
+              hasExpense,
+              response: choice.message.content?.slice(0, 150)
+            }
+          })
+        }
         return choice.message.content || 'Lo siento, no entendí'
       }
 
@@ -418,15 +489,35 @@ export class ProactiveAgent {
       messages.push(choice.message)
       for (const toolCall of toolCalls) {
         if (toolCall.type !== 'function') continue
+
+        logger.info('[ProactiveAgent] Executing tool', {
+          metadata: {
+            toolName: toolCall.function.name,
+            args: toolCall.function.arguments.slice(0, 200),
+            forced: toolChoice !== 'auto'
+          }
+        })
+
         const args = JSON.parse(toolCall.function.arguments)
         args.userId = userId // Inject userId
         const result = await executeTool(toolCall.function.name, args)
+
+        logger.info('[ProactiveAgent] Tool executed successfully', {
+          metadata: {
+            toolName: toolCall.function.name,
+            result: result.slice(0, 100)
+          }
+        })
+
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
           content: result
         })
       }
+
+      // After first iteration, switch to 'auto' to allow natural continuation
+      toolChoice = 'auto'
     }
 
     throw new Error('Max tool iterations reached')
