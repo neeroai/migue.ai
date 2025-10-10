@@ -280,7 +280,38 @@ async function executeTool(name: string, args: any): Promise<string> {
   }
 }
 
-const SYSTEM_PROMPT = `# ROLE AND OBJECTIVE
+/**
+ * Generate system prompt with current time context
+ * CRITICAL: Time context enables GPT to calculate "en 5 minutos", "mañana", etc.
+ */
+function generateSystemPrompt(): string {
+  const now = new Date()
+  const nowISO = now.toISOString()
+  const nowBogota = new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(now)
+
+  return `# CURRENT TIME CONTEXT (CRITICAL for tool calling)
+Current time (UTC): ${nowISO}
+Current time (Bogotá, Colombia): ${nowBogota} (America/Bogota, UTC-5)
+
+When user says:
+- "en X minutos" → Add X minutes to current time
+- "en X horas" → Add X hours to current time
+- "mañana a las Xam/pm" → Tomorrow at specified time
+- "el [día] a las X" → Specified day at specified time
+
+ALWAYS use Colombia timezone (America/Bogota, UTC-5) for datetimeIso.
+Format: YYYY-MM-DDTHH:MM:SS-05:00
+
+# ROLE AND OBJECTIVE
 Eres Migue, un asistente personal conversacional en WhatsApp. Tu objetivo es mantener conversaciones naturales, cálidas y útiles en español colombiano, usando herramientas solo cuando el usuario lo necesite claramente.
 
 # RESPONSE RULES (Critical)
@@ -384,29 +415,43 @@ You: "Te recomiendo crear recordatorios para lo importante y revisarlos cada ma�
 ✅ YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses - USE IT!
 
 You are an agent - continue the conversation naturally until the user's need is completely resolved.`
+}
+
+// Note: generateSystemPrompt() is called dynamically per request to inject current time
 
 /**
  * Detect if message contains reminder keywords
+ * Handles Spanish accents by normalizing text
  */
 function hasReminderKeywords(message: string): boolean {
-  const keywords = /recuerd|record|no olvid|avis|tengo que|debo|me recuerdas/i
-  return keywords.test(message)
+  // Normalize to remove accents: recuérdame → recuerdame
+  const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const keywords = /recuerd|record|no olvid|avis|tengo que|debo|me recuerdas|recordar|puedes recordar/i
+
+  // Test both original and normalized to catch all variations
+  return keywords.test(message) || keywords.test(normalized)
 }
 
 /**
  * Detect if message contains meeting keywords
+ * Handles Spanish accents by normalizing text
  */
 function hasMeetingKeywords(message: string): boolean {
+  const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const keywords = /agenda|agendar|reserva|reservar|programa|programar|reun|cita/i
-  return keywords.test(message)
+
+  return keywords.test(message) || keywords.test(normalized)
 }
 
 /**
  * Detect if message contains expense keywords
+ * Handles Spanish accents by normalizing text
  */
 function hasExpenseKeywords(message: string): boolean {
+  const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const keywords = /gast|pagu|pagué|compr|cost|costó|sali|salió/i
-  return keywords.test(message)
+
+  return keywords.test(message) || keywords.test(normalized)
 }
 
 /**
@@ -419,8 +464,12 @@ export class ProactiveAgent {
     conversationHistory: OpenAIMessage[]
   ): Promise<string> {
     const client = getOpenAIClient()
+
+    // Generate system prompt with current time context (CRITICAL for "en 5 minutos")
+    const systemPrompt = generateSystemPrompt()
+
     const messages: OpenAIMessage[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       ...conversationHistory,
       { role: 'user', content: userMessage }
     ]
