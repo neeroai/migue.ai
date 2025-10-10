@@ -106,17 +106,20 @@ export async function processMessageWithAI(
     // Start typing
     await typingManager.start()
 
-    // Get conversation history
+    // Get conversation history (increased from 10 to 15 for better context)
     logger.debug('[AI] Getting conversation history', {
       conversationId,
       userId,
     })
-    const history = await getConversationHistory(conversationId, 10)
+    const history = await getConversationHistory(conversationId, 15)
     const openaiHistory = historyToOpenAIMessages(history)
     logger.debug('[AI] Conversation history retrieved', {
       conversationId,
       userId,
-      metadata: { historyLength: openaiHistory.length },
+      metadata: {
+        historyLength: openaiHistory.length,
+        lastUserMessage: openaiHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
+      },
     })
 
     // Use ProactiveAgent with tool calling (handles all actions autonomously)
