@@ -5,9 +5,9 @@ import { logger } from '../../../../lib/logger';
 import { fetchDueFollowUps, markFollowUpStatus } from '../../../../lib/followups';
 import { sendWhatsAppText } from '../../../../lib/whatsapp';
 import { getSupabaseServerClient } from '../../../../lib/supabase';
-import { createProactiveAgent } from '../../../../lib/claude-agents';
+import { createProactiveAgent } from '../../../../lib/openai';
 import { getConversationHistory } from '../../../../lib/conversation-utils';
-import { historyToClaudeMessages } from '../../../../lib/ai-processing-v2';
+import { historyToOpenAIMessages } from '../../../../lib/ai-processing-v2';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -35,7 +35,7 @@ async function buildIntelligentFollowUp(
 ): Promise<string> {
   // Load conversation history for context
   const history = await getConversationHistory(conversationId, 5);
-  const claudeHistory = historyToClaudeMessages(history);
+  const openaiHistory = historyToOpenAIMessages(history);
 
   // Check if user has been active recently (< 30 minutes)
   if (history.length > 0) {
@@ -62,7 +62,7 @@ async function buildIntelligentFollowUp(
         const agent = createProactiveAgent();
         const prompt = `El usuario tiene ${isReminder ? 'un recordatorio' : 'una cita'} agendado: "${title}" para el ${date} a las ${time}${description ? ` (${description})` : ''}. Escribe un mensaje amigable y breve (máximo 2 líneas) confirmando que todo sigue en pie. Sé cercano y usa emojis moderadamente.`;
 
-        const response = await agent.respond(prompt, userId, claudeHistory);
+        const response = await agent.respond(prompt, userId, openaiHistory);
         return response;
       }
       // Fallback

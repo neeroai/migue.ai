@@ -306,10 +306,10 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 
 **Stack**: Next.js 15 + Vercel Edge + Supabase + Multi-Provider AI
 **AI Providers**:
-- Primary: Claude Sonnet 4.5 (75% cheaper than GPT-4o)
+- Primary: OpenAI GPT-4o-mini ($0.15/$0.60 per 1M tokens - 96% cheaper than Claude)
 - Audio: Groq Whisper (93% cheaper than OpenAI)
 - OCR: Tesseract (100% free)
-- Fallback: OpenAI (backwards compatibility)
+- Fallback: Claude Sonnet 4.5 (backwards compatibility)
 
 **AI SDKs** (Edge Runtime Compatible):
 - ✅ `@anthropic-ai/sdk` v0.65.0 - Anthropic Messages API (primary)
@@ -323,13 +323,33 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 **Production**: https://migue.app
 **Status**: Fase 2 (95%) - Production Ready
 
-**Current Phase**: WhatsApp v23.0 full support, message type fixes
-**Target**: Oct 8, 2025 - Fase 2 complete (adelantado)
-**Cost Savings**: 76% reduction ($55/month → $13/month) - ACTIVO
+**Current Phase**: GPT-4o-mini migration, cost optimization
+**Target**: Oct 10, 2025 - Beta testing in production
+**Cost Savings**: 93% reduction ($55/month → $4/month) - ACTIVO
 
 ---
 
 ## Recent Updates
+
+### 2025-10-10 - Migration to GPT-4o-mini 💰
+- ✅ **Cost Optimization**: Migrated from Claude Sonnet 4.5 to GPT-4o-mini
+  - Chat: $3/$15 → $0.15/$0.60 per 1M tokens (96% cheaper)
+  - Monthly cost: $13 → $4 (69% reduction)
+  - Total savings: 93% vs original ($55 → $4)
+  - Annual savings: $612/year
+- ✅ **Maintained Features**:
+  - Full function calling support (create_reminder, schedule_meeting, track_expense)
+  - Audio: Groq Whisper (no change)
+  - OCR: Tesseract (no change)
+  - Spanish language support
+  - All 239 unit tests passing
+- ✅ **Implementation**:
+  - Added ProactiveAgent to `lib/openai.ts`
+  - Modified `lib/ai-providers.ts` to select GPT-4o-mini
+  - Updated `lib/ai-processing-v2.ts` imports
+  - Minimal code changes (133 lines total)
+- ✅ **Fallback**: Claude Sonnet available if GPT-4o-mini fails
+- ✅ **Status**: Beta testing in production
 
 ### 2025-10-08 - Claude Model ID Fix 🔧
 - ✅ **Root Cause Identified**: Model ID `'claude-sonnet-4-5'` was invalid

@@ -1,9 +1,9 @@
 /**
  * Multi-Provider AI System
- * Intelligent selection between Claude, Groq, and OpenAI based on cost/quality
+ * Intelligent selection between OpenAI, Groq, and Claude based on cost/quality
  *
  * Cost optimization:
- * - Claude Sonnet 4.5: $3/$15 per 1M tokens (75% cheaper than GPT-4o)
+ * - OpenAI GPT-4o-mini: $0.15/$0.60 per 1M tokens (PRIMARY - 96% cheaper than Claude)
  * - Groq Whisper: $0.05/hour (93% cheaper than OpenAI Whisper)
  * - Tesseract OCR: Free (100% savings vs GPT-4 Vision)
  */
@@ -31,8 +31,8 @@ export const COST_LIMITS = {
  */
 export const PROVIDER_COSTS = {
   chat: {
-    claude: 0.0003,    // ~$0.0003 per message (500 tokens)
-    openai: 0.0015,    // ~$0.0015 per message (GPT-4o)
+    openai: 0.00005,   // ~$0.00005 per message (GPT-4o-mini, 500 tokens)
+    claude: 0.0003,    // Fallback option
   },
   transcription: {
     groq: 0.0008,      // $0.05/hour ≈ $0.0008/minute
@@ -103,7 +103,7 @@ export class AIProviderManager {
       case 'chat':
       case 'streaming':
       case 'long_task':
-        return 'claude' // Best quality/price for chat
+        return 'openai' // GPT-4o-mini (96% cheaper than Claude)
 
       case 'transcription':
         return 'groq' // 93% cheaper than OpenAI

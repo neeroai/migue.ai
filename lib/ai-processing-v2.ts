@@ -1,9 +1,9 @@
 /**
  * AI Processing V2 - Multi-Provider System
- * Integrates Claude SDK, Groq, and Tesseract for 76% cost savings
+ * Integrates GPT-4o-mini, Groq, and Tesseract for 85% cost savings
  *
  * Provider selection:
- * - Chat: Claude Sonnet 4.5 (75% cheaper than GPT-4o)
+ * - Chat: OpenAI GPT-4o-mini (96% cheaper than Claude)
  * - Audio: Groq Whisper (93% cheaper than OpenAI)
  * - OCR: Tesseract (100% free)
  */
@@ -19,8 +19,8 @@ import {
 } from './ai-providers'
 import {
   createProactiveAgent,
-} from './claude-agents'
-import { type ClaudeMessage } from './claude-client'
+  type OpenAIMessage,
+} from './openai'
 import { transcribeWithGroq, bufferToFile } from './groq-client'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
@@ -36,15 +36,15 @@ import {
 import type { NormalizedMessage } from './message-normalization'
 
 /**
- * Convert conversation history to Claude format
+ * Convert conversation history to OpenAI format
  */
-export function historyToClaudeMessages(
+export function historyToOpenAIMessages(
   history: Array<{ direction: 'inbound' | 'outbound'; content: string | null }>
-): ClaudeMessage[] {
+): OpenAIMessage[] {
   return history
     .filter((msg) => msg.content !== null)
     .map((msg) => ({
-      role: msg.direction === 'outbound' ? 'assistant' : 'user',
+      role: msg.direction === 'outbound' ? ('assistant' as const) : ('user' as const),
       content: msg.content!,
     }))
 }
@@ -112,11 +112,11 @@ export async function processMessageWithAI(
       userId,
     })
     const history = await getConversationHistory(conversationId, 10)
-    const claudeHistory = historyToClaudeMessages(history)
+    const openaiHistory = historyToOpenAIMessages(history)
     logger.debug('[AI] Conversation history retrieved', {
       conversationId,
       userId,
-      metadata: { historyLength: claudeHistory.length },
+      metadata: { historyLength: openaiHistory.length },
     })
 
     // Use ProactiveAgent with tool calling (handles all actions autonomously)
@@ -125,15 +125,15 @@ export async function processMessageWithAI(
       userId,
     })
     const proactiveAgent = createProactiveAgent()
-    const response = await proactiveAgent.respond(userMessage, userId, claudeHistory)
+    const response = await proactiveAgent.respond(userMessage, userId, openaiHistory)
 
     await sendTextAndPersist(conversationId, userPhone, response)
     await reactWithCheck(userPhone, messageId)
 
     // Track cost
     providerManager.trackSpending(
-      PROVIDER_COSTS.chat.claude,
-      'claude',
+      PROVIDER_COSTS.chat.openai,
+      'openai',
       'chat'
     )
 
@@ -410,15 +410,15 @@ export async function processDocumentMessage(
       metadata: { textLength: extractedText.length },
     })
 
-    // Process extracted text with Claude for comprehension
+    // Process extracted text with GPT-4o-mini for comprehension
     const proactiveAgent = createProactiveAgent()
     const history = await getConversationHistory(conversationId, 5)
-    const claudeHistory = historyToClaudeMessages(history)
+    const openaiHistory = historyToOpenAIMessages(history)
 
     const comprehension = await proactiveAgent.respond(
       `El usuario envió una imagen con este texto: "${extractedText}". Analiza y responde de forma útil.`,
       userId,
-      claudeHistory
+      openaiHistory
     )
 
     // Send response
@@ -433,7 +433,7 @@ export async function processDocumentMessage(
     // Track cost (Tesseract is FREE!)
     providerManager.trackSpending(0, 'tesseract', 'ocr')
 
-    logger.info('Document processed with Tesseract + Claude', {
+    logger.info('Document processed with Tesseract + GPT-4o-mini', {
       metadata: {
         textLength: extractedText.length,
         savings: '$0.002 (100% free OCR)',

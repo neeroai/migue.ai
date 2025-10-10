@@ -181,3 +181,182 @@ export async function transcribeAudio(
 
   throw new Error('Unexpected transcription response format')
 }
+
+// ============================================
+// GPT-4o-mini Agent (PRIMARY - 2025-10-10)
+// ============================================
+
+import type { ChatCompletionTool } from 'openai/resources/chat/completions'
+import { logger } from './logger'
+import { createReminder } from './reminders'
+import { scheduleMeetingFromIntent } from './scheduling'
+
+export type OpenAIMessage = ChatCompletionMessageParam
+
+/**
+ * Convert Claude tools to OpenAI function format
+ */
+function getOpenAITools(): ChatCompletionTool[] {
+  return [
+    {
+      type: 'function',
+      function: {
+        name: 'create_reminder',
+        description: 'Crea recordatorio cuando usuario dice: recuérdame, no olvides, tengo que, avísame',
+        parameters: {
+          type: 'object',
+          properties: {
+            userId: { type: 'string', description: 'ID del usuario' },
+            title: { type: 'string', description: 'Qué recordar' },
+            description: { type: 'string', description: 'Detalles' },
+            datetimeIso: { type: 'string', description: 'ISO format: YYYY-MM-DDTHH:MM:SS-05:00' }
+          },
+          required: ['userId', 'title', 'datetimeIso']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'schedule_meeting',
+        description: 'Agenda reunión cuando usuario dice: agenda, reserva cita, programa',
+        parameters: {
+          type: 'object',
+          properties: {
+            userId: { type: 'string' },
+            title: { type: 'string' },
+            startTime: { type: 'string', description: 'ISO format' },
+            endTime: { type: 'string', description: 'ISO format' },
+            description: { type: 'string' }
+          },
+          required: ['userId', 'title', 'startTime', 'endTime']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'track_expense',
+        description: 'Registra gasto cuando usuario dice: gasté, pagué, compré, costó',
+        parameters: {
+          type: 'object',
+          properties: {
+            userId: { type: 'string' },
+            amount: { type: 'number' },
+            currency: { type: 'string' },
+            category: { type: 'string' },
+            description: { type: 'string' }
+          },
+          required: ['userId', 'amount', 'currency', 'category', 'description']
+        }
+      }
+    }
+  ]
+}
+
+/**
+ * Execute tool (reutiliza lógica de claude-tools.ts)
+ */
+async function executeTool(name: string, args: any): Promise<string> {
+  switch (name) {
+    case 'create_reminder':
+      await createReminder(args.userId, args.title, args.description || null, args.datetimeIso)
+      return `✅ Recordatorio creado: "${args.title}"`
+
+    case 'schedule_meeting':
+      const result = await scheduleMeetingFromIntent({
+        userId: args.userId,
+        userMessage: `${args.title}${args.description ? ': ' + args.description : ''}`,
+        conversationHistory: []
+      })
+      return result.reply
+
+    case 'track_expense':
+      logger.info('[trackExpense] Registered', { metadata: args })
+      return `💰 Gasto registrado: ${args.currency} ${args.amount} en ${args.category}`
+
+    default:
+      throw new Error(`Unknown tool: ${name}`)
+  }
+}
+
+const SYSTEM_PROMPT = `Eres Migue, asistente personal en WhatsApp con capacidades reales.
+
+TUS CAPACIDADES:
+✅ create_reminder - Guardas recordatorios
+✅ schedule_meeting - Agendar reuniones
+✅ track_expense - Registrar gastos
+
+USA HERRAMIENTAS INMEDIATAMENTE cuando usuario dice:
+- "recuérdame..." → create_reminder
+- "agenda reunión..." → schedule_meeting
+- "gasté $X..." → track_expense
+
+CONFIRMA DESPUÉS: "✅ Listo! [lo que hiciste]"
+
+NUNCA digas: "no puedo", "no tengo acceso"
+
+Responde en español, cálido y conciso.`
+
+/**
+ * ProactiveAgent con GPT-4o-mini (PRIMARY)
+ */
+export class ProactiveAgent {
+  async respond(
+    userMessage: string,
+    userId: string,
+    conversationHistory: OpenAIMessage[]
+  ): Promise<string> {
+    const client = getOpenAIClient()
+    const messages: OpenAIMessage[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...conversationHistory,
+      { role: 'user', content: userMessage }
+    ]
+
+    // Tool calling loop (max 5 iterations)
+    for (let i = 0; i < 5; i++) {
+      const response = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages,
+        tools: getOpenAITools(),
+        tool_choice: 'auto',
+        temperature: 0.7,
+        max_tokens: 1024
+      })
+
+      const choice = response.choices[0]
+      if (!choice) throw new Error('No response from GPT-4o-mini')
+
+      const toolCalls = choice.message.tool_calls
+
+      // No tool calls → return text
+      if (!toolCalls) {
+        return choice.message.content || 'Lo siento, no entendí'
+      }
+
+      // Execute tools
+      messages.push(choice.message)
+      for (const toolCall of toolCalls) {
+        if (toolCall.type !== 'function') continue
+        const args = JSON.parse(toolCall.function.arguments)
+        args.userId = userId // Inject userId
+        const result = await executeTool(toolCall.function.name, args)
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: result
+        })
+      }
+    }
+
+    throw new Error('Max tool iterations reached')
+  }
+}
+
+/**
+ * Crear instancia del agente
+ */
+export function createProactiveAgent() {
+  return new ProactiveAgent()
+}
