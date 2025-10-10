@@ -80,7 +80,10 @@ describe('check-reminders cron', () => {
   })
 
   it('processes due reminders and marks them sent', async () => {
-    const res = await handler(new Request('https://cron.test/reminders'))
+    const req = new Request('https://cron.test/reminders', {
+      headers: { 'user-agent': 'vercel-cron/1.0' }
+    })
+    const res = await handler(req)
     const json = await res.json()
     expect(json.processed).toBe(1)
     expect(sendWhatsAppText).toHaveBeenCalledWith('+521234567890', expect.stringContaining('Recordatorio'))

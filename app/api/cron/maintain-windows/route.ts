@@ -108,26 +108,53 @@ Ejemplos:
 
 export async function GET(req: Request): Promise<Response> {
   const startTime = Date.now();
+  const currentHour = new Date().toLocaleString('en-US', {
+    timeZone: COLOMBIA_TZ,
+    hour: '2-digit',
+    hour12: false
+  });
 
-  logger.info('[maintain-windows] Cron job started');
+  logger.info('[maintain-windows] Cron job started', {
+    metadata: {
+      timezone: COLOMBIA_TZ,
+      currentHour,
+      businessHours: `${BUSINESS_HOURS.start}-${BUSINESS_HOURS.end}`,
+      timestamp: new Date().toISOString()
+    }
+  });
 
-  // Verify cron authentication
+  // Verify cron authentication (Vercel uses 'vercel-cron/1.0' user-agent)
   const userAgent = req.headers.get('user-agent');
-  if (!userAgent?.includes('vercel-cron')) {
-    logger.warn('[maintain-windows] Unauthorized request (not from Vercel Cron)', {
-      metadata: { userAgent },
+  const isVercelCron = userAgent?.startsWith('vercel-cron/');
+
+  if (!isVercelCron) {
+    logger.warn('[maintain-windows] Invalid user-agent', {
+      metadata: {
+        userAgent,
+        expected: 'vercel-cron/*',
+        headers: Object.fromEntries(req.headers.entries())
+      },
     });
 
-    // Also check CRON_SECRET as fallback
+    // Fallback to CRON_SECRET if configured
     const { CRON_SECRET } = getEnv();
     if (CRON_SECRET) {
       const authHeader = req.headers.get('authorization');
       if (authHeader !== `Bearer ${CRON_SECRET}`) {
+        logger.warn('[maintain-windows] CRON_SECRET validation failed', {
+          metadata: { hasAuth: !!authHeader }
+        });
         return jsonResponse({ error: 'Unauthorized' }, 401);
       }
+      logger.info('[maintain-windows] Authenticated via CRON_SECRET');
     } else {
+      logger.warn('[maintain-windows] No CRON_SECRET configured and invalid user-agent');
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
+  } else {
+    logger.debug('[maintain-windows] Authenticated via Vercel Cron user-agent', {
+      metadata: { userAgent }
+    });
   }
 
   // Check if within business hours (7am-8pm Bogotá)

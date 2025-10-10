@@ -58,11 +58,19 @@ async function markReminderStatus(id: string, status: 'sent' | 'failed') {
 }
 
 export async function GET(req: Request): Promise<Response> {
-  // Verify cron authentication
-  const { CRON_SECRET } = getEnv();
-  if (CRON_SECRET) {
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+  // Verify cron authentication (Vercel uses 'vercel-cron/1.0' user-agent)
+  const userAgent = req.headers.get('user-agent');
+  const isVercelCron = userAgent?.startsWith('vercel-cron/');
+
+  if (!isVercelCron) {
+    // Fallback to CRON_SECRET if configured
+    const { CRON_SECRET } = getEnv();
+    if (CRON_SECRET) {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader !== `Bearer ${CRON_SECRET}`) {
+        return jsonResponse({ error: 'Unauthorized' }, 401);
+      }
+    } else {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
   }

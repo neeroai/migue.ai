@@ -28,7 +28,8 @@
     "prepare": "husky",
     "db:verify": "npx tsx scripts/verify-supabase.ts",
     "db:cli": "./scripts/supabase-cli.sh",
-    "audit:users": "npx tsx scripts/audit-users.ts"
+    "audit:users": "npx tsx scripts/audit-users.ts",
+    "diagnose:cron": "npx tsx scripts/diagnose-cron-jobs.ts"
   },
   "keywords": [],
   "author": "",
