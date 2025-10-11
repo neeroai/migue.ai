@@ -553,7 +553,7 @@ export async function analyzeImageWithGemini(
     const base64Image = Buffer.from(imageBuffer).toString('base64');
 
     // Build multimodal request (image + text)
-    const parts = [
+    const parts: Array<{ inlineData?: { data: string; mimeType: string }; text?: string }> = [
       {
         inlineData: {
           data: base64Image,
@@ -573,7 +573,7 @@ export async function analyzeImageWithGemini(
     });
 
     // Send to Gemini
-    const result = await model.generateContent(parts);
+    const result = await model.generateContent(parts as any);
     const response = result.response;
     const text = response.text();
     const usage = response.usageMetadata;
