@@ -20,6 +20,7 @@
  */
 
 import { generateContent, getGeminiModel, getCachedContext, setCachedContext, convertToGeminiMessages, clearCache } from '../lib/gemini-client';
+import { SchemaType } from '@google/generative-ai';
 import { getSupabaseServerClient } from '../lib/supabase';
 import { logger } from '../lib/logger';
 import type { ChatMessage } from '../types/schemas';
@@ -143,7 +144,7 @@ async function testFunctionCalling(): Promise<void> {
       name: 'get_current_time',
       description: 'Get the current time in Colombia',
       parameters: {
-        type: 'object' as const,
+        type: SchemaType.OBJECT,
         properties: {},
         required: []
       }
