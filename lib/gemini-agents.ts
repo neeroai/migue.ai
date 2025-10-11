@@ -8,7 +8,7 @@
 import { FunctionDeclaration, Content, SchemaType } from '@google/generative-ai';
 import { getGeminiModel, convertToGeminiMessages, parseGeminiResponse, getCachedContext, setCachedContext } from './gemini-client';
 import { logger } from './logger';
-import type { ChatMessage } from '@/types/schemas';
+import type { ChatMessage } from '../types/schemas';
 import { createReminder } from './reminders';
 import { scheduleMeetingFromIntent } from './scheduling';
 import { getConversationHistory } from './conversation-utils';

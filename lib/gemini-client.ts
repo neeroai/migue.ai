@@ -11,7 +11,7 @@ import { GoogleGenerativeAI, GenerativeModel, Content, FunctionDeclaration, Gene
 import { Redis } from '@upstash/redis';
 import { logger } from './logger';
 import { getSupabaseServerClient } from './supabase';
-import type { ChatMessage } from '@/types/schemas';
+import type { ChatMessage } from '../types/schemas';
 
 // Model configuration
 export type GeminiModelName = 'gemini-2.5-flash' | 'gemini-2.5-flash-lite' | 'gemini-2.5-pro';

@@ -22,7 +22,7 @@
 import { generateContent, getGeminiModel, getCachedContext, setCachedContext, convertToGeminiMessages, clearCache } from '../lib/gemini-client';
 import { getSupabaseServerClient } from '../lib/supabase';
 import { logger } from '../lib/logger';
-import type { ChatMessage } from '@/types/schemas';
+import type { ChatMessage } from '../types/schemas';
 import { config } from 'dotenv';
 import path from 'path';
 

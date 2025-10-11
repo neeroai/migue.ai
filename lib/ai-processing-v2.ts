@@ -27,7 +27,7 @@ import {
   analyzeImageWithGemini,
   detectImageIssue,
 } from './gemini-client'
-import type { ChatMessage } from '@/types/schemas'
+import type { ChatMessage } from '../types/schemas'
 import { transcribeWithGroq, bufferToFile } from './groq-client'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
