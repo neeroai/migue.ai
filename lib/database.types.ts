@@ -349,6 +349,33 @@ export type Database = {
           },
         ]
       }
+      gemini_usage: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          date: string
+          requests: number | null
+          tokens: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          date: string
+          requests?: number | null
+          tokens?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          date?: string
+          requests?: number | null
+          tokens?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: Json
@@ -1033,6 +1060,13 @@ export type Database = {
       hnswhandler: {
         Args: { "": unknown }
         Returns: unknown
+      }
+      increment_gemini_usage: {
+        Args: { token_count: number; usage_date: string }
+        Returns: {
+          current_requests: number
+          current_tokens: number
+        }[]
       }
       is_free_entry_active: {
         Args: { p_phone_number: string }

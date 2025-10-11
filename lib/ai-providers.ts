@@ -1,21 +1,24 @@
 /**
  * Multi-Provider AI System
- * Intelligent selection between OpenAI, Groq, and Claude based on cost/quality
+ * Intelligent selection between Gemini, OpenAI, Groq, and Claude based on cost/quality
  *
  * Cost optimization:
- * - OpenAI GPT-4o-mini: $0.15/$0.60 per 1M tokens (PRIMARY - 96% cheaper than Claude)
+ * - Gemini 2.5 Flash: FREE (1,500 req/day free tier) - PRIMARY
+ * - OpenAI GPT-4o-mini: $0.15/$0.60 per 1M tokens (Fallback #1)
  * - Groq Whisper: $0.05/hour (93% cheaper than OpenAI Whisper)
  * - Tesseract OCR: Free (100% savings vs GPT-4 Vision)
+ * - Claude Sonnet: $3/$15 per 1M tokens (Emergency fallback)
  */
 
 import Anthropic from '@anthropic-ai/sdk'
 import Groq from 'groq-sdk'
 import { getOpenAIClient } from './openai'
+import { getGeminiClient, canUseFreeTier } from './gemini-client'
 import { logger } from './logger'
 
 export type TaskType = 'chat' | 'transcription' | 'ocr' | 'long_task' | 'streaming'
 
-export type ProviderName = 'claude' | 'groq' | 'openai' | 'tesseract'
+export type ProviderName = 'claude' | 'groq' | 'openai' | 'tesseract' | 'gemini'
 
 /**
  * Cost limits and budgets
@@ -31,8 +34,9 @@ export const COST_LIMITS = {
  */
 export const PROVIDER_COSTS = {
   chat: {
+    gemini: 0,         // FREE (1,500 req/day free tier)
     openai: 0.00005,   // ~$0.00005 per message (GPT-4o-mini, 500 tokens)
-    claude: 0.0003,    // Fallback option
+    claude: 0.0003,    // Emergency fallback
   },
   transcription: {
     groq: 0.0008,      // $0.05/hour ≈ $0.0008/minute
@@ -40,6 +44,7 @@ export const PROVIDER_COSTS = {
   },
   ocr: {
     tesseract: 0,      // Free!
+    gemini: 0,         // Free (multi-modal support)
     claude: 0.0002,    // Vision capability
     openai: 0.002,     // GPT-4 Vision
   },
@@ -82,37 +87,50 @@ export class AIProviderManager {
   async selectProvider(task: TaskType): Promise<ProviderName> {
     const remainingBudget = COST_LIMITS.dailyMax - this.dailySpent
 
+    // Check if Gemini free tier is available
+    const geminiAvailable = process.env.GOOGLE_AI_API_KEY && canUseFreeTier()
+
     // Emergency mode: use only free/cheap options
     if (remainingBudget < COST_LIMITS.emergencyMode) {
       logger.warn(`Low budget: $${remainingBudget.toFixed(2)} remaining`)
 
       switch (task) {
         case 'chat':
-          return 'openai' // Fallback to existing
+        case 'streaming':
+        case 'long_task':
+          if (geminiAvailable) return 'gemini' // FREE
+          return 'openai' // Fallback
         case 'transcription':
           return 'groq' // Cheapest audio
         case 'ocr':
-          return 'tesseract' // Free
+          if (geminiAvailable) return 'gemini' // FREE with multi-modal
+          return 'tesseract' // Free OCR
         default:
-          return 'openai'
+          return geminiAvailable ? 'gemini' : 'openai'
       }
     }
 
-    // Normal mode: select based on task optimization
+    // Normal mode: prioritize free options, then optimize by task
     switch (task) {
       case 'chat':
       case 'streaming':
       case 'long_task':
-        return 'openai' // GPT-4o-mini (96% cheaper than Claude)
+        if (geminiAvailable) {
+          logger.info('Using Gemini (FREE tier)')
+          return 'gemini'
+        }
+        return 'openai' // GPT-4o-mini fallback
 
       case 'transcription':
         return 'groq' // 93% cheaper than OpenAI
 
       case 'ocr':
-        return 'tesseract' // Free OCR
+        if (geminiAvailable) return 'gemini' // FREE multi-modal
+        return 'tesseract' // Free OCR fallback
 
       default:
-        return 'claude'
+        if (geminiAvailable) return 'gemini'
+        return 'openai'
     }
   }
 
@@ -143,6 +161,17 @@ export class AIProviderManager {
    */
   getOpenAI() {
     return getOpenAIClient()
+  }
+
+  /**
+   * Get Gemini client
+   * @returns GoogleGenerativeAI client instance
+   */
+  getGemini() {
+    if (!process.env.GOOGLE_AI_API_KEY) {
+      throw new Error('GOOGLE_AI_API_KEY not set - cannot use Gemini')
+    }
+    return getGeminiClient()
   }
 
   /**

@@ -87,7 +87,16 @@ export async function GET(req: Request): Promise<Response> {
           failures.push({ id: r.id, error: 'missing phone number' });
           continue;
         }
-        const body = r.description ? `${r.title}: ${r.description}` : r.title;
+
+        // ✅ FIX: Mark as 'sent' BEFORE sending to prevent race condition duplicates
+        await markReminderStatus(r.id, 'sent');
+
+        // Format message with emoji and context for better UX
+        const emoji = '🔔';
+        const body = r.description
+          ? `${emoji} Recordatorio: ${r.title}\n\n${r.description}`
+          : `${emoji} Recordatorio: ${r.title}`;
+
         await sendWhatsAppText(phone, body);
         await recordCalendarEvent({
           userId: r.user_id,
@@ -100,7 +109,6 @@ export async function GET(req: Request): Promise<Response> {
           meetingUrl: null,
           metadata: { source: 'reminder-cron' },
         });
-        await markReminderStatus(r.id, 'sent');
         processed++;
       } catch (err: any) {
         const reason = err?.message ?? 'unknown error';

@@ -27,6 +27,7 @@ export default {
   testMatch: [
     '<rootDir>/tests/unit/**/*.test.ts',
     '<rootDir>/tests/integration/**/*.test.ts',
+    '<rootDir>/tests/gemini/**/*.test.ts',
   ],
   testPathIgnorePatterns: ['/node_modules/', '/.next/', '/.vercel/'],
 

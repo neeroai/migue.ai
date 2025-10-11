@@ -893,11 +893,11 @@ This agent has access to:
 ## Reference Documentation
 
 **Internal Documentation:**
-- `docs/05-deployment/vercel-edge-guide.md` - Complete Edge Functions guide
-- `docs/05-deployment/edge-functions-optimization.md` - Performance optimization
-- `docs/05-deployment/edge-security-guide.md` - Security patterns
-- `docs/05-deployment/edge-error-handling.md` - Error handling patterns
-- `docs/03-api-reference/edge-runtime-api.md` - API reference
+- `docs/platforms/vercel/vercel-edge-guide.md` - Complete Edge Functions guide
+- `docs/platforms/vercel/edge-functions-optimization.md` - Performance optimization
+- `docs/platforms/vercel/edge-security-guide.md` - Security patterns
+- `docs/platforms/vercel/edge-error-handling.md` - Error handling patterns
+- `docs/reference/edge-runtime-api.md` - API reference
 
 **External References:**
 - [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)

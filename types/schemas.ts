@@ -307,6 +307,73 @@ export type FlowChange = z.infer<typeof FlowChangeSchema>;
 export type UnknownChange = z.infer<typeof UnknownChangeSchema>;
 
 /**
+ * Gemini AI Types
+ * For Gemini 2.5 Flash integration
+ */
+
+// Gemini message format for conversation history
+export const GeminiPartSchema = z.union([
+  z.object({
+    text: z.string()
+  }),
+  z.object({
+    functionCall: z.object({
+      name: z.string(),
+      args: z.record(z.unknown())
+    })
+  }),
+  z.object({
+    functionResponse: z.object({
+      name: z.string(),
+      response: z.unknown()
+    })
+  })
+]);
+
+export const GeminiMessageSchema = z.object({
+  role: z.enum(['user', 'model']),
+  parts: z.array(GeminiPartSchema)
+});
+
+// Gemini function call result (strongly typed)
+export const GeminiFunctionCallSchema = z.object({
+  name: z.string(),
+  args: z.record(z.unknown())
+});
+
+// Generic chat message (compatible with OpenAI/Claude/Gemini)
+export const ChatMessageSchema = z.object({
+  role: z.enum(['system', 'user', 'assistant', 'tool']),
+  content: z.string().nullable(),
+  tool_calls: z.array(z.object({
+    id: z.string(),
+    type: z.literal('function'),
+    function: z.object({
+      name: z.string(),
+      arguments: z.string()
+    })
+  })).optional()
+});
+
+// Type exports for Gemini
+export type GeminiPart = z.infer<typeof GeminiPartSchema>;
+export type GeminiMessage = z.infer<typeof GeminiMessageSchema>;
+export type GeminiFunctionCall = z.infer<typeof GeminiFunctionCallSchema>;
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+/**
+ * Convert OpenAI/Claude messages to Gemini format
+ */
+export function convertToGeminiFormat(messages: ChatMessage[]): GeminiMessage[] {
+  return messages
+    .filter(msg => msg.content !== null)
+    .map(msg => ({
+      role: msg.role === 'assistant' ? 'model' as const : 'user' as const,
+      parts: [{ text: msg.content || '' }]
+    }));
+}
+
+/**
  * Validate WhatsApp webhook payload
  * @returns Parsed payload or throws ZodError with validation details
  */

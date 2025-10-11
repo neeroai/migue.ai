@@ -1,0 +1,529 @@
+/**
+ * migue.ai Design System - CSS Variables
+ * Versión: 1.0
+ * Fecha: 8 de Octubre, 2025
+ * 
+ * Uso:
+ * Importar en tu CSS principal:
+ * @import url('migue-ai-design-system.css');
+ * 
+ * Luego usar variables:
+ * color: var(--migue-color-whatsapp-green);
+ * font-family: var(--migue-font-primary);
+ */
+
+:root {
+  /* ========================================
+     COLORES - Brand Colors
+     ======================================== */
+  
+  /* WhatsApp Colors */
+  --migue-color-whatsapp-green: #25D366;
+  --migue-color-whatsapp-dark: #128C7E;
+  
+  /* AI Colors */
+  --migue-color-ai-purple: #764BA2;
+  --migue-color-ai-blue: #667EEA;
+  
+  /* Text Colors */
+  --migue-color-text-primary: #2D3748;
+  --migue-color-text-secondary: #718096;
+  --migue-color-text-tertiary: #A0AEC0;
+  
+  /* Background Colors */
+  --migue-color-bg-light: #F7FAFC;
+  --migue-color-bg-white: #FFFFFF;
+  --migue-color-bg-dark: #1A202C;
+  
+  /* Semantic Colors */
+  --migue-color-success: #25D366;
+  --migue-color-error: #E53E3E;
+  --migue-color-warning: #ED8936;
+  --migue-color-info: #667EEA;
+  
+  /* ========================================
+     GRADIENTES - Gradients
+     ======================================== */
+  
+  --migue-gradient-whatsapp: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  --migue-gradient-ai: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  
+  /* ========================================
+     TIPOGRAFÍA - Typography
+     ======================================== */
+  
+  /* Font Families */
+  --migue-font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --migue-font-fallback: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --migue-font-monospace: 'JetBrains Mono', 'Courier New', monospace;
+  
+  /* Font Sizes - Display */
+  --migue-font-size-display-xxl: 85px;    /* Logo text */
+  --migue-font-size-display-xl: 60px;     /* Display extra large */
+  --migue-font-size-display-lg: 48px;     /* H1 */
+  
+  /* Font Sizes - Heading */
+  --migue-font-size-h2: 36px;
+  --migue-font-size-h3: 28px;
+  --migue-font-size-h4: 24px;
+  --migue-font-size-h5: 20px;
+  
+  /* Font Sizes - Body */
+  --migue-font-size-body-lg: 18px;
+  --migue-font-size-body-md: 16px;        /* Base */
+  --migue-font-size-body-sm: 14px;
+  --migue-font-size-body-xs: 12px;
+  
+  /* Font Weights */
+  --migue-font-weight-light: 300;
+  --migue-font-weight-regular: 400;
+  --migue-font-weight-medium: 500;
+  --migue-font-weight-semibold: 600;
+  --migue-font-weight-bold: 700;
+  --migue-font-weight-extrabold: 800;
+  
+  /* Line Heights */
+  --migue-line-height-tight: 1.2;         /* Títulos */
+  --migue-line-height-normal: 1.5;
+  --migue-line-height-relaxed: 1.6;       /* Cuerpo */
+  --migue-line-height-loose: 1.8;         /* Lectura larga */
+  
+  /* Letter Spacing */
+  --migue-letter-spacing-tight: -0.02em;  /* Logo "migue" */
+  --migue-letter-spacing-normal: 0;
+  --migue-letter-spacing-wide: 0.01em;    /* Tagline */
+  
+  /* ========================================
+     ESPACIADO - Spacing
+     ======================================== */
+  
+  --migue-spacing-xs: 4px;
+  --migue-spacing-sm: 8px;
+  --migue-spacing-md: 16px;
+  --migue-spacing-lg: 24px;
+  --migue-spacing-xl: 32px;
+  --migue-spacing-xxl: 40px;
+  --migue-spacing-protection: 120px;      /* Área de protección del logo */
+  
+  /* ========================================
+     BORDER RADIUS
+     ======================================== */
+  
+  --migue-radius-none: 0;
+  --migue-radius-sm: 4px;
+  --migue-radius-md: 8px;
+  --migue-radius-lg: 12px;
+  --migue-radius-xl: 16px;
+  --migue-radius-full: 9999px;            /* Círculo */
+  
+  /* ========================================
+     SOMBRAS - Shadows
+     ======================================== */
+  
+  --migue-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --migue-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --migue-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  --migue-shadow-logo: 0 2px 4px rgba(0, 0, 0, 0.2);
+  
+  /* ========================================
+     OPACIDAD - Opacity
+     ======================================== */
+  
+  --migue-opacity-disabled: 0.4;
+  --migue-opacity-muted: 0.6;
+  --migue-opacity-typing-dot-fade: 0.75;
+  --migue-opacity-typing-dot-active: 0.95;
+  
+  /* ========================================
+     TAMAÑOS - Sizing
+     ======================================== */
+  
+  /* Logo Sizes */
+  --migue-logo-width: 800px;
+  --migue-logo-height: 300px;
+  --migue-logo-min-width: 300px;
+  
+  --migue-icon-size: 400px;
+  --migue-icon-min-size: 128px;
+  
+  --migue-favicon-large: 32px;
+  --migue-favicon-small: 16px;
+  
+  /* Component Sizes */
+  --migue-chat-bubble-width: 200px;
+  --migue-chat-bubble-height: 170px;
+  
+  --migue-typing-dot-radius: 10px;
+  --migue-typing-dot-spacing: 40px;
+  
+  --migue-ai-badge-radius: 22px;
+  
+  /* ========================================
+     ANIMACIÓN - Animation
+     ======================================== */
+  
+  --migue-duration-fast: 150ms;
+  --migue-duration-normal: 300ms;
+  --migue-duration-slow: 500ms;
+  
+  --migue-easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --migue-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* ========================================
+     BREAKPOINTS - Media Queries
+     ======================================== */
+  
+  --migue-breakpoint-mobile: 375px;
+  --migue-breakpoint-tablet: 768px;
+  --migue-breakpoint-desktop: 1024px;
+  --migue-breakpoint-wide: 1440px;
+}
+
+/* ========================================
+   UTILITY CLASSES - Clases Utilitarias
+   ======================================== */
+
+/* Text Styles */
+.migue-text-display-bold {
+  font-family: var(--migue-font-primary);
+  font-size: var(--migue-font-size-display-xxl);
+  font-weight: var(--migue-font-weight-bold);
+  letter-spacing: var(--migue-letter-spacing-tight);
+  line-height: var(--migue-line-height-tight);
+  color: var(--migue-color-text-primary);
+}
+
+.migue-text-display-light {
+  font-family: var(--migue-font-primary);
+  font-size: var(--migue-font-size-display-xxl);
+  font-weight: var(--migue-font-weight-light);
+  line-height: var(--migue-line-height-tight);
+  background: var(--migue-gradient-ai);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.migue-text-tagline {
+  font-family: var(--migue-font-primary);
+  font-size: var(--migue-font-size-h4);
+  font-weight: var(--migue-font-weight-regular);
+  letter-spacing: var(--migue-letter-spacing-wide);
+  color: var(--migue-color-text-secondary);
+}
+
+.migue-text-h1 {
+  font-family: var(--migue-font-primary);
+  font-size: var(--migue-font-size-display-lg);
+  font-weight: var(--migue-font-weight-bold);
+  line-height: var(--migue-line-height-tight);
+  color: var(--migue-color-text-primary);
+}
+
+.migue-text-h2 {
+  font-family: var(--migue-font-primary);
+  font-size: var(--migue-font-size-h2);
+  font-weight: var(--migue-font-weight-semibold);
+  line-height: var(--migue-line-height-tight);
+  color: var(--migue-color-text-primary);
+}
+
+.migue-text-body {
+  font-family: var(--migue-font-primary);
+  font-size: var(--migue-font-size-body-md);
+  font-weight: var(--migue-font-weight-regular);
+  line-height: var(--migue-line-height-relaxed);
+  color: var(--migue-color-text-primary);
+}
+
+/* Color Classes */
+.migue-bg-whatsapp {
+  background: var(--migue-gradient-whatsapp);
+}
+
+.migue-bg-ai {
+  background: var(--migue-gradient-ai);
+}
+
+.migue-bg-light {
+  background-color: var(--migue-color-bg-light);
+}
+
+.migue-text-primary {
+  color: var(--migue-color-text-primary);
+}
+
+.migue-text-secondary {
+  color: var(--migue-color-text-secondary);
+}
+
+/* Shadow Classes */
+.migue-shadow-sm {
+  box-shadow: var(--migue-shadow-sm);
+}
+
+.migue-shadow-md {
+  box-shadow: var(--migue-shadow-md);
+}
+
+.migue-shadow-lg {
+  box-shadow: var(--migue-shadow-lg);
+}
+
+/* Border Radius Classes */
+.migue-rounded-sm {
+  border-radius: var(--migue-radius-sm);
+}
+
+.migue-rounded-md {
+  border-radius: var(--migue-radius-md);
+}
+
+.migue-rounded-lg {
+  border-radius: var(--migue-radius-lg);
+}
+
+.migue-rounded-full {
+  border-radius: var(--migue-radius-full);
+}
+
+/* ========================================
+   COMPONENT STYLES - Estilos de Componentes
+   ======================================== */
+
+/* Logo Container */
+.migue-logo {
+  display: inline-block;
+  max-width: var(--migue-logo-width);
+  min-width: var(--migue-logo-min-width);
+  height: auto;
+}
+
+.migue-logo img,
+.migue-logo svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Icon Container */
+.migue-icon {
+  display: inline-block;
+  width: var(--migue-icon-size);
+  height: var(--migue-icon-size);
+  min-width: var(--migue-icon-min-size);
+  min-height: var(--migue-icon-min-size);
+}
+
+.migue-icon img,
+.migue-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Chat Bubble Component */
+.migue-chat-bubble {
+  background: var(--migue-gradient-whatsapp);
+  border-radius: var(--migue-radius-lg);
+  padding: var(--migue-spacing-md);
+  box-shadow: var(--migue-shadow-md);
+  color: white;
+}
+
+/* Badge Component */
+.migue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--migue-ai-badge-radius) * 2);
+  height: calc(var(--migue-ai-badge-radius) * 2);
+  background: var(--migue-gradient-ai);
+  border-radius: var(--migue-radius-full);
+  color: white;
+  font-size: var(--migue-font-size-body-sm);
+  font-weight: var(--migue-font-weight-semibold);
+}
+
+/* Button Component */
+.migue-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--migue-spacing-sm) var(--migue-spacing-lg);
+  font-family: var(--migue-font-primary);
+  font-size: var(--migue-font-size-body-md);
+  font-weight: var(--migue-font-weight-medium);
+  border: none;
+  border-radius: var(--migue-radius-md);
+  cursor: pointer;
+  transition: all var(--migue-duration-normal) var(--migue-easing-default);
+}
+
+.migue-btn-primary {
+  background: var(--migue-gradient-whatsapp);
+  color: white;
+}
+
+.migue-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--migue-shadow-lg);
+}
+
+.migue-btn-secondary {
+  background: var(--migue-gradient-ai);
+  color: white;
+}
+
+.migue-btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--migue-shadow-lg);
+}
+
+/* ========================================
+   ANIMATIONS - Animaciones
+   ======================================== */
+
+/* Typing Dots Animation */
+@keyframes migue-typing-dot {
+  0%, 100% {
+    opacity: var(--migue-opacity-typing-dot-active);
+    transform: scale(1);
+  }
+  50% {
+    opacity: var(--migue-opacity-typing-dot-fade);
+    transform: scale(0.8);
+  }
+}
+
+.migue-typing-dots {
+  display: flex;
+  gap: var(--migue-spacing-sm);
+}
+
+.migue-typing-dot {
+  width: var(--migue-typing-dot-radius);
+  height: var(--migue-typing-dot-radius);
+  background-color: white;
+  border-radius: var(--migue-radius-full);
+  animation: migue-typing-dot var(--migue-duration-slow) ease-in-out infinite;
+}
+
+.migue-typing-dot:nth-child(2) {
+  animation-delay: calc(var(--migue-duration-normal) / 3);
+}
+
+.migue-typing-dot:nth-child(3) {
+  animation-delay: calc(var(--migue-duration-normal) * 2 / 3);
+}
+
+/* Fade In Animation */
+@keyframes migue-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.migue-fade-in {
+  animation: migue-fade-in var(--migue-duration-normal) var(--migue-easing-default);
+}
+
+/* ========================================
+   RESPONSIVE - Media Queries
+   ======================================== */
+
+@media (max-width: 768px) {
+  :root {
+    /* Ajustar tamaños para móvil */
+    --migue-font-size-display-xxl: 48px;
+    --migue-font-size-display-lg: 32px;
+    --migue-font-size-h2: 28px;
+    --migue-font-size-h3: 24px;
+    
+    --migue-logo-min-width: 200px;
+    --migue-icon-min-size: 80px;
+  }
+  
+  .migue-logo {
+    max-width: 100%;
+  }
+}
+
+/* ========================================
+   DARK MODE - Modo Oscuro
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --migue-color-text-primary: #F7FAFC;
+    --migue-color-text-secondary: #CBD5E0;
+    --migue-color-bg-light: #1A202C;
+    --migue-color-bg-white: #2D3748;
+  }
+}
+
+/* Dark mode manual */
+[data-theme="dark"] {
+  --migue-color-text-primary: #F7FAFC;
+  --migue-color-text-secondary: #CBD5E0;
+  --migue-color-bg-light: #1A202C;
+  --migue-color-bg-white: #2D3748;
+}
+
+/* ========================================
+   UTILITIES - Utilidades Adicionales
+   ======================================== */
+
+/* Smooth scrolling */
+.migue-smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Antialiasing */
+.migue-antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent text selection (para logos) */
+.migue-no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Aspect ratio para logos */
+.migue-aspect-logo {
+  aspect-ratio: 8 / 3;
+}
+
+.migue-aspect-icon {
+  aspect-ratio: 1 / 1;
+}
+
+/* ========================================
+   FIN - End of Stylesheet
+   ======================================== */
+
+/**
+ * migue.ai Design System
+ * Desarrollado para máxima consistencia y facilidad de uso
+ * 
+ * Uso de ejemplo:
+ * 
+ * <div class="migue-logo">
+ *   <img src="logo.svg" alt="migue.ai">
+ * </div>
+ * 
+ * <h1 class="migue-text-h1">Bienvenido a migue.ai</h1>
+ * 
+ * <button class="migue-btn migue-btn-primary">
+ *   Comenzar
+ * </button>
+ * 
+ * Para más información, consulta README-LOGOS.md
+ */

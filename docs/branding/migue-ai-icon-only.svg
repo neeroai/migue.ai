@@ -1,0 +1,68 @@
+<svg width="280" height="300" viewBox="0 0 280 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 
+    Logo Icon Only - Sin texto
+    Máxima compatibilidad con Figma
+    Solo formas básicas: paths, circles, lines
+  -->
+  
+  <defs>
+    <!-- Gradiente WhatsApp -->
+    <linearGradient id="wa-grad" x1="0" y1="0" x2="200" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#25D366"/>
+      <stop offset="100%" stop-color="#128C7E"/>
+    </linearGradient>
+    
+    <!-- Gradiente IA -->
+    <linearGradient id="ai-grad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#667EEA"/>
+      <stop offset="100%" stop-color="#764BA2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- GRUPO: Logo Icon Completo -->
+  <g id="migue-ai-icon-only">
+    
+    <!-- Capa: Sombra suave -->
+    <g id="shadow" opacity="0.15">
+      <path d="M 0 180 Q 0 100 70 100 L 130 100 Q 200 100 200 180 Q 200 220 160 240 L 160 270 L 140 250 L 80 250 Q 0 250 0 180 Z" 
+            fill="#000000" 
+            transform="translate(0, 4)"/>
+    </g>
+    
+    <!-- Capa: Chat Bubble Principal -->
+    <g id="chat-bubble">
+      <path id="bubble-shape" 
+            d="M 0 180 Q 0 100 70 100 L 130 100 Q 200 100 200 180 Q 200 220 160 240 L 160 270 L 140 250 L 80 250 Q 0 250 0 180 Z" 
+            fill="url(#wa-grad)"/>
+    </g>
+    
+    <!-- Capa: Typing Dots -->
+    <g id="typing-dots">
+      <circle id="dot-left" cx="60" cy="180" r="10" fill="#FFFFFF" opacity="0.95"/>
+      <circle id="dot-center" cx="100" cy="180" r="10" fill="#FFFFFF" opacity="0.75"/>
+      <circle id="dot-right" cx="140" cy="180" r="10" fill="#FFFFFF" opacity="0.95"/>
+    </g>
+    
+    <!-- Capa: AI Badge -->
+    <g id="ai-badge" transform="translate(160, 120)">
+      <!-- Badge circle -->
+      <circle id="badge-bg" cx="0" cy="0" r="22" fill="url(#ai-grad)"/>
+      
+      <!-- Circuit lines -->
+      <g id="circuit-lines">
+        <line id="line-left" x1="-8" y1="-8" x2="-8" y2="8" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+        <line id="line-right" x1="8" y1="-8" x2="8" y2="8" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+        <line id="line-center" x1="-8" y1="0" x2="8" y2="0" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+      </g>
+      
+      <!-- Circuit dots -->
+      <g id="circuit-dots">
+        <circle id="dot-tl" cx="-8" cy="-8" r="2.5" fill="#FFFFFF"/>
+        <circle id="dot-tr" cx="8" cy="-8" r="2.5" fill="#FFFFFF"/>
+        <circle id="dot-bl" cx="-8" cy="8" r="2.5" fill="#FFFFFF"/>
+        <circle id="dot-br" cx="8" cy="8" r="2.5" fill="#FFFFFF"/>
+      </g>
+    </g>
+    
+  </g>
+</svg>

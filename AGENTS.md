@@ -41,27 +41,28 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 - **Frontend/Comunicación**: WhatsApp Business API
 - **Backend**: Vercel Edge Functions (serverless)
 - **Base de Datos**: Supabase PostgreSQL + Auth (contexto conversacional con RLS)
-- **IA/LLM Multi-Provider** (76% cost savings):
-  - **Primary**: Claude Sonnet 4.5 (chat, agents)
-  - **Audio**: Groq Whisper (transcription)
-  - **OCR**: Tesseract (free image text extraction)
-  - **Fallback**: OpenAI API (backwards compatibility)
+- **IA/LLM Multi-Provider** (100% chat cost savings):
+  - **Primary**: Gemini 2.5 Flash (FREE - 1,500 req/day, chat, agents)
+  - **Fallback #1**: GPT-4o-mini (cuando se excede free tier)
+  - **Fallback #2**: Claude Sonnet 4.5 (emergencia)
+  - **Audio**: Groq Whisper (transcription - 93% cheaper)
+  - **OCR**: Tesseract (free) o Gemini (multi-modal)
 - **Almacenamiento**: Supabase Storage (archivos multimedia)
 - **Programación**: Vercel Cron Jobs (recordatorios)
 - **Seguridad**: Vercel Env + RLS (Supabase) para control de acceso
 - **Integraciones**: Model Context Protocol (MCP)
 
-#### Flujo de Mensajes V2 (Multi-Provider)
+#### Flujo de Mensajes V2 (Multi-Provider con Gemini)
 1. **Recepción**: Webhook en Vercel Edge Function
-2. **Selección de Provider**: AIProviderManager decide según costo/tarea
+2. **Selección de Provider**: AIProviderManager decide según costo/disponibilidad
 3. **Procesamiento**:
-   - **Chat**: Claude Sonnet 4.5 con agentes especializados
-   - **Audio**: Groq Whisper → transcripción → Claude
-   - **Imágenes/PDFs**: Tesseract OCR → Claude comprensión
-4. **Persistencia**: Supabase (contexto + tracking de costos)
-5. **Generación**: Claude Agents (ProactiveAgent, SchedulingAgent, FinanceAgent)
+   - **Chat**: Gemini 2.5 Flash (FREE tier) con agentes especializados
+   - **Audio**: Groq Whisper → transcripción → Gemini/GPT
+   - **Imágenes/PDFs**: Gemini Vision API (multi-modal) o Tesseract (fallback)
+4. **Persistencia**: Supabase (contexto + tracking de costos + free tier usage)
+5. **Generación**: Gemini Agents (GeminiProactiveAgent primario) + fallbacks
 6. **Envío**: WhatsApp Business API
-7. **Monitoreo**: Cost tracking y budget management
+7. **Monitoreo**: Cost tracking, free tier monitoring, budget management
 
 ### Funcionalidades Core
 
@@ -306,14 +307,18 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 - [x] **Testing Infrastructure**: Jest + Edge Runtime + 225 unit tests
 - [x] **Zod Validation**: WhatsApp webhook schemas completos (types/schemas.ts)
 - [x] **Type Safety**: Validación de 13 formatos de mensaje WhatsApp
-- [x] **Multi-Provider AI System** - 76% cost reduction:
-  - [x] Claude Sonnet 4.5 para chat principal
+- [x] **Multi-Provider AI System** - 100% chat cost reduction:
+  - [x] Gemini 2.5 Flash para chat principal (FREE - 1,500 req/día)
+  - [x] GPT-4o-mini como fallback #1 (cuando se excede free tier)
+  - [x] Claude Sonnet 4.5 como fallback #2 (emergencia)
   - [x] Groq Whisper para transcripción (93% más barato)
   - [x] Tesseract para OCR gratuito
-  - [x] OpenAI como fallback
+  - [x] Context caching (75% ahorro adicional si se excede free tier)
+  - [x] Free tier tracking con buffer (1,400/1,500 requests)
 - [x] **Specialized AI Agents**:
-  - [x] ProactiveAgent: Asistente conversacional autónomo
-  - [x] SchedulingAgent: Gestión autónoma de citas con ejecución directa
+  - [x] GeminiProactiveAgent: Asistente conversacional primario con tool calling
+  - [x] ProactiveAgent (OpenAI): Fallback conversacional
+  - [x] SchedulingAgent: Gestión autónoma de citas
   - [x] FinanceAgent: Control proactivo de gastos
 - [x] **Autonomous Actions**: Ejecución directa sin confirmación manual
 - [x] **Error Recovery System**: Retry logic + duplicate detection
@@ -359,12 +364,39 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 ---
 
 **Fecha de creación**: 2025-01-27
-**Última actualización**: 2025-10-08
-**Versión**: 2.2 - Tool Calling Fix (Model IDs)
-**Estado**: En desarrollo - Fase 2 (Core Features + AI Migration - Progreso 98%)
+**Última actualización**: 2025-10-11
+**Versión**: 2.3 - Gemini 2.5 Flash Integration (FREE Tier)
+**Estado**: En desarrollo - Fase 2 (Core Features + Gemini Complete - Progreso 95%)
 **Deployment**: ✅ Producción activa en Vercel
 
-**Últimos Logros (2025-10-08 - Claude Model ID Fix)** 🔧:
+**Últimos Logros (2025-10-11 - Gemini 2.5 Flash Integration)** 🚀:
+- ✅ **100% Cost Reduction**: Chat ahora completamente GRATIS (FREE tier)
+  - Costo mensual: $90 → $0 (100% reducción dentro free tier)
+  - Límite: 1,500 req/día con buffer de 1,400
+  - Context window: 128K → 1M tokens (8x más grande)
+  - Spanish quality: Ranking #3 global (Scale AI SEAL)
+- ✅ **Implementación Completa**:
+  - Created lib/gemini-client.ts (475 líneas)
+    - Free tier tracking con buffer
+    - Context caching (75% ahorro adicional)
+    - Multi-modal support (audio, imagen, video)
+    - Tool calling completo
+    - Streaming via async generators
+  - Created lib/gemini-agents.ts (405 líneas)
+    - GeminiProactiveAgent con tool calling
+    - Prompts en español colombiano
+    - Herramientas: create_reminder, schedule_meeting, track_expense
+    - Follow-up generation
+    - Intent analysis
+  - 90 Gemini tests passing (329 total)
+  - 21 TypeScript strict violations corregidas
+- ✅ **Multi-Provider Chain**: Gemini (FREE) → GPT-4o-mini → Claude
+- ✅ **Production Deployment**: Exitoso con fallback automático
+- 📊 Progreso: 90% → 95% (Gemini complete)
+- 💰 Ahorro anual: ~$900/año
+- 🎯 Siguiente: Audio transcription, streaming, RAG
+
+**Logros Previos (2025-10-08 - Claude Model ID Fix)** 🔧:
 - ✅ **Root Cause**: Model ID `'claude-sonnet-4-5'` era inválido
   - API calls fallaban silenciosamente
   - Activaba fallback a OpenAI sin tool calling
@@ -421,19 +453,18 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 - ✅ **Testing**: 225 tests passing (+13 nuevos para persist failures)
 - ✅ **Documentation**: 2 research guides (2,337 líneas)
 
-**Logros Previos (2025-10-05 - Claude SDK Migration)** ⚡:
+**Logros Previos (2025-10-05 - Multi-Provider AI)** ⚡:
 - ✅ **Multi-Provider AI System** - 76% cost reduction:
   - Claude Sonnet 4.5: Chat principal ($3/$15 vs $15/$60)
   - Groq Whisper: Transcripción ($0.05/hr vs $0.36/hr)
-  - Tesseract: OCR gratuito (vs $0.002/image)
+  - Tesseract: OCR gratuito
   - OpenAI: Fallback
-- ✅ **Specialized AI Agents**:
-  - ProactiveAgent: Asistente conversacional con contexto
-  - SchedulingAgent: Gestión autónoma de citas
-  - FinanceAgent: Control proactivo de gastos
-- ✅ **Dependencies**: @anthropic-ai/sdk (Edge-compatible), groq-sdk, tesseract.js, MCP
-- ✅ **Cost Tracking**: Budget management ($10/día límite)
-- ✅ **Webhook V2**: Integración completa multi-provider
+- ✅ **Specialized AI Agents**: Proactive, Scheduling, Finance
+- ✅ **Dependencies**: @anthropic-ai/sdk, groq-sdk, tesseract.js, MCP
+- ✅ **Cost Tracking**: Budget management
+- ✅ **Webhook V2**: Integración multi-provider
+
+**Nota**: Sistema migrado a Gemini 2.5 Flash (2025-10-11) para lograr 100% cost savings
 
 **Otros Logros**:
 - ✅ Testing Infrastructure: Jest + Edge Runtime + 225 tests

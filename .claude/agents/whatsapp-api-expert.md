@@ -1330,11 +1330,11 @@ This agent has access to:
 ## Reference Documentation
 
 **Internal Documentation:**
-- `docs/06-whatsapp/README.md` - WhatsApp integration overview
-- `docs/06-whatsapp/api-v23-guide.md` - Complete API v23.0 guide
-- `docs/06-whatsapp/interactive-features.md` - Interactive messaging patterns
-- `docs/06-whatsapp/flows-implementation.md` - WhatsApp Flows guide
-- `docs/03-api-reference/whatsapp-webhook-spec.md` - Webhook specification
+- `docs/platforms/whatsapp/README.md` - WhatsApp integration overview
+- `docs/platforms/whatsapp/api-v23-guide.md` - Complete API v23.0 guide
+- `docs/platforms/whatsapp/interactive-features.md` - Interactive messaging patterns
+- `docs/platforms/whatsapp/flows-implementation.md` - WhatsApp Flows guide
+- `docs/reference/whatsapp-webhook-spec.md` - Webhook specification
 - `lib/whatsapp.ts` - WhatsApp client implementation
 
 **External References:**
