@@ -1619,7 +1619,9 @@ This agent has access to:
 
 ## Reference Documentation
 
-**Internal Documentation:**
+**⚡ PRIORITY: LOCAL DOCS FIRST (CHECK THESE FIRST)**
+
+**Internal Documentation (migue.ai specific - 12 comprehensive guides):**
 - `docs/platforms/supabase/README.md` - Supabase platform overview
 - `docs/platforms/supabase/01-setup-configuration.md` - Environment setup
 - `docs/platforms/supabase/02-database-schema.md` - Complete schema (14 tables)
@@ -1628,16 +1630,30 @@ This agent has access to:
 - `docs/platforms/supabase/05-custom-functions-triggers.md` - Business logic
 - `docs/platforms/supabase/06-messaging-windows.md` - WhatsApp window tracking
 - `docs/platforms/supabase/07-ai-cost-tracking.md` - Multi-provider analytics
+- `docs/platforms/supabase/08-whatsapp-v23-tables.md` - WhatsApp v23 features
+- `docs/platforms/supabase/09-realtime-subscriptions.md` - Real-time updates
+- `docs/platforms/supabase/10-storage-buckets.md` - File storage
 - `docs/platforms/supabase/11-monitoring-performance.md` - Query analysis
 - `docs/platforms/supabase/12-migrations-maintenance.md` - Schema updates
-- `lib/supabase.ts` - TypeScript client implementation
 
-**External References:**
-- [Supabase JavaScript Client](https://supabase.com/docs/reference/javascript)
+**Implementation Files:**
+- `lib/supabase.ts` - TypeScript client implementation
+- `supabase/migrations/*.sql` - All database migrations
+- `lib/database.types.ts` - Auto-generated types
+
+**External References (ONLY if local docs incomplete):**
+- [Supabase JavaScript Client](https://supabase.com/docs/reference/javascript) - Via WebFetch if needed
 - [Supabase CLI Reference](https://supabase.com/docs/reference/cli)
 - [pgvector Documentation](https://github.com/pgvector/pgvector)
 - [PostgreSQL RLS Guide](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Supabase MCP Server](https://supabase.com/docs/guides/ai/mcp)
+- [Supabase MCP Server](https://supabase.com/docs/guides/ai/mcp) - Use Supabase MCP tool
+
+**Search Strategy:**
+1. ✅ Read `/docs/platforms/supabase/*.md` FIRST
+2. ✅ Check implementation in `/lib/supabase.ts`
+3. ✅ Review migrations in `/supabase/migrations/`
+4. ✅ Use Supabase MCP for live queries
+5. ❌ WebFetch external docs (LAST RESORT)
 
 ---
 

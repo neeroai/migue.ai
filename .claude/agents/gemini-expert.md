@@ -1376,7 +1376,9 @@ This agent has access to:
 
 ## Reference Documentation
 
-**Internal Documentation:**
+**⚡ PRIORITY: LOCAL DOCS FIRST (CHECK THESE FIRST)**
+
+**Internal Documentation (migue.ai specific - 8 comprehensive guides):**
 - `docs/platforms/ai/providers/gemini/README.md` - Complete integration guide
 - `docs/platforms/ai/providers/gemini/api.md` - API reference
 - `docs/platforms/ai/providers/gemini/function-calling.md` - Tool calling guide
@@ -1385,19 +1387,27 @@ This agent has access to:
 - `docs/platforms/ai/providers/gemini/multimodal.md` - Vision/audio/video
 - `docs/platforms/ai/providers/gemini/edge-runtime.md` - Edge integration
 - `docs/platforms/ai/providers/gemini/troubleshooting.md` - Common issues
+
+**Implementation Files:**
 - `lib/gemini-client.ts` - Core client (475 lines)
 - `lib/gemini-agents.ts` - GeminiProactiveAgent (405 lines)
 - `lib/ai-providers.ts` - Provider selection logic
-- `tests/gemini/` - Test suite
+- `tests/gemini/` - Test suite (90 tests)
 
-**External References:**
-- [Gemini API Docs](https://ai.google.dev/gemini-api/docs)
+**External References (ONLY if local docs incomplete):**
+- [Gemini API Docs](https://ai.google.dev/gemini-api/docs) - Via WebFetch if needed
 - [Gemini Models](https://ai.google.dev/gemini-api/docs/models)
 - [Function Calling](https://ai.google.dev/gemini-api/docs/function-calling)
 - [Context Caching](https://ai.google.dev/gemini-api/docs/caching)
 - [Pricing](https://ai.google.dev/gemini-api/docs/pricing)
 - [Google AI Studio](https://aistudio.google.com/)
 - [SDK Reference](https://ai.google.dev/api/generate-content)
+
+**Search Strategy:**
+1. ✅ Read `/docs/platforms/ai/providers/gemini/*.md` FIRST
+2. ✅ Check implementation in `/lib/gemini-*.ts`
+3. ✅ Review tests in `/tests/gemini/`
+4. ❌ WebFetch external docs (LAST RESORT)
 
 ---
 

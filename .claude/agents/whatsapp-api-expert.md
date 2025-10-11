@@ -1329,20 +1329,41 @@ This agent has access to:
 
 ## Reference Documentation
 
-**Internal Documentation:**
-- `docs/platforms/whatsapp/README.md` - WhatsApp integration overview
-- `docs/platforms/whatsapp/api-v23-guide.md` - Complete API v23.0 guide
-- `docs/platforms/whatsapp/interactive-features.md` - Interactive messaging patterns
-- `docs/platforms/whatsapp/flows-implementation.md` - WhatsApp Flows guide
-- `docs/reference/whatsapp-webhook-spec.md` - Webhook specification
-- `lib/whatsapp.ts` - WhatsApp client implementation
+**⚡ PRIORITY: LOCAL DOCS FIRST (CHECK THESE FIRST)**
 
-**External References:**
-- [WhatsApp Cloud API Documentation](https://developers.facebook.com/docs/whatsapp/cloud-api)
-- [Interactive Messages](https://developers.facebook.com/docs/whatsapp/cloud-api/messages/interactive-messages)
-- [WhatsApp Flows](https://developers.facebook.com/docs/whatsapp/flows)
-- [Webhooks Reference](https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks)
-- [Rate Limits](https://developers.facebook.com/docs/whatsapp/cloud-api/overview/rate-limits)
+**Internal Documentation (migue.ai specific - 10 comprehensive guides):**
+- `docs/platforms/whatsapp/README.md` - WhatsApp integration overview
+- `docs/platforms/whatsapp/api-v23-guide.md` - Complete API v23.0 guide (webhook, auth, rate limits)
+- `docs/platforms/whatsapp/interactive-features.md` - Interactive messaging patterns (buttons, lists, reactions)
+- `docs/platforms/whatsapp/flows-implementation.md` - WhatsApp Flows v3 guide (navigate, data_exchange)
+- `docs/platforms/whatsapp/flows/` - Flow tutorials (4 files: fundamentos, implementacion, templates, seguridad)
+- `docs/platforms/whatsapp/service-conversations.md` - 24h messaging windows & free entry points
+- `docs/platforms/whatsapp/pricing-guide-2025.md` - Pricing tiers & cost optimization
+- `docs/platforms/whatsapp/template-troubleshooting.md` - Template debugging & compliance
+- `docs/platforms/whatsapp/integration-plan.md` - End-to-end integration checklist
+- `docs/reference/whatsapp-webhook-spec.md` - Webhook payload specification
+
+**Implementation Files:**
+- `lib/whatsapp.ts` - WhatsApp client (sendMessage, interactive, reactions, typing)
+- `lib/messaging-windows.ts` - 24h window management & proactive messaging
+- `lib/message-builders.ts` - Type-safe button/list builders (validation)
+- `app/api/whatsapp/webhook/route.ts` - Webhook handler (signature validation, 5s timeout)
+- `app/api/cron/maintain-windows/route.ts` - Messaging window maintenance
+- `types/schemas.ts` - Zod validation schemas (WebhookPayloadSchema, MessageTypeSchema)
+
+**External References (ONLY if local docs incomplete):**
+- [WhatsApp Cloud API Documentation](https://developers.facebook.com/docs/whatsapp/cloud-api) - Via WebFetch if needed
+- [Interactive Messages](https://developers.facebook.com/docs/whatsapp/cloud-api/messages/interactive-messages) - Via WebFetch if needed
+- [WhatsApp Flows](https://developers.facebook.com/docs/whatsapp/flows) - Via WebFetch if needed
+- [Webhooks Reference](https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks) - Via WebFetch if needed
+- [Rate Limits](https://developers.facebook.com/docs/whatsapp/cloud-api/overview/rate-limits) - Via WebFetch if needed
+
+**Search Strategy:**
+1. ✅ Read `/docs/platforms/whatsapp/*.md` FIRST (10 comprehensive guides)
+2. ✅ Check implementation in `/lib/whatsapp.ts` and related files
+3. ✅ Review webhook handler in `/app/api/whatsapp/webhook/route.ts`
+4. ✅ Validate with Zod schemas in `/types/schemas.ts`
+5. ❌ WebFetch external docs (LAST RESORT)
 
 ---
 

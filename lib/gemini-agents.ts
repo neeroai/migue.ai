@@ -6,7 +6,7 @@
  */
 
 import { FunctionDeclaration, Content, SchemaType } from '@google/generative-ai';
-import { getGeminiModel, convertToGeminiMessages, parseGeminiResponse, getCachedContext, setCachedContext } from './gemini-client';
+import { getGeminiModel, convertToGeminiMessages, parseGeminiResponse } from './gemini-client';
 import { logger } from './logger';
 import type { ChatMessage } from '../types/schemas';
 import { createReminder } from './reminders';
@@ -230,13 +230,7 @@ export class GeminiProactiveAgent {
       });
 
       // Convert conversation history to Gemini format
-      const historyKey = `user_${userId}_history`;
-      let geminiHistory = await getCachedContext(historyKey);
-
-      if (!geminiHistory) {
-        geminiHistory = convertToGeminiMessages(conversationHistory.slice(-10)); // Last 10 messages
-        await setCachedContext(historyKey, geminiHistory);
-      }
+      const geminiHistory = convertToGeminiMessages(conversationHistory.slice(-10)); // Last 10 messages
 
       // Get model with system prompt (temperature = 0 for deterministic function calling)
       const model = getGeminiModel('gemini-2.5-flash-lite', COLOMBIAN_ASSISTANT_PROMPT, { useToolCalling: true });

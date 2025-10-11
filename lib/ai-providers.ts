@@ -88,7 +88,7 @@ export class AIProviderManager {
     const remainingBudget = COST_LIMITS.dailyMax - this.dailySpent
 
     // Check if Gemini free tier is available
-    const geminiAvailable = process.env.GOOGLE_AI_API_KEY && canUseFreeTier()
+    const geminiAvailable = process.env.GOOGLE_AI_API_KEY && await canUseFreeTier()
 
     // Emergency mode: use only free/cheap options
     if (remainingBudget < COST_LIMITS.emergencyMode) {

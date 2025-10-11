@@ -17,6 +17,9 @@ migue.ai integrates with WhatsApp Business API v23.0 for messaging, including su
 - **[api-v23-guide.md](./api-v23-guide.md)** - Comprehensive API v23 guide (migration, features, reference)
 - **[integration-plan.md](./integration-plan.md)** - Integration architecture and implementation plan
 
+### Setup & Configuration 🛠️
+- **[meta-app-setup-guide.md](./meta-app-setup-guide.md)** - Complete step-by-step guide to configure Meta app and get WhatsApp API approval (2025)
+
 ### Pricing & Templates (2025) 💰
 - **[pricing-guide-2025.md](./pricing-guide-2025.md)** - Complete pricing guide, 24h windows, cost optimization
 - **[template-troubleshooting.md](./template-troubleshooting.md)** - Fix template categorization issues (UTILITY vs MARKETING)

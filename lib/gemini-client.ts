@@ -8,7 +8,6 @@
  */
 
 import { GoogleGenerativeAI, GenerativeModel, Content, FunctionDeclaration, GenerateContentResult } from '@google/generative-ai';
-import { Redis } from '@upstash/redis';
 import { logger } from './logger';
 import { getSupabaseServerClient } from './supabase';
 import type { ChatMessage } from '../types/schemas';
@@ -418,108 +417,8 @@ export async function* streamContent(
   }
 }
 
-/**
- * Context caching for 75% cost savings with Upstash Redis
- * Best Practice 2025: Persistent cache for Edge Runtime
- * Cache frequently used prompts and conversation history
- */
-interface CachedContext {
-  content: Content[];
-  timestamp: number;
-  hits: number;
-}
-
-// Lazy initialization for Edge Runtime optimization
-let cachedRedis: Redis | null = null;
-
-function getRedisClient(): Redis {
-  if (!cachedRedis) {
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    if (!url || !token) {
-      throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set');
-    }
-
-    cachedRedis = new Redis({
-      url,
-      token
-    });
-
-    logger.info('[gemini-client] Upstash Redis client initialized');
-  }
-  return cachedRedis;
-}
-
-const CACHE_TTL = 3600; // 1 hour in seconds
-
-/**
- * Get cached context from Upstash Redis
- * Best Practice 2025: Async with error handling + fallback
- */
-export async function getCachedContext(key: string): Promise<Content[] | null> {
-  try {
-    const redis = getRedisClient();
-    const cached = await redis.get<CachedContext>(key);
-
-    if (!cached) {
-      logger.debug('[gemini-client] Cache miss', { metadata: { key } });
-      return null;
-    }
-
-    // TTL check (double safety with Redis EX)
-    if (Date.now() - cached.timestamp > CACHE_TTL * 1000) {
-      logger.debug('[gemini-client] Cache expired', { metadata: { key } });
-      await redis.del(key); // Cleanup
-      return null;
-    }
-
-    // Increment hit counter (async, don't await - fire and forget)
-    redis.set(key, { ...cached, hits: cached.hits + 1 }, { ex: CACHE_TTL })
-      .catch(err => logger.error('[gemini-client] Failed to update hits', err instanceof Error ? err : new Error(String(err))));
-
-    logger.info('[gemini-client] ✅ Cache hit', {
-      metadata: {
-        key,
-        hits: cached.hits + 1,
-        age: Math.round((Date.now() - cached.timestamp) / 1000) + 's'
-      }
-    });
-
-    return cached.content;
-
-  } catch (error) {
-    logger.error('[gemini-client] Redis get failed', error instanceof Error ? error : new Error(String(error)));
-    return null; // Degrade gracefully - caching is optimization
-  }
-}
-
-/**
- * Set cached context in Upstash Redis
- * Best Practice 2025: EX for automatic expiration
- */
-export async function setCachedContext(key: string, content: Content[]): Promise<void> {
-  try {
-    const redis = getRedisClient();
-
-    const cachedData: CachedContext = {
-      content,
-      timestamp: Date.now(),
-      hits: 0
-    };
-
-    // Use EX for automatic expiration (Redis handles cleanup)
-    await redis.set(key, cachedData, { ex: CACHE_TTL });
-
-    logger.info('[gemini-client] Context cached', {
-      metadata: { key, ttl: CACHE_TTL, size: content.length }
-    });
-
-  } catch (error) {
-    logger.error('[gemini-client] Redis set failed', error instanceof Error ? error : new Error(String(error)));
-    // Don't throw - caching is optimization, not critical
-  }
-}
+// Context caching removed - unnecessary complexity for Fase 1
+// Can be re-added in Fase 2 if needed for performance optimization
 
 /**
  * Analyze image with Gemini Vision API (multimodal)
@@ -626,14 +525,12 @@ export function detectImageIssue(imageBuffer: Uint8Array): string {
 }
 
 /**
- * Clear all cached models and contexts (for testing)
+ * Clear all cached models (for testing)
  * Note: Usage tracking is now in Supabase, not cleared here
- * Note: Context cache is now in Upstash Redis, not cleared locally
  */
 export function clearCache() {
   cachedClient = null;
   cachedModels.clear();
-  cachedRedis = null; // Reset Redis client (will re-initialize on next use)
 
-  logger.info('[gemini-client] Local cache cleared (Supabase usage + Redis context persisted)');
+  logger.info('[gemini-client] Local cache cleared (Supabase usage persisted)');
 }

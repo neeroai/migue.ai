@@ -12,9 +12,9 @@
       "args": ["-y", "@playwright/mcp@latest", "--browser", "chromium"],
       "env": {}
     },
-    "context7": {
+    "ref-tools": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "args": ["-y", "@modelcontextprotocol/server-ref-tools"],
       "env": {}
     },
     "sequential-thinking": {

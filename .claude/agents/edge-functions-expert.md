@@ -892,19 +892,40 @@ This agent has access to:
 
 ## Reference Documentation
 
-**Internal Documentation:**
-- `docs/platforms/vercel/vercel-edge-guide.md` - Complete Edge Functions guide
-- `docs/platforms/vercel/edge-functions-optimization.md` - Performance optimization
-- `docs/platforms/vercel/edge-security-guide.md` - Security patterns
-- `docs/platforms/vercel/edge-error-handling.md` - Error handling patterns
-- `docs/reference/edge-runtime-api.md` - API reference
+**⚡ PRIORITY: LOCAL DOCS FIRST (CHECK THESE FIRST)**
 
-**External References:**
-- [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
-- [Edge Runtime](https://edge-runtime.vercel.app/)
-- [Next.js 15 Edge Runtime](https://nextjs.org/docs/app/building-your-application/rendering/edge-and-nodejs-runtimes)
-- [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API)
-- [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
+**Internal Documentation (migue.ai specific - 8 comprehensive guides):**
+- `docs/platforms/vercel/README.md` - Vercel platform overview & deployment
+- `docs/platforms/vercel/vercel-edge-guide.md` - Complete Edge Functions guide (config, patterns)
+- `docs/platforms/vercel/edge-functions-optimization.md` - Performance optimization (cold start, bundle size)
+- `docs/platforms/vercel/edge-security-guide.md` - Security patterns (HMAC, rate limiting, validation)
+- `docs/platforms/vercel/edge-error-handling.md` - Error handling patterns (retry, timeout, fallback)
+- `docs/platforms/vercel/edge-observability.md` - Monitoring & debugging strategies
+- `docs/platforms/vercel/supabase-integration.md` - Supabase integration with Edge Runtime
+- `docs/platforms/vercel/functions-guide.md` - Serverless functions patterns
+- `docs/reference/edge-runtime-api.md` - Edge Runtime API reference
+
+**Implementation Files:**
+- `app/api/whatsapp/webhook/route.ts` - WhatsApp webhook (5s timeout, fire-and-forget)
+- `app/api/cron/check-reminders/route.ts` - Cron job on Edge Runtime
+- `app/api/cron/maintain-windows/route.ts` - Messaging window maintenance
+- `lib/whatsapp.ts` - WhatsApp client (Edge-compatible fetch calls)
+- `lib/supabase.ts` - Supabase client (Edge Runtime compatible)
+- `vercel.json` - Vercel configuration (crons, headers, redirects)
+
+**External References (ONLY if local docs incomplete):**
+- [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions) - Via WebFetch if needed
+- [Edge Runtime](https://edge-runtime.vercel.app/) - Via WebFetch if needed
+- [Next.js 15 Edge Runtime](https://nextjs.org/docs/app/building-your-application/rendering/edge-and-nodejs-runtimes) - Via WebFetch if needed
+- [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API) - Via WebFetch if needed
+- [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API) - Via WebFetch if needed
+
+**Search Strategy:**
+1. ✅ Read `/docs/platforms/vercel/*.md` FIRST (8 comprehensive guides)
+2. ✅ Check implementation in Edge Function routes (`/app/api/**/route.ts`)
+3. ✅ Review `vercel.json` configuration
+4. ✅ Validate Edge-compatible APIs in implementation files
+5. ❌ WebFetch external docs (LAST RESORT)
 
 ---
 
