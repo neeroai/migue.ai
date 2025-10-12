@@ -45,8 +45,10 @@ describe('Messaging Windows', () => {
       const utcHour = getCurrentHour('UTC');
 
       // Colombia is UTC-5, so difference should be around 5 hours
-      // (allowing for DST variations)
-      expect(Math.abs(colombiaHour - utcHour)).toBeLessThanOrEqual(6);
+      // Handle day wrap-around (e.g., 23:00 vs 04:00 = 5h difference, not 19h)
+      const diff = Math.abs(colombiaHour - utcHour);
+      const normalizedDiff = Math.min(diff, 24 - diff);
+      expect(normalizedDiff).toBeLessThanOrEqual(6);
     });
 
     it('should default to Colombia timezone', () => {

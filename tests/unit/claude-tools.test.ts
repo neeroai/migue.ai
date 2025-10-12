@@ -25,7 +25,11 @@ const mockedCreateReminder = createReminder as jest.MockedFunction<typeof create
 const mockedScheduleMeetingFromIntent = scheduleMeetingFromIntent as jest.MockedFunction<
   typeof scheduleMeetingFromIntent
 >
-const mockedInsert = jest.fn()
+const mockedSelect = jest.fn()
+const mockedSingle = jest.fn()
+const mockedInsert = jest.fn(() => ({
+  select: mockedSelect,
+}))
 const mockedSupabase = {
   from: jest.fn(() => ({ insert: mockedInsert })),
 }
@@ -34,7 +38,19 @@ describe('Claude Tools', () => {
   beforeEach(() => {
     mockedCreateReminder.mockReset()
     mockedScheduleMeetingFromIntent.mockReset()
+    mockedSelect.mockReset()
+    mockedSingle.mockReset()
+
+    // Setup chained mock for Supabase: .from().insert().select().single()
+    mockedSingle.mockResolvedValue({ data: { id: 'test-expense-id' }, error: null })
+    mockedSelect.mockReturnValue({ single: mockedSingle })
     mockedInsert.mockReset()
+    mockedInsert.mockReturnValue({ select: mockedSelect })
+
+    // Reset and re-setup the from() mock to return the updated insert mock
+    mockedSupabase.from.mockClear()
+    mockedSupabase.from.mockReturnValue({ insert: mockedInsert })
+
     ;(getSupabaseServerClient as jest.MockedFunction<typeof getSupabaseServerClient>).mockReturnValue(
       mockedSupabase as any
     )
@@ -170,7 +186,7 @@ describe('Claude Tools', () => {
   })
 
   describe('executeTrackExpense', () => {
-    it('tracks expense with valid input (in-memory, pending DB)', async () => {
+    it('tracks expense with valid input', async () => {
       const input = {
         userId: 'test-user-123',
         amount: 150.5,
@@ -181,14 +197,12 @@ describe('Claude Tools', () => {
 
       const result = await executeTrackExpense(input)
 
-      // TODO: Remove this test update when 'expenses' table is created
-      expect(result).toContain('💰 Gasto registrado')
-      expect(result).toContain('MXN 150.5')
+      expect(result).toContain('✅ Listo!')
+      expect(result).toContain('MXN 150')
       expect(result).toContain('Alimentación')
-      expect(result).toContain('en desarrollo') // Temporary message
     })
 
-    it('tracks expense without database persistence', async () => {
+    it('tracks expense with USD currency', async () => {
       const input = {
         userId: 'test-user-123',
         amount: 100,
@@ -199,9 +213,9 @@ describe('Claude Tools', () => {
 
       const result = await executeTrackExpense(input)
 
-      // Temporarily returns success message without DB errors
-      expect(result).toContain('💰 Gasto registrado')
+      expect(result).toContain('✅ Listo!')
       expect(result).toContain('USD 100')
+      expect(result).toContain('Transporte')
     })
 
     it('throws error on invalid input', async () => {
@@ -249,17 +263,16 @@ describe('Claude Tools', () => {
     })
 
     it('executes track_expense tool', async () => {
-      mockedInsert.mockResolvedValueOnce({ error: null })
-
       const result = await executeTool('track_expense', {
         userId: 'test-user',
         amount: 50,
         currency: 'MXN',
-        category: 'Test',
+        category: 'Alimentación',
         description: 'Test expense',
       })
 
-      expect(result).toContain('💰 Gasto registrado')
+      expect(result).toContain('✅ Listo!')
+      expect(result).toContain('MXN 50')
     })
 
     it('throws error for unknown tool', async () => {

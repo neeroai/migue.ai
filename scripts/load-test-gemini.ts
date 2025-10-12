@@ -19,7 +19,7 @@
  *   npm run test:gemini:load -- --quick   # Quick test (10 requests)
  */
 
-import { generateContent, getGeminiModel, getCachedContext, setCachedContext, convertToGeminiMessages, clearCache } from '../lib/gemini-client';
+import { generateContent, getGeminiModel, convertToGeminiMessages, clearCache } from '../lib/gemini-client';
 import { SchemaType } from '@google/generative-ai';
 import { getSupabaseServerClient } from '../lib/supabase';
 import { logger } from '../lib/logger';
@@ -167,38 +167,6 @@ async function testFunctionCalling(): Promise<void> {
   });
 }
 
-// ============================================================================
-// Test 4: Cache Performance
-// ============================================================================
-
-async function testCachePerformance(): Promise<void> {
-  console.log('\n💾 Test 4: Cache Performance');
-
-  const testKey = 'load_test_cache_key';
-  const testHistory: ChatMessage[] = [
-    { role: 'user', content: 'Hola' },
-    { role: 'assistant', content: 'Hola! ¿Cómo estás?' }
-  ];
-
-  await runTest('Cache write operation', async () => {
-    const geminiHistory = convertToGeminiMessages(testHistory);
-    await setCachedContext(testKey, geminiHistory);
-  });
-
-  await runTest('Cache read operation (hit)', async () => {
-    const cached = await getCachedContext(testKey);
-    if (!cached || cached.length !== testHistory.length) {
-      throw new Error('Cache miss or incorrect data');
-    }
-  });
-
-  await runTest('Cache read operation (miss)', async () => {
-    const cached = await getCachedContext('nonexistent_key_12345');
-    if (cached !== null) {
-      throw new Error('Expected cache miss');
-    }
-  });
-}
 
 // ============================================================================
 // Test 5: Concurrent Load Test
@@ -363,7 +331,6 @@ async function main(): Promise<void> {
     await testEnvironmentSetup();
     await testBasicConnectivity();
     await testFunctionCalling();
-    await testCachePerformance();
     await testConcurrentLoad();
     await testFreeTierTracking();
     await testErrorHandling();

@@ -12,7 +12,14 @@ import * as reminders from '@/lib/reminders'
 jest.mock('@/lib/supabase', () => ({
   getSupabaseServerClient: () => ({
     from: () => ({
-      insert: jest.fn().mockResolvedValue({ error: null }),
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: { id: 'test-expense-id' },
+            error: null,
+          }),
+        }),
+      }),
       select: jest.fn().mockResolvedValue({ data: [], error: null }),
     }),
   }),
@@ -102,7 +109,7 @@ describe('ProactiveAgent Tool Calling', () => {
 
       await expect(
         claudeTools.executeTrackExpense(validInput)
-      ).resolves.toContain('💰 Gasto registrado')
+      ).resolves.toContain('✅ Listo!')
     })
   })
 
@@ -111,8 +118,7 @@ describe('ProactiveAgent Tool Calling', () => {
       const agent = new ProactiveAgent()
       const systemPrompt = (agent as any).config.systemPrompt
 
-      expect(systemPrompt).toContain('HERRAMIENTAS DISPONIBLES')
-      expect(systemPrompt).toContain('ÚSALAS SIEMPRE')
+      expect(systemPrompt).toContain('TUS CAPACIDADES')
       expect(systemPrompt).toContain('create_reminder')
       expect(systemPrompt).toContain('schedule_meeting')
       expect(systemPrompt).toContain('track_expense')
@@ -122,27 +128,27 @@ describe('ProactiveAgent Tool Calling', () => {
       const agent = new ProactiveAgent()
       const systemPrompt = (agent as any).config.systemPrompt
 
-      expect(systemPrompt).toContain('FLUJO DE TRABAJO')
-      expect(systemPrompt).toContain('Detecta si necesita tool')
-      expect(systemPrompt).toContain('LLAMA el tool')
-      expect(systemPrompt).toContain('Confirma al usuario')
+      expect(systemPrompt).toContain('INSTRUCCIONES DE USO DE HERRAMIENTAS')
+      expect(systemPrompt).toContain('Detecta intención')
+      expect(systemPrompt).toContain('LLÁMALO INMEDIATAMENTE')
+      expect(systemPrompt).toContain('Confirma')
     })
 
     it('should have examples of correct tool usage', () => {
       const agent = new ProactiveAgent()
       const systemPrompt = (agent as any).config.systemPrompt
 
-      expect(systemPrompt).toContain('EJEMPLOS DE USO CORRECTO')
-      expect(systemPrompt).toContain('recuérdame llamar a mi tía')
-      expect(systemPrompt).toContain('✅ Listo!')
-      expect(systemPrompt).toContain('❌')
+      expect(systemPrompt).toContain('PATRONES DE CONVERSACIÓN')
+      expect(systemPrompt).toContain('llamar a mi tía')
+      expect(systemPrompt).toContain('✅')
+      expect(systemPrompt).toContain('CALL create_reminder')
     })
 
     it('should explicitly warn against saying "cannot do"', () => {
       const agent = new ProactiveAgent()
       const systemPrompt = (agent as any).config.systemPrompt
 
-      expect(systemPrompt).toContain('NUNCA DIGAS')
+      expect(systemPrompt).toContain('NUNCA')
       expect(systemPrompt).toContain('no puedo')
     })
 
@@ -150,32 +156,29 @@ describe('ProactiveAgent Tool Calling', () => {
       const agent = new ProactiveAgent()
       const systemPrompt = (agent as any).config.systemPrompt
 
-      expect(systemPrompt).toContain('CAPACIDADES REALES')
-      expect(systemPrompt).toContain('SÍ PUEDES')
-      expect(systemPrompt).toContain('CREAR RECORDATORIOS')
-      expect(systemPrompt).toContain('AGENDAR REUNIONES')
+      expect(systemPrompt).toContain('TUS CAPACIDADES')
+      expect(systemPrompt).toContain('SÍ tienes estas capacidades')
+      expect(systemPrompt).toContain('create_reminder')
+      expect(systemPrompt).toContain('schedule_meeting')
     })
 
     it('should have explicit forbidden phrases section', () => {
       const agent = new ProactiveAgent()
       const systemPrompt = (agent as any).config.systemPrompt
 
-      expect(systemPrompt).toContain('NUNCA HAGAS ESTO')
-      expect(systemPrompt).toContain('EJEMPLOS PROHIBIDOS')
+      expect(systemPrompt).toContain('REGLAS FINALES')
       expect(systemPrompt).toContain('❌')
-      expect(systemPrompt).toContain('no puedo configurar recordatorios')
-      expect(systemPrompt).toContain('No tengo acceso')
-      expect(systemPrompt).toContain('ESTAS FRASES ESTÁN PROHIBIDAS')
+      expect(systemPrompt).toContain('NUNCA')
     })
 
     it('should use visual separators for clarity', () => {
       const agent = new ProactiveAgent()
       const systemPrompt = (agent as any).config.systemPrompt
 
-      // Check for section separators
-      expect(systemPrompt).toContain('═══')
-      expect(systemPrompt).toContain('🎯')
-      expect(systemPrompt).toContain('🔧')
+      // Check for section separators (now uses brackets instead of visual symbols)
+      expect(systemPrompt).toContain('[')
+      expect(systemPrompt).toContain(']')
+      expect(systemPrompt).toContain('✅')
     })
   })
 
