@@ -169,19 +169,62 @@ export function getGeminiModel(
     });
   }
 
-  return cachedModels.get(cacheKey)!;
+  // Fix C: Explicit null check to prevent cache corruption errors
+  const cached = cachedModels.get(cacheKey);
+  if (!cached) {
+    logger.error('[gemini-client] Model cache corrupted - reinitializing', new Error('Cache miss after set'), {
+      metadata: { cacheKey, modelName }
+    });
+    // Clear cache and throw to trigger fallback to OpenAI
+    cachedModels.clear();
+    throw new Error('Model cache corrupted - reinitializing');
+  }
+
+  return cached;
 }
 
 /**
  * Convert OpenAI/Claude messages to Gemini format
+ *
+ * CRITICAL FIX (2025-10-11): Gemini requires first message to be role='user'
+ * - Drop leading assistant/model messages (from proactive/follow-up messages)
+ * - Return empty array if no user messages exist
+ *
+ * Bug context: When bot sends proactive message (direction='outbound'),
+ * next user reply creates history starting with 'model' role → Gemini rejects
  */
 export function convertToGeminiMessages(messages: ChatMessage[]): Content[] {
-  return messages
-    .filter(msg => msg.content) // Skip empty messages
-    .map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content || '' }]
-    }));
+  const filtered = messages.filter(msg => msg.content);
+
+  // CRITICAL: Gemini requires first message to be role='user'
+  // Drop all leading assistant messages (from proactive/follow-up messages)
+  if (filtered.length > 0 && filtered[0]!.role === 'assistant') {
+    const firstUserIndex = filtered.findIndex(m => m.role === 'user');
+
+    if (firstUserIndex > 0) {
+      // Remove all messages before first user message
+      logger.debug('[gemini-client] Dropping leading assistant messages', {
+        metadata: {
+          droppedCount: firstUserIndex,
+          totalMessages: filtered.length,
+          newLength: filtered.length - firstUserIndex
+        }
+      });
+      filtered.splice(0, firstUserIndex);
+    } else if (firstUserIndex === -1) {
+      // Edge case: No user messages at all (shouldn't happen in practice)
+      // Return empty array to prevent Gemini error
+      logger.warn('[gemini-client] No user messages found in history', {
+        metadata: { messageCount: filtered.length }
+      });
+      return [];
+    }
+  }
+
+  return filtered.map(msg => ({
+    role: msg.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: msg.content || '' }]
+  }));
 }
 
 /**
@@ -231,7 +274,7 @@ export async function canUseFreeTier(): Promise<boolean> {
     const today = new Date().toISOString().split('T')[0]!; // YYYY-MM-DD
 
     const { data, error } = await supabase
-      .from('gemini_usage' as any) // Type will be available after running migration
+      .from('gemini_usage')
       .select('requests')
       .eq('date', today)
       .single();
@@ -242,7 +285,7 @@ export async function canUseFreeTier(): Promise<boolean> {
       return false; // Fail closed for safety
     }
 
-    const currentRequests = (data as any)?.requests || 0;
+    const currentRequests = data?.requests || 0;
     const withinLimit = currentRequests < 1400; // Soft limit (100 buffer)
 
     logger.info('[gemini-client] Free tier check', {
@@ -272,10 +315,10 @@ export async function trackGeminiUsage(tokens: number): Promise<void> {
     const supabase = getSupabaseServerClient();
     const today = new Date().toISOString().split('T')[0]!;
 
-    const { data, error } = await supabase.rpc('increment_gemini_usage' as any, { // Type will be available after running migration
+    const { data, error } = await supabase.rpc('increment_gemini_usage', {
       usage_date: today,
       token_count: tokens
-    } as any);
+    });
 
     if (error) {
       logger.error('[gemini-client] Failed to track usage', new Error(error.message));

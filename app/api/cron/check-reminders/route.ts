@@ -47,7 +47,7 @@ async function getDueReminders(): Promise<DueReminder[]> {
   }));
 }
 
-async function markReminderStatus(id: string, status: 'sent' | 'failed') {
+async function markReminderStatus(id: string, status: 'sent' | 'failed' | 'pending') {
   const supabase = getSupabaseServerClient();
   const patch: Record<string, unknown> = { status };
   if (status === 'sent') {
@@ -97,20 +97,38 @@ export async function GET(req: Request): Promise<Response> {
           ? `${emoji} Recordatorio: ${r.title}\n\n${r.description}`
           : `${emoji} Recordatorio: ${r.title}`;
 
-        await sendWhatsAppText(phone, body);
-        await recordCalendarEvent({
-          userId: r.user_id,
-          provider: 'google',
-          externalId: `reminder-${r.id}`,
-          summary: r.title,
-          description: r.description,
-          startTime: r.scheduled_time,
-          endTime: r.scheduled_time,
-          meetingUrl: null,
-          metadata: { source: 'reminder-cron' },
-        });
-        processed++;
+        try {
+          // Send WhatsApp message
+          await sendWhatsAppText(phone, body);
+
+          // Record calendar event (non-critical - log failure but don't rollback)
+          try {
+            await recordCalendarEvent({
+              userId: r.user_id,
+              provider: 'google',
+              externalId: `reminder-${r.id}`,
+              summary: r.title,
+              description: r.description,
+              startTime: r.scheduled_time,
+              endTime: r.scheduled_time,
+              meetingUrl: null,
+              metadata: { source: 'reminder-cron' },
+            });
+          } catch (calErr: any) {
+            // Log calendar failure but don't fail the reminder
+            // User got the WhatsApp notification which is the primary goal
+            console.warn(`Calendar event failed for reminder ${r.id}:`, calErr.message);
+          }
+
+          processed++;
+        } catch (whatsappErr: any) {
+          // WhatsApp send failed - rollback status to 'pending' for retry
+          await markReminderStatus(r.id, 'pending');
+          const reason = whatsappErr?.message ?? 'WhatsApp send failed';
+          failures.push({ id: r.id, error: reason });
+        }
       } catch (err: any) {
+        // Unexpected error in outer try block
         const reason = err?.message ?? 'unknown error';
         await markReminderStatus(r.id, 'failed');
         failures.push({ id: r.id, error: reason });

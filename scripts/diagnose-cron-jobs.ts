@@ -151,13 +151,13 @@ async function main() {
     'SUPABASE_KEY',
     'WHATSAPP_TOKEN',
     'WHATSAPP_PHONE_ID',
-    'OPENAI_API_KEY',
+    'GOOGLE_AI_API_KEY', // Primary AI provider (Gemini 2.5 Flash)
   ];
 
   const optionalEnvVars = [
     'CRON_SECRET',
-    'ANTHROPIC_API_KEY',
-    'GROQ_API_KEY',
+    'OPENAI_API_KEY',   // Fallback #1 (GPT-4o-mini) + Audio transcription
+    'ANTHROPIC_API_KEY', // Emergency fallback (Claude Sonnet)
   ];
 
   for (const envVar of requiredEnvVars) {

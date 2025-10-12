@@ -23,9 +23,9 @@ const envSchema = z.object({
     .startsWith('eyJ', 'SUPABASE_KEY must be a valid JWT token'),
 
   // AI Provider Configuration
-  ANTHROPIC_API_KEY: z.string().min(1).optional(), // Primary AI provider (Claude)
-  GROQ_API_KEY: z.string().min(1).optional(), // Audio transcription
-  OPENAI_API_KEY: z.string().startsWith('sk-').optional(), // Fallback AI provider
+  ANTHROPIC_API_KEY: z.string().min(1).optional(), // Emergency fallback (Claude)
+  OPENAI_API_KEY: z.string().startsWith('sk-').optional(), // Fallback AI provider + Audio transcription
+  GOOGLE_AI_API_KEY: z.string().min(1).optional(), // Primary AI provider (Gemini)
 
   // Google Calendar Configuration (optional)
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),

@@ -18,9 +18,9 @@ npm run test         # Run all tests
 - `app/api/cron/maintain-windows/route.ts` - WhatsApp window maintenance
 - `lib/whatsapp.ts` - WhatsApp API client (messages, typing, reactions)
 - `lib/messaging-windows.ts` - WhatsApp 24h window management
-- `lib/ai-providers.ts` - Multi-provider AI system (Claude, Groq, Tesseract)
-- `lib/claude-agents.ts` - Specialized AI agents
-- `lib/groq-client.ts` - Audio transcription (93% cheaper)
+- `lib/ai-providers.ts` - Multi-provider AI system (Gemini, OpenAI, Claude)
+- `lib/gemini-agents.ts` - Specialized AI agents (Gemini-based)
+- `lib/claude-agents.ts` - Fallback AI agents
 - `lib/tesseract-ocr.ts` - Free OCR
 - `lib/supabase.ts` - Database client
 - `types/schemas.ts` - Zod validation schemas
@@ -32,13 +32,84 @@ See `.env.local` - Required:
 - `WHATSAPP_*` - WhatsApp Business API
 - `SUPABASE_*` - Database
 - `GOOGLE_AI_API_KEY` - Primary chat (Gemini 2.5 Flash - FREE)
-- `OPENAI_API_KEY` - Fallback #1 (GPT-4o-mini)
-- `GROQ_API_KEY` - Audio transcription
+- `OPENAI_API_KEY` - Fallback #1 (GPT-4o-mini) + Audio transcription
 - `ANTHROPIC_API_KEY` - Emergency fallback (Claude Sonnet)
 
 ---
 
+## Personality Quick Reference
+
+**Migue es eficientemente amigable**: Útil sin invasivo, proactivo con límites
+
+### Core Principles
+1. **Eficientemente Amigable**: 1-2 líneas confirmaciones, 3-4 explicaciones, < 2s respuesta
+2. **Proactivo con Límites**: Max 4 msg proactivos/día, mín 4h entre mensajes, NO spam
+3. **Colombianamente Natural**: "parce" (amigos), "tinto" (café), "lucas" (miles COP)
+
+### Always Do
+- ✅ Confirmar acciones con "✅ Listo!"
+- ✅ Usar lenguaje colombiano natural (no forzar)
+- ✅ Preguntar una cosa a la vez (progressive disclosure)
+- ✅ Formatear fechas en español ("lun 4 nov, 3:00 PM")
+- ✅ Responder < 2 segundos
+
+### Never Do
+- ❌ Enviar múltiples mensajes seguidos (spam)
+- ❌ Usar "hermano", "mi llave", "bro" (muy informal)
+- ❌ Ofrecer ayuda no solicitada < 30 min última interacción
+- ❌ Explicar demás cuando no necesario
+
+### Feature Priority
+- 🟢 **Core** (< 2 semanas): Recordatorios ✅, Expenses (1h), Voice, Documents, Daily Briefings
+- 🟡 **Secondary** (4-8 semanas): Calendar, Smart Lists, Location-based
+- 🔴 **Not Viable**: Real-time push, Payments, Complex forms, Project management
+
+**Full Guide**: See [docs/migue-ai-personality-guide.md](./docs/migue-ai-personality-guide.md) | [AGENTS.md](./AGENTS.md)
+
+---
+
 ## Development Rules
+
+### ⚠️ MANDATORY EXECUTION RULES (CRITICAL)
+
+**ONE TASK AT A TIME - NO EXCEPTIONS**:
+- Execute ONLY the explicit task requested by the user
+- NEVER propose next steps without explicit approval
+- NEVER implement features ahead of the roadmap
+- STOP after completing the requested task
+- WAIT for user approval before proceeding to next phase
+
+**ROADMAP ADHERENCE**:
+- Follow `.claude/phases/project-realignment-report.md` strictly
+- Each FASE requires explicit user approval BEFORE implementation
+- "Pending approval" means STOP and WAIT
+- Document says "Next: Awaiting user approval" → DO NOT PROCEED
+
+**VIOLATION CONSEQUENCES**:
+- Implementing without approval = Critical failure
+- Proposing next steps without request = Overstepping
+- Modifying code beyond request = Unauthorized changes
+
+**CORRECT WORKFLOW**:
+1. User requests Task X
+2. Execute ONLY Task X
+3. Report completion
+4. STOP and WAIT for next instruction
+
+**INCORRECT WORKFLOW** ❌:
+1. User requests Task X
+2. Execute Task X
+3. ❌ Propose Task Y, Z (NOT REQUESTED)
+4. ❌ Implement Task Y because "it's next in roadmap"
+
+**EXAMPLE VIOLATION**:
+```
+User: "Translate these 2 documents"
+❌ WRONG: Translate + Implement FASE 2 without authorization
+✅ RIGHT: Translate documents → Report → STOP and WAIT
+```
+
+---
 
 ### MANDATORY Standards
 - **Read Files First**: ALWAYS read complete files before edits
@@ -351,8 +422,7 @@ find /Users/mercadeo/neero/migue.ai/docs -name "*keyword*.md"
 │   ├── ai/providers/
 │   │   ├── gemini/                     # 8 files - API, caching, tools, cost
 │   │   ├── claude/                     # Claude Sonnet fallback
-│   │   ├── openai/                     # GPT-4o-mini fallback
-│   │   └── groq/                       # Audio transcription
+│   │   └── openai/                     # GPT-4o-mini fallback + audio transcription
 │   ├── supabase/                       # 12 files - schema, RLS, pgvector
 │   ├── vercel/                         # 8 files - Edge, deployment, security
 │   └── whatsapp/                       # 10 files - API v23, Flows, pricing
@@ -416,7 +486,7 @@ Claude: *Uses GitHub MCP to search public repos*
 - **[docs/reference/](./docs/reference/)** - API documentation (WhatsApp, Supabase, Edge Runtime)
 - **[docs/platforms/whatsapp/](./docs/platforms/whatsapp/)** - WhatsApp API integration
 - **[docs/platforms/vercel/](./docs/platforms/vercel/)** - Vercel deployment guides
-- **[docs/platforms/ai/](./docs/platforms/ai/)** - Multi-provider AI (Gemini, OpenAI, Claude, Groq)
+- **[docs/platforms/ai/](./docs/platforms/ai/)** - Multi-provider AI (Gemini, OpenAI, Claude)
 - **[docs/platforms/supabase/](./docs/platforms/supabase/)** - PostgreSQL database & backend
 - **[docs/project/](./docs/project/)** - PRD, roadmap, planning
 
@@ -434,15 +504,14 @@ Claude: *Uses GitHub MCP to search public repos*
 **AI Providers** (100% chat savings - FREE tier):
 - Primary: Gemini 2.5 Flash ($0 - FREE within 1,500 req/day, 1M context)
 - Fallback #1: OpenAI GPT-4o-mini ($0.15/$0.60 per 1M tokens)
-- Audio: Groq Whisper (93% cheaper than OpenAI)
+- Audio: OpenAI Whisper ($0.36/hour - transcription)
 - OCR: Tesseract (100% free) or Gemini Vision (multi-modal, FREE)
 - Emergency: Claude Sonnet 4.5 (backwards compatibility)
 **Savings**: $90/month → $0/month (100% reduction within free tier)
 
 **AI SDKs** (Edge Runtime Compatible):
 - ✅ `@google/generative-ai` v0.21.0 - Primary chat (Gemini 2.5 Flash)
-- ✅ `openai` v5.23.1 - Fallback chat (GPT-4o-mini)
-- ✅ `groq-sdk` v0.33.0 - Audio transcription
+- ✅ `openai` v5.23.1 - Fallback chat (GPT-4o-mini) + Audio transcription (Whisper)
 - ✅ `tesseract.js` v6.0.1 - Free OCR
 - ✅ `@anthropic-ai/sdk` v0.65.0 - Emergency fallback (Claude Sonnet)
 - ❌ `@anthropic-ai/claude-agent-sdk` - NOT compatible (requires Node.js fs/child_process)
@@ -505,7 +574,7 @@ Claude: *Uses GitHub MCP to search public repos*
   - Annual savings: ~$2,520/year
 - ✅ **Maintained Features**:
   - Full function calling support (create_reminder, schedule_meeting, track_expense)
-  - Audio: Groq Whisper (no change)
+  - Audio: OpenAI Whisper (transcription)
   - OCR: Tesseract (no change)
   - Spanish language support
   - All 239 unit tests passing
@@ -626,7 +695,7 @@ Claude: *Uses GitHub MCP to search public repos*
 ### 2025-10-05 - Multi-Provider AI System ⚡
 - ✅ **76% Cost Reduction**:
   - Claude Sonnet 4.5: Primary chat ($3/$15 vs $15/$60)
-  - Groq Whisper: Audio transcription ($0.05/hr vs $0.36/hr)
+  - OpenAI Whisper: Audio transcription ($0.36/hr)
   - Tesseract: Free OCR (vs $0.002/image)
   - OpenAI: Fallback only
 - ✅ **Specialized AI Agents**:
@@ -635,7 +704,7 @@ Claude: *Uses GitHub MCP to search public repos*
   - FinanceAgent: Proactive expense tracking
 - ✅ **Edge-Compatible SDKs**:
   - @anthropic-ai/sdk: v0.65.0 (Messages API)
-  - groq-sdk: v0.33.0 (Audio transcription)
+  - openai: v5.23.1 (Audio transcription)
   - tesseract.js: v6.0.1 (OCR)
   - @modelcontextprotocol/sdk: v1.19.1 (MCP integration)
 - ✅ Webhook updated to use V2 AI processing

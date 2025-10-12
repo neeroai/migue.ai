@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from './supabase'
+import { logger } from './logger'
 
 export type CalendarProvider = 'google'
 
@@ -29,15 +30,16 @@ export async function fetchCalendarCredential(
   provider: CalendarProvider = 'google'
 ): Promise<CalendarCredentialRecord | null> {
   const supabase = getSupabaseServerClient()
-  // @ts-ignore - calendar_credentials table exists but types not yet regenerated
-  const { data, error } = await (supabase.from('calendar_credentials') as any)
+
+  // @ts-expect-error - calendar_credentials table not yet in production (migration pending)
+  const { data, error } = await supabase.from('calendar_credentials')
     .select('id, user_id, provider, refresh_token, access_token, access_token_expires_at, scope')
     .eq('user_id', userId)
     .eq('provider', provider)
     .limit(1)
     .maybeSingle()
   if (error) throw error
-  return (data as CalendarCredentialRecord) ?? null
+  return (data as any as CalendarCredentialRecord) ?? null
 }
 
 export async function updateAccessToken(
@@ -52,17 +54,25 @@ export async function updateAccessToken(
     access_token_expires_at: expiresAt,
   }
   if (scope) payload.scope = scope
-  // @ts-ignore - calendar_credentials table exists but types not yet regenerated
-  const { error } = await (supabase.from('calendar_credentials') as any)
+
+  // @ts-expect-error - calendar_credentials table not yet in production (migration pending)
+  const { error } = await supabase.from('calendar_credentials')
     .update(payload)
     .eq('id', credentialId)
-  if (error) throw error
+
+  if (error) {
+    logger.error('[CalendarStore] Failed to update access token', error, {
+      metadata: { credentialId },
+    })
+    throw error
+  }
 }
 
 export async function recordCalendarEvent(input: CalendarEventRecordInput): Promise<void> {
   const supabase = getSupabaseServerClient()
-  // @ts-ignore - calendar_events table exists but types not yet regenerated
-  const { error } = await (supabase.from('calendar_events') as any).upsert(
+
+  // @ts-expect-error - calendar_events table not yet in production (migration pending)
+  const { error } = await supabase.from('calendar_events').upsert(
     {
       user_id: input.userId,
       provider: input.provider,

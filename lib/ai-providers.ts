@@ -1,24 +1,23 @@
 /**
  * Multi-Provider AI System
- * Intelligent selection between Gemini, OpenAI, Groq, and Claude based on cost/quality
+ * Intelligent selection between Gemini, OpenAI, and Claude based on cost/quality
  *
  * Cost optimization:
  * - Gemini 2.5 Flash: FREE (1,500 req/day free tier) - PRIMARY
  * - OpenAI GPT-4o-mini: $0.15/$0.60 per 1M tokens (Fallback #1)
- * - Groq Whisper: $0.05/hour (93% cheaper than OpenAI Whisper)
+ * - OpenAI Whisper: $0.36/hour (Audio transcription)
  * - Tesseract OCR: Free (100% savings vs GPT-4 Vision)
  * - Claude Sonnet: $3/$15 per 1M tokens (Emergency fallback)
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import Groq from 'groq-sdk'
 import { getOpenAIClient } from './openai'
 import { getGeminiClient, canUseFreeTier } from './gemini-client'
 import { logger } from './logger'
 
 export type TaskType = 'chat' | 'transcription' | 'ocr' | 'long_task' | 'streaming'
 
-export type ProviderName = 'claude' | 'groq' | 'openai' | 'tesseract' | 'gemini'
+export type ProviderName = 'claude' | 'openai' | 'tesseract' | 'gemini'
 
 /**
  * Cost limits and budgets
@@ -39,7 +38,6 @@ export const PROVIDER_COSTS = {
     claude: 0.0003,    // Emergency fallback
   },
   transcription: {
-    groq: 0.0008,      // $0.05/hour ≈ $0.0008/minute
     openai: 0.006,     // $0.006/minute (Whisper)
   },
   ocr: {
@@ -56,18 +54,13 @@ export const PROVIDER_COSTS = {
  */
 export class AIProviderManager {
   private anthropic: Anthropic
-  private groq: Groq
   private dailySpent: number = 0
 
   constructor() {
     const anthropicKey = process.env.ANTHROPIC_API_KEY
-    const groqKey = process.env.GROQ_API_KEY
 
     if (!anthropicKey) {
       logger.warn('ANTHROPIC_API_KEY not set - Claude unavailable, will use OpenAI fallback')
-    }
-    if (!groqKey) {
-      logger.warn('GROQ_API_KEY not set - Groq transcription unavailable, will use OpenAI Whisper')
     }
 
     // Only initialize clients if API keys are provided
@@ -75,16 +68,26 @@ export class AIProviderManager {
     this.anthropic = new Anthropic({
       apiKey: anthropicKey || 'sk-ant-missing',
     })
-
-    this.groq = new Groq({
-      apiKey: groqKey || 'gsk-missing',
-    })
   }
 
   /**
    * Select best provider for task considering budget
+   * @returns Provider name or null if emergency stop is enabled
    */
-  async selectProvider(task: TaskType): Promise<ProviderName> {
+  async selectProvider(task: TaskType): Promise<ProviderName | null> {
+    // CRITICAL FIX (2025-10-11): Emergency kill switch for cost control
+    // Set AI_EMERGENCY_STOP=true in Vercel Dashboard to disable all AI processing
+    if (process.env.AI_EMERGENCY_STOP === 'true') {
+      logger.warn('[emergency] AI processing disabled via kill switch', {
+        metadata: {
+          task,
+          envVariable: 'AI_EMERGENCY_STOP=true',
+          action: 'All AI requests blocked'
+        }
+      })
+      return null
+    }
+
     const remainingBudget = COST_LIMITS.dailyMax - this.dailySpent
 
     // Check if Gemini free tier is available
@@ -101,7 +104,7 @@ export class AIProviderManager {
           if (geminiAvailable) return 'gemini' // FREE
           return 'openai' // Fallback
         case 'transcription':
-          return 'groq' // Cheapest audio
+          return 'openai' // OpenAI Whisper
         case 'ocr':
           if (geminiAvailable) return 'gemini' // FREE with multi-modal
           return 'tesseract' // Free OCR
@@ -122,7 +125,7 @@ export class AIProviderManager {
         return 'openai' // GPT-4o-mini fallback
 
       case 'transcription':
-        return 'groq' // 93% cheaper than OpenAI
+        return 'openai' // OpenAI Whisper
 
       case 'ocr':
         if (geminiAvailable) return 'gemini' // FREE multi-modal
@@ -143,17 +146,6 @@ export class AIProviderManager {
       throw new Error('ANTHROPIC_API_KEY not set - cannot use Claude')
     }
     return this.anthropic
-  }
-
-  /**
-   * Get Groq client
-   * @throws Error if GROQ_API_KEY is not set
-   */
-  getGroq(): Groq {
-    if (!process.env.GROQ_API_KEY) {
-      throw new Error('GROQ_API_KEY not set - cannot use Groq')
-    }
-    return this.groq
   }
 
   /**

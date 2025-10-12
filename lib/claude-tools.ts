@@ -184,6 +184,22 @@ export async function executeScheduleMeeting(input: unknown): Promise<string> {
 }
 
 /**
+ * Valid expense categories (must match database CHECK constraint)
+ * From migration 011_add_expenses_table.sql
+ */
+export const VALID_EXPENSE_CATEGORIES = [
+  'Alimentación',
+  'Transporte',
+  'Entretenimiento',
+  'Salud',
+  'Servicios',
+  'Compras',
+  'Educación',
+  'Hogar',
+  'Otros'
+] as const;
+
+/**
  * Tool: Track Expense
  * Automatically tracks expenses when user mentions spending money
  */
@@ -197,13 +213,11 @@ Use this tool IMMEDIATELY when user says:
 - "compré..." / "cuesta..."
 - "salió..." / "costó..."
 
-This tool SAVES the expense to the database. Confirm: "✅ Listo! Registré tu gasto..."
-
-Note: Currently in development - if tool returns pending message, acknowledge to user that expense tracking is being set up.
+This tool SAVES the expense to the database automatically. After calling, confirm to user: "✅ Listo! Registré tu gasto..."
 
 Examples:
-- User: "gasté $500 en el super" → Use this tool with amount=500, category="Alimentación"
-- User: "pagué 200 pesos de uber" → Use this tool with amount=200, category="Transporte"`,
+- User: "gasté $500 en el super" → Use this tool with amount=500, category="Alimentación", currency="COP"
+- User: "pagué 200 pesos de uber" → Use this tool with amount=200, category="Transporte", currency="COP"`,
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -217,11 +231,11 @@ Examples:
       },
       currency: {
         type: 'string' as const,
-        description: 'Moneda (MXN, USD, COP)',
+        description: 'Moneda (MXN, USD, COP, EUR)',
       },
       category: {
         type: 'string' as const,
-        description: 'Categoría del gasto (Alimentación, Transporte, Entretenimiento, Salud, Servicios, Compras, Otros)',
+        description: 'Categoría del gasto (Alimentación, Transporte, Entretenimiento, Salud, Servicios, Compras, Educación, Hogar, Otros)',
       },
       description: {
         type: 'string' as const,
@@ -234,28 +248,56 @@ Examples:
 
 const TrackExpenseInputSchema = z.object({
   userId: z.string(),
-  amount: z.number(),
-  currency: z.string(),
-  category: z.string(),
+  amount: z.number().positive(),
+  currency: z.enum(['COP', 'USD', 'MXN', 'EUR']),
+  category: z.enum(VALID_EXPENSE_CATEGORIES),
   description: z.string(),
 })
 
 export async function executeTrackExpense(input: unknown): Promise<string> {
   try {
     const validated = TrackExpenseInputSchema.parse(input)
+    const supabase = getSupabaseServerClient()
 
-    // TODO: Create 'expenses' table in Supabase
-    // Temporarily return success message without DB persistence
-    logger.info('[trackExpenseTool] Expense tracked (in-memory only - pending DB table)', {
+    // Insert expense into database
+    // Note: expense_date uses CURRENT_DATE default from database
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert({
+        user_id: validated.userId,
+        amount: validated.amount,
+        currency: validated.currency,
+        category: validated.category,
+        description: validated.description,
+        // expense_date omitted - uses DEFAULT CURRENT_DATE from database
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      logger.error('[trackExpenseTool] Failed to persist expense to database', error, {
+        metadata: {
+          userId: validated.userId,
+          amount: validated.amount,
+          category: validated.category,
+          errorCode: error.code,
+          errorMessage: error.message,
+        },
+      })
+      throw new Error(`Error guardando gasto en la base de datos: ${error.message}`)
+    }
+
+    logger.info('[trackExpenseTool] Expense persisted successfully', {
       metadata: {
+        expenseId: data.id,
         userId: validated.userId,
         amount: validated.amount,
+        currency: validated.currency,
         category: validated.category,
       },
     })
 
-    return `💰 Gasto registrado: ${validated.currency} ${validated.amount} en ${validated.category}
-⚠️ Nota: El seguimiento de gastos está en desarrollo`
+    return `✅ Listo! Registré tu gasto de ${validated.currency} ${validated.amount.toLocaleString('es-CO')} en ${validated.category}`
   } catch (error: any) {
     logger.error('[trackExpenseTool] Failed to track expense', error, {
       metadata: { input },

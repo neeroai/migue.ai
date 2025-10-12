@@ -66,12 +66,11 @@
 **Cost Savings**: 100% reduction with Gemini FREE tier
 
 **Completed**:
-- [x] Gemini 2.5 Flash for primary chat (FREE - 1,500 req/day)
-- [x] GPT-4o-mini as fallback #1 (when free tier exceeded)
-- [x] Claude Sonnet 4.5 as emergency fallback
-- [x] Groq Whisper for audio transcription (93% cheaper)
-- [x] Tesseract for free OCR
-- [x] Context caching (75% additional savings if exceeding free tier)
+- [x] Gemini 2.5 Flash for primary chat
+- [x] GPT-4o-mini as emergency fallback
+- [no] Claude Sonnet 4.5 as emergency fallback -> Claude Sonnet es muy caro para este proyecto
+- [no] Groq Whisper for audio transcription (93% cheaper)
+- [no] Tesseract for free OCR -> vamos a hacerlo con Gemini
 - [x] Free tier tracking with buffer (1,400/1,500 requests)
 - [x] Cost tracking and budget management
 - [x] Specialized AI agents (GeminiProactive, ProactiveAgent, Scheduling, Finance)
@@ -83,12 +82,12 @@
 **Impact**: Revolutionary UX improvement
 
 **Completed**:
-- [x] ProactiveAgent executes actions automatically
-- [x] No manual confirmation needed
-- [x] createReminder() integration
-- [x] scheduleMeetingFromIntent() integration
-- [x] Confirmation responses ("Ya lo guardé")
-- [x] Tests for autonomous execution
+- [ ] ProactiveAgent executes actions automatically
+- [ ] No manual confirmation needed
+- [ ] createReminder() integration
+- [ ] scheduleMeetingFromIntent() integration
+- [ ] Confirmation responses ("Ya lo guardé")
+- [ ] Tests for autonomous execution
 
 ---
 
@@ -97,12 +96,12 @@
 **Reliability**: Production-ready
 
 **Completed**:
-- [x] Retry logic with exponential backoff
-- [x] Duplicate detection (DB + code)
-- [x] Transient error classification
-- [x] Enhanced logging with metadata
-- [x] 13 new tests for persist failures
-- [x] User notification on failures
+- [ ] Retry logic with exponential backoff
+- [ ] Duplicate detection (DB + code)
+- [ ] Transient error classification
+- [ ] Enhanced logging with metadata
+- [ ] 13 new tests for persist failures
+- [ ] User notification on failures
 
 ---
 
@@ -111,12 +110,12 @@
 **Scheduled**: 9am and 6pm daily
 
 **Completed**:
-- [x] Context-aware messaging
-- [x] Conversation history integration
-- [x] User activity detection (< 30 min)
-- [x] ProactiveAgent message generation
-- [x] Cron schedule optimization
-- [x] Follow-up payload with context
+- [ ] Context-aware messaging
+- [ ] Conversation history integration
+- [ ] User activity detection (< 30 min)
+- [ ] ProactiveAgent message generation
+- [ ] Cron schedule optimization
+- [ ] Follow-up payload with context
 
 ---
 
@@ -125,11 +124,11 @@
 **Cost Savings**: 93% cheaper than OpenAI Whisper
 
 **Completed**:
-- [x] Groq Whisper API integration (93% cheaper)
-- [x] WhatsApp audio download from Media API
-- [x] Audio transcription processing pipeline
-- [x] Error handling for unsupported formats
-- [x] Integration with AI processing pipeline
+- [no] Groq Whisper API integration (93% cheaper) -> reemplazar por Gemini
+- [ ] WhatsApp audio download from Media API
+- [ ] Audio transcription processing pipeline
+- [ ] Error handling for unsupported formats
+- [ ] Integration with AI processing pipeline
 
 **Files**:
 - `lib/groq-client.ts` - Complete implementation
@@ -187,9 +186,9 @@
 **Estimated**: 1 hour
 
 **Tasks**:
-- [x] Reminder creation & storage
-- [x] Cron job for daily reminders (9 AM UTC)
-- [x] Natural language date parsing
+- [ ] Reminder creation & storage
+- [ ] Cron job for daily reminders (9 AM UTC)
+- [ ] Natural language date parsing
 - [ ] Google Calendar API integration
 - [ ] Timezone handling improvements
 - [ ] Recurring reminders support
@@ -344,8 +343,8 @@
 ## Success Metrics
 
 ### Phase 2 Completion Criteria
-- [x] 100% test coverage maintained (225 tests + 90 Gemini tests)
-- [x] Multi-provider AI system active (100% chat savings - FREE tier)
+- [ ] 100% test coverage maintained (225 tests + 90 Gemini tests)
+- [ ] Multi-provider AI system active (100% chat savings - FREE tier)
 - [x] Gemini 2.5 Flash integration complete (FREE tier)
 - [x] Autonomous AI actions implemented
 - [x] Error recovery system production-ready
@@ -390,13 +389,13 @@ Fase 2       Fase 3       Fase 4       Scale
 
 1. ✅ Create `.claude/` structure
 2. ✅ Create `ROADMAP.md`
-3. ✅ Multi-provider AI system (100% chat savings - FREE tier)
-4. ✅ Gemini 2.5 Flash integration complete
-5. ✅ Autonomous AI actions
+3. [ ] Multi-provider AI system (100% chat savings - FREE tier)
+4. [ ] Gemini 2.5 Flash integration complete
+5. [ ] Autonomous AI actions
 6. ✅ Error recovery system
-7. ✅ Intelligent follow-ups
+7. [ ] Intelligent follow-ups
 8. ✅ 329 tests passing (225 unit + 90 Gemini + 14 tools)
-9. ✅ Audio transcription complete (Groq Whisper)
+9. [ ] Audio transcription complete (Gemini)
 10. ✅ Code cleanup (deleted 475 LOC obsolete code)
 11. [ ] Implement streaming responses (3h)
 12. [ ] Rebuild RAG implementation (8h)

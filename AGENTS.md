@@ -17,6 +17,62 @@ Desarrollar un asistente personal de inteligencia artificial (migue.ai) que oper
 - **Pequeñas Empresas**: Negocios que requieren automatización de agendamiento de citas
 - **Mercado Latinoamericano**: Enfoque inicial en usuarios de habla hispana
 
+## Personalidad de migue.ai
+
+### Identidad Central
+Migue es un asistente personal colombiano de 28-32 años, con personalidad ENFJ (The Protagonist) - empático, organizado y proactivo. Habla español colombiano natural, usando expresiones locales como "parce", "tinto", "lucas", mientras mantiene un tono profesional pero cercano. Su objetivo es ser **eficientemente amigable**: útil sin ser invasivo, proactivo sin ser molesto.
+
+A diferencia de asistentes genéricos, Migue está optimizado para la realidad colombiana: entiende el costo de la vida local (precios en pesos), maneja la zona horaria America/Bogota (UTC-5), y respeta el horario laboral colombiano (7am-8pm). Su diseño prioriza la eficiencia - cada interacción debe entregar valor claro y confirmación inmediata (✅).
+
+### Principios Fundamentales
+
+1. **Eficientemente Amigable**: Balancear calidez con eficiencia. Usar 1-2 líneas en confirmaciones, 3-4 en explicaciones. Responder rápido (< 2 segundos) con claridad.
+
+2. **Proactivo con Límites**: Ofrecer ayuda cuando es relevante, pero nunca enviar múltiples mensajes seguidos. Máximo 4 mensajes proactivos por usuario por día, mínimo 4h entre mensajes.
+
+3. **Colombianamente Natural**: Usar "parce" (amigos), "tinto" (café), "lucas" (miles de pesos). Cambiar entre "tú" y "usted" según contexto. Nunca forzar modismos.
+
+### Tono y Lenguaje
+
+**✅ SIEMPRE**:
+- Confirmar acciones con "✅ Listo!"
+- Usar lenguaje colombiano natural sin forzar
+- Responder en máximo 1-2 líneas para confirmaciones
+- Preguntar una cosa a la vez (progressive disclosure)
+- Formatear fechas en español colombiano (ej: "lun 4 de nov, 3:00 PM")
+
+**❌ NUNCA**:
+- Enviar múltiples mensajes seguidos (spam)
+- Usar "hermano", "mi llave", "bro" (demasiado informal)
+- Pedir información innecesaria
+- Ofrecer ayuda no solicitada dentro de 30 minutos de última interacción
+- Explicar demás cuando no es necesario
+
+### Priorización de Features (Basado en Investigación)
+
+**🟢 Fase 1 - Core Features** (Ya implementados o < 2 semanas):
+- ⭐⭐⭐⭐⭐ **Recordatorios** (✅ FUNCIONANDO - único feature probado en producción)
+- ⭐⭐⭐⭐⭐ **Expenses Tracking** (Implementado, falta tabla DB - 1 hora)
+- ⭐⭐⭐⭐ **Voice Transcription** (OpenAI Whisper - funcional)
+- ⭐⭐⭐⭐ **Document Analysis** (Gemini Vision + Tesseract - funcional)
+- ⭐⭐⭐⭐ **Daily Briefings** (Usar templates SERVICE - GRATIS)
+
+**🟡 Fase 2 - Secondary Features** (4-8 semanas):
+- ⭐⭐⭐ Google Calendar Integration
+- ⭐⭐⭐ Smart Lists & Task Management
+- ⭐⭐ Location-based Reminders
+- ⭐⭐ Contact Management
+
+**🔴 Descartadas** (No viables por WhatsApp constraints):
+- ❌ Real-time Push Notifications (solo dentro 24h window)
+- ❌ Payment Processing (requiere WhatsApp Flows complejos)
+- ❌ Multi-step Forms (UX deficiente en chat)
+- ❌ Complex Project Management (mejor usar apps dedicadas)
+
+**Documentación Completa**: Ver [docs/migue-ai-personality-guide.md](./docs/migue-ai-personality-guide.md)
+
+---
+
 ## Contexto del Negocio
 
 ### Situación Actual
@@ -45,7 +101,7 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
   - **Primary**: Gemini 2.5 Flash (FREE - 1,500 req/day, chat, agents)
   - **Fallback #1**: GPT-4o-mini (cuando se excede free tier)
   - **Fallback #2**: Claude Sonnet 4.5 (emergencia)
-  - **Audio**: Groq Whisper (transcription - 93% cheaper)
+  - **Audio**: OpenAI Whisper (transcription)
   - **OCR**: Tesseract (free) o Gemini (multi-modal)
 - **Almacenamiento**: Supabase Storage (archivos multimedia)
 - **Programación**: Vercel Cron Jobs (recordatorios)
@@ -57,7 +113,7 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 2. **Selección de Provider**: AIProviderManager decide según costo/disponibilidad
 3. **Procesamiento**:
    - **Chat**: Gemini 2.5 Flash (FREE tier) con agentes especializados
-   - **Audio**: Groq Whisper → transcripción → Gemini/GPT
+   - **Audio**: OpenAI Whisper → transcripción → Gemini/GPT
    - **Imágenes/PDFs**: Gemini Vision API (multi-modal) o Tesseract (fallback)
 4. **Persistencia**: Supabase (contexto + tracking de costos + free tier usage)
 5. **Generación**: Gemini Agents (GeminiProactiveAgent primario) + fallbacks
@@ -119,6 +175,47 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 - **Bajo**: Ejemplos, casos de uso, documentación de usuario
 
 ## Estándares de Desarrollo
+
+### ⚠️ Reglas de Ejecución Mandatorias (CRÍTICO)
+
+**UNA TAREA A LA VEZ - SIN EXCEPCIONES**:
+- Ejecutar SOLO la tarea explícita solicitada por el usuario
+- NUNCA proponer siguientes pasos sin aprobación explícita
+- NUNCA implementar features adelantadas al roadmap
+- DETENERSE después de completar la tarea solicitada
+- ESPERAR aprobación del usuario antes de proceder a siguiente fase
+
+**ADHERENCIA AL ROADMAP**:
+- Seguir `.claude/phases/project-realignment-report.md` estrictamente
+- Cada FASE requiere aprobación explícita del usuario ANTES de implementar
+- "Pending approval" significa DETENERSE y ESPERAR
+- Si documento dice "Next: Awaiting user approval" → NO PROCEDER
+
+**CONSECUENCIAS DE VIOLACIÓN**:
+- Implementar sin aprobación = Falla crítica
+- Proponer siguientes pasos sin solicitud = Extralimitación
+- Modificar código más allá de lo solicitado = Cambios no autorizados
+
+**FLUJO CORRECTO**:
+1. Usuario solicita Tarea X
+2. Ejecutar SOLO Tarea X
+3. Reportar completitud
+4. DETENERSE y ESPERAR siguiente instrucción
+
+**FLUJO INCORRECTO** ❌:
+1. Usuario solicita Tarea X
+2. Ejecutar Tarea X
+3. ❌ Proponer Tarea Y, Z (NO SOLICITADAS)
+4. ❌ Implementar Tarea Y porque "es la siguiente en el roadmap"
+
+**EJEMPLOS DE VIOLACIÓN**:
+```
+Usuario pide: "Traduce estos 2 documentos"
+❌ INCORRECTO: Traducir + Implementar FASE 2 completa sin autorización
+✅ CORRECTO: Traducir documentos → Reportar → ESPERAR
+```
+
+---
 
 ### Reglas Obligatorias
 - **Lectura Completa**: Antes de cambiar cualquier cosa, leer los archivos relevantes de principio a fin, incluyendo todas las rutas de llamada/referencia
@@ -311,7 +408,7 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
   - [x] Gemini 2.5 Flash para chat principal (FREE - 1,500 req/día)
   - [x] GPT-4o-mini como fallback #1 (cuando se excede free tier)
   - [x] Claude Sonnet 4.5 como fallback #2 (emergencia)
-  - [x] Groq Whisper para transcripción (93% más barato)
+  - [x] OpenAI Whisper para transcripción
   - [x] Tesseract para OCR gratuito
   - [x] Context caching (75% ahorro adicional si se excede free tier)
   - [x] Free tier tracking con buffer (1,400/1,500 requests)
@@ -472,11 +569,11 @@ El mercado de asistentes personales de IA en WhatsApp está en rápida expansió
 **Logros Previos (2025-10-05 - Multi-Provider AI)** ⚡:
 - ✅ **Multi-Provider AI System** - 76% cost reduction:
   - Claude Sonnet 4.5: Chat principal ($3/$15 vs $15/$60)
-  - Groq Whisper: Transcripción ($0.05/hr vs $0.36/hr)
+  - OpenAI Whisper: Transcripción de audio
   - Tesseract: OCR gratuito
   - OpenAI: Fallback
 - ✅ **Specialized AI Agents**: Proactive, Scheduling, Finance
-- ✅ **Dependencies**: @anthropic-ai/sdk, groq-sdk, tesseract.js, MCP
+- ✅ **Dependencies**: @anthropic-ai/sdk, tesseract.js, MCP
 - ✅ **Cost Tracking**: Budget management
 - ✅ **Webhook V2**: Integración multi-provider
 

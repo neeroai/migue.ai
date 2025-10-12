@@ -1,21 +1,19 @@
 /**
- * OpenAI Client - FALLBACK ONLY
+ * OpenAI Client - Multi-purpose provider
  *
- * ⚠️ IMPORTANT: This module is maintained for fallback purposes only.
- * Primary AI provider: Claude Sonnet 4.5 (see ai-providers.ts)
- * Primary transcription: Groq Whisper (see groq-client.ts)
+ * Primary AI provider: Gemini 2.5 Flash (FREE tier - see gemini-client.ts)
+ * Fallback AI provider: GPT-4o-mini (see ai-providers.ts)
+ * Audio transcription: OpenAI Whisper
  * Primary OCR: Tesseract (see tesseract-ocr.ts)
  *
- * Cost comparison (per 1M tokens):
- * - Claude Sonnet 4.5: $3 input / $15 output (75% cheaper than GPT-4o)
- * - GPT-4o: $15 input / $60 output (FALLBACK ONLY)
+ * Cost comparison:
+ * - Chat: Gemini FREE → GPT-4o-mini $0.15/$0.60 per 1M tokens → Claude $3/$15 per 1M tokens
+ * - Audio: OpenAI Whisper $0.36/hour
  *
- * Only use OpenAI when:
- * - Claude SDK is unavailable
- * - Groq transcription fails
- * - Backwards compatibility required
- *
- * @deprecated Prefer Claude SDK for chat, Groq for audio, Tesseract for OCR
+ * OpenAI is used for:
+ * - Chat fallback when Gemini is unavailable or exceeds free tier
+ * - Audio transcription (primary and only provider)
+ * - Backwards compatibility
  */
 
 import OpenAI from 'openai'
@@ -147,8 +145,7 @@ async function toUploadable(
 
 /**
  * Transcribe audio using OpenAI Whisper
- *
- * @deprecated Use Groq Whisper via groq-client.ts (93% cheaper: $0.05/hr vs $0.36/hr)
+ * Primary audio transcription provider at $0.36/hour
  */
 export async function transcribeAudio(
   data: UploadableInput,
@@ -165,7 +162,7 @@ export async function transcribeAudio(
   const uploadable = await toUploadable(data, fileName, mimeType)
   const response = await client.audio.transcriptions.create({
     file: uploadable,
-    model: options?.model ?? 'gpt-4o-mini-transcribe',
+    model: options?.model ?? 'whisper-1',
     language: options?.language ?? 'es',
     response_format: 'text',
   })

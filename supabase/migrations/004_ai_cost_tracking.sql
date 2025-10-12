@@ -2,7 +2,7 @@
 -- Tracks all AI provider usage (Claude, Groq, OpenAI, Tesseract)
 CREATE TABLE IF NOT EXISTS ai_usage_tracking (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  provider TEXT NOT NULL CHECK (provider IN ('claude', 'groq', 'tesseract', 'openai', 'supabase')),
+  provider TEXT NOT NULL CHECK (provider IN ('claude', 'groq', 'tesseract', 'openai', 'supabase', 'gemini')),
   task_type TEXT NOT NULL CHECK (task_type IN ('chat', 'audio_transcription', 'ocr', 'embeddings', 'image_analysis')),
   model TEXT,
   tokens_input INT,
@@ -73,6 +73,7 @@ RETURNS TABLE (
   date DATE,
   total_cost DECIMAL,
   claude_cost DECIMAL,
+  gemini_cost DECIMAL,
   groq_cost DECIMAL,
   openai_cost DECIMAL,
   total_requests BIGINT
@@ -86,6 +87,7 @@ BEGIN
     DATE(created_at) AS date,
     SUM(cost_usd) AS total_cost,
     SUM(CASE WHEN provider = 'claude' THEN cost_usd ELSE 0 END) AS claude_cost,
+    SUM(CASE WHEN provider = 'gemini' THEN cost_usd ELSE 0 END) AS gemini_cost,
     SUM(CASE WHEN provider = 'groq' THEN cost_usd ELSE 0 END) AS groq_cost,
     SUM(CASE WHEN provider = 'openai' THEN cost_usd ELSE 0 END) AS openai_cost,
     COUNT(*) AS total_requests

@@ -14,8 +14,8 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   create type msg_type as enum (
-    'text','image','audio','video','document','location',
-    'interactive','button','contacts','system','unknown'
+    'text','image','audio','sticker','video','document','location',
+    'interactive','button','reaction','order','contacts','system','unknown'
   );
 exception when duplicate_object then null; end $$;
 do $$ begin
@@ -247,8 +247,8 @@ alter table public.messages_v2 add constraint chk_msg_content_or_media check (
 
 alter table public.messages_v2 drop constraint if exists chk_msg_requirements_by_type;
 alter table public.messages_v2 add constraint chk_msg_requirements_by_type check (
-  (type in ('text','location','interactive','button','contacts','system') and content is not null)
-  or (type in ('image','audio','video','document') and media_url is not null)
+  (type in ('text','location','interactive','button','reaction','order','contacts','system') and content is not null)
+  or (type in ('image','audio','sticker','video','document') and media_url is not null)
   or (type = 'unknown')
 );
 

@@ -92,8 +92,9 @@ export async function recordConversationAction(params: {
   payload?: Record<string, unknown> | null
 }) {
   const supabase = getSupabaseServerClient()
-  // @ts-ignore - conversation_actions table exists but types not yet regenerated
-  const { error } = await (supabase.from('conversation_actions') as any).insert({
+
+  // @ts-expect-error - conversation_actions table not yet in production (migration pending)
+  const { error } = await supabase.from('conversation_actions').insert({
     conversation_id: params.conversationId,
     user_id: params.userId,
     action_type: params.actionType,

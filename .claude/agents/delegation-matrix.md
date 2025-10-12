@@ -21,8 +21,10 @@
 
 | Task Category | Agent | Model | Rationale | Trigger Keywords |
 |--------------|-------|-------|-----------|-----------------|
+| **Full-Stack Development** | senior-dev | Opus | Complete feature implementation end-to-end, 360° platform orchestration, roadmap execution | "implement feature", "end-to-end", "full-stack", "integrate platforms", "follow roadmap", "complete phase" |
 | **Frontend Development** | frontend-developer | Sonnet | UI work is mostly routine | "React", "component", "UI", "CSS", "responsive" |
 | **Backend API** | backend-developer | Sonnet | CRUD operations standard | "API", "endpoint", "route", "database query" |
+| **Database Architecture** | database-architect | Opus | Complex architecture decisions, greenfield design | "database architecture", "schema design", "data modeling", "technology selection", "migration strategy", "sharding", "normalization" |
 | **Edge Functions** | edge-functions-expert | Sonnet | Edge Runtime patterns established | "edge function", "edge runtime", "vercel edge", "cold start", "bundle size" |
 | **WhatsApp Integration** | whatsapp-api-expert | Sonnet | WhatsApp API patterns well-documented | "whatsapp", "interactive message", "flows", "webhook", "media message" |
 | **TypeScript Architecture** | typescript-pro | Opus | Complex type systems need deep reasoning | "type safety", "generics", "architecture", "refactor" |
@@ -41,6 +43,35 @@
 ## Task-Specific Delegation
 
 ### Fase 2 Feature Development
+
+#### Full-Stack Feature Implementation
+**Agent**: `senior-dev` (Opus)
+**Reason**: Complex end-to-end implementation requiring 360° platform orchestration
+**Scope**:
+- Complete feature development (backend + frontend + database + tests)
+- Multi-platform integration (Next.js + Vercel + Supabase + WhatsApp + AI)
+- Roadmap-driven execution (strict phase adherence)
+- Personality-first implementation (Eficientemente Amigable, Proactivo con Límites, Colombianamente Natural)
+- Production deployment with monitoring
+
+**Use Cases**:
+- Implementing Fase 2/3/4 features as per roadmap
+- Features requiring all 5 platforms (e.g., Daily Briefings: Cron + WhatsApp + Supabase + AI)
+- Features needing architectural decisions aligned with roadmap
+- Complex integrations (e.g., Google Calendar OAuth + reminders + AI scheduling)
+
+**Delegation Command**:
+```
+/task senior-dev "Implement Daily Briefings feature (Fase 3) end-to-end: Create SERVICE template, aggregate reminders/meetings/expenses from Supabase, generate brief message with Gemini, schedule cron 7am Bogotá, write 10+ tests, validate personality consistency, deploy with monitoring."
+```
+
+**When NOT to use**:
+- Platform-specific optimization (use specialized agent: gemini-expert, whatsapp-api-expert, etc.)
+- Routine tasks (use general-purpose)
+- Research (use research-analyst)
+- Code review (use code-reviewer)
+
+---
 
 #### Audio Transcription
 **Agent**: `ai-engineer` (Opus)
@@ -233,18 +264,44 @@
 
 ---
 
-#### Database Schema Design
-**Agent**: `backend-developer` (Sonnet)
-**Reason**: Standard database design
+#### Database Architecture Design
+**Agent**: `database-architect` (Opus)
+**Reason**: Complex architecture decisions, technology selection, greenfield design
 **Scope**:
-- Table schema design
-- RLS policies
-- Indexes and performance
-- Migration scripts
+- Technology selection (SQL vs NoSQL, database choice)
+- Schema design from scratch
+- Normalization strategy (1NF-5NF)
+- Indexing strategy (B-tree, GIN, HNSW)
+- Sharding/partitioning design
+- Migration planning (zero-downtime strategies)
+- Multi-tenancy architecture
+- Scalability design (replication, caching)
+- Data consistency patterns (ACID, eventual consistency)
 
 **Delegation Command**:
 ```
-/task backend-developer "Design Supabase schema for RAG documents table with pgvector, RLS policies, and performance indexes."
+/task database-architect "Design database architecture for multi-tenant SaaS platform with pgvector semantic search, 100K users, and global distribution requirements."
+```
+
+**When to use database-architect vs supabase-expert:**
+- **database-architect**: Greenfield design, technology selection, major re-architecture
+- **supabase-expert**: Implementing/optimizing existing migue.ai Supabase database
+
+---
+
+#### Database Implementation
+**Agent**: `supabase-expert` (Sonnet)
+**Reason**: Implementation and optimization of existing migue.ai database
+**Scope**:
+- Query optimization
+- RLS policy tuning
+- Adding indexes to existing tables
+- Custom functions and triggers
+- pgvector semantic search implementation
+
+**Delegation Command**:
+```
+/task supabase-expert "Optimize RLS policies for messages_v2 table to reduce query latency from 200ms to <50ms."
 ```
 
 ---
@@ -319,6 +376,7 @@ graph TD
 
     B -->|UI/Frontend| C[frontend-developer<br/>Sonnet]
     B -->|API/Backend| D{Complex?}
+    B -->|Database| DB{Greenfield or Major Re-arch?}
     B -->|Edge Functions| E1[edge-functions-expert<br/>Sonnet]
     B -->|WhatsApp| W1[whatsapp-api-expert<br/>Sonnet]
     B -->|AI/ML| E[ai-engineer<br/>Opus]
@@ -329,6 +387,9 @@ graph TD
 
     D -->|No| J[backend-developer<br/>Sonnet]
     D -->|Yes| K[typescript-pro<br/>Opus]
+
+    DB -->|Yes: New Schema/<br/>Technology Selection| DBA[database-architect<br/>Opus]
+    DB -->|No: Existing Schema/<br/>Optimization| SBE[supabase-expert<br/>Sonnet]
 
     H -->|API| L[api-documenter<br/>Sonnet]
     H -->|General| M[general-purpose<br/>Sonnet]
@@ -349,11 +410,42 @@ graph TD
     U -->|Flows| X[Navigate/<br/>Data Exchange]
     U -->|Webhook| Y[5s Timeout/<br/>Deduplication]
     U -->|Media| Z[Audio/Image/<br/>Transcription]
+
+    DBA --> DBA1{Database Decision?}
+    DBA1 -->|Schema Design| DBA2[Normalization/<br/>Relationships]
+    DBA1 -->|Technology| DBA3[SQL/NoSQL/<br/>Selection]
+    DBA1 -->|Migration| DBA4[Zero-Downtime/<br/>Strategy]
+    DBA1 -->|Scalability| DBA5[Sharding/<br/>Replication]
 ```
 
 ---
 
 ## Agent Specializations
+
+### senior-dev (Opus)
+**Expertise**:
+- Full-stack feature implementation (backend + frontend + database + tests)
+- 360° platform orchestration (Next.js 15, Vercel Edge, Supabase, WhatsApp v23, Gemini 2.5 Flash)
+- Roadmap-driven development (strict phase-by-phase execution)
+- Personality-first implementation (Eficientemente Amigable, Proactivo con Límites, Colombianamente Natural)
+- Multi-platform integration (5 platforms working together)
+- Production deployment with monitoring and cost validation
+
+**Use For**:
+- Complete feature development (end-to-end)
+- Following roadmap phases (Fase 2, Fase 3, etc.)
+- Integrating multiple platforms in single feature
+- Features requiring all 5 platforms
+- Architectural decisions aligned with roadmap
+- Complex integrations (Google Calendar, payment systems, etc.)
+
+**Avoid For**:
+- Platform-specific optimizations (use specialized agent)
+- Routine tasks (use general-purpose)
+- Research or documentation (use research-analyst, api-documenter)
+- Code reviews (use code-reviewer)
+
+---
 
 ### ai-engineer (Opus)
 **Expertise**:
@@ -431,7 +523,7 @@ graph TD
 
 **Use For**:
 - REST API endpoints
-- Database schema design
+- Small database changes (add columns, simple tables)
 - Query optimization
 - Server middleware
 - Cron jobs
@@ -440,6 +532,38 @@ graph TD
 - Complex ML integration
 - Advanced architecture
 - UI development
+- Greenfield database design (use database-architect)
+
+---
+
+### database-architect (Opus)
+**Expertise**:
+- Database technology selection (SQL/NoSQL/TimeSeries)
+- Schema design from scratch (normalization, relationships)
+- Indexing strategy (B-tree, GIN, HNSW, partial, composite)
+- Scalability patterns (sharding, partitioning, replication)
+- Migration planning (zero-downtime, large-scale)
+- Multi-tenancy architecture
+- Data consistency models (ACID, BASE, eventual consistency)
+- Caching architecture (Redis, materialized views)
+- Security design (RLS, encryption, audit logging)
+- Compliance patterns (GDPR, HIPAA, PCI-DSS)
+
+**Use For**:
+- Designing database architecture from scratch
+- Choosing database technology for new project
+- Planning major re-architecture (monolith to microservices)
+- Designing sharding/partitioning strategy
+- Planning complex migrations
+- Multi-tenancy architecture decisions
+- Data modeling for new features
+- Schema design for greenfield projects
+
+**Avoid For**:
+- Optimizing existing queries (use supabase-expert)
+- Small schema changes (use backend-developer)
+- Application logic (use backend-developer)
+- Routine database operations
 
 ---
 
@@ -646,6 +770,8 @@ If agent fails or produces incorrect results:
 ### DO
 ✅ Use Sonnet for routine tasks (80% of work)
 ✅ Reserve Opus for complex/critical tasks (20% of work)
+✅ Use **database-architect** for greenfield database design and major re-architecture
+✅ Use **supabase-expert** for optimizing existing migue.ai Supabase database
 ✅ Provide clear context and constraints
 ✅ Checkpoint before major delegations
 ✅ Run independent tasks in parallel
@@ -653,6 +779,8 @@ If agent fails or produces incorrect results:
 
 ### DON'T
 ❌ Use Opus for simple tasks (waste of budget)
+❌ Use **database-architect** for small schema changes (use backend-developer or supabase-expert)
+❌ Use **backend-developer** for complex database architecture (use database-architect)
 ❌ Delegate without clear success criteria
 ❌ Run dependent tasks in parallel
 ❌ Skip checkpoints on critical changes

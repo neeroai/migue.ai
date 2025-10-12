@@ -1,11 +1,11 @@
 /**
  * AI Processing V2 - Multi-Provider System
- * Integrates Gemini, GPT-4o-mini, Groq, and Tesseract for 100% cost savings
+ * Integrates Gemini, GPT-4o-mini, and Tesseract for cost optimization
  *
  * Provider selection:
  * - Chat: Gemini 2.5 Flash (FREE - 1,500 req/day)
  * - Fallback: OpenAI GPT-4o-mini (96% cheaper than Claude)
- * - Audio: Groq Whisper (93% cheaper than OpenAI)
+ * - Audio: OpenAI Whisper ($0.36/hour)
  * - OCR: Tesseract (100% free) or Gemini (multi-modal)
  */
 
@@ -19,6 +19,7 @@ import {
 import {
   createProactiveAgent,
   type OpenAIMessage,
+  transcribeAudio,
 } from './openai'
 import {
   createGeminiProactiveAgent,
@@ -28,7 +29,6 @@ import {
   detectImageIssue,
 } from './gemini-client'
 import type { ChatMessage } from '../types/schemas'
-import { transcribeWithGroq, bufferToFile } from './groq-client'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
   sendWhatsAppText,
@@ -110,6 +110,8 @@ export async function processMessageWithAI(
 
   let typingManager
   let providerManager
+  let provider: string | null = null
+  let providersAttempted: Set<string> = new Set()
 
   try {
     // Initialize managers inside try-catch to prevent synchronous errors
@@ -136,7 +138,25 @@ export async function processMessageWithAI(
     const history = await getConversationHistory(conversationId, 15)
 
     // Select provider based on availability and cost
-    const provider = await providerManager.selectProvider('chat')
+    provider = await providerManager.selectProvider('chat')
+
+    // CRITICAL FIX (2025-10-11): Handle emergency kill switch
+    if (provider === null) {
+      logger.warn('[AI] Emergency kill switch enabled - AI disabled', {
+        conversationId,
+        userId,
+        metadata: { envVariable: 'AI_EMERGENCY_STOP=true' }
+      })
+
+      await reactWithWarning(userPhone, messageId)
+      await sendTextAndPersist(
+        conversationId,
+        userPhone,
+        'El sistema está temporalmente deshabilitado por mantenimiento. Por favor intenta más tarde.'
+      )
+      return
+    }
+
     logger.decision('Provider selection', `Selected ${provider} for chat`, {
       conversationId,
       userId,
@@ -144,6 +164,9 @@ export async function processMessageWithAI(
         provider,
       }
     })
+
+    // CRITICAL FIX (2025-10-11): Track providers attempted to prevent fallback loops
+    providersAttempted = new Set<string>([provider])
 
     let response: string
     let agentName: string
@@ -187,8 +210,16 @@ export async function processMessageWithAI(
     await sendTextAndPersist(conversationId, userPhone, response)
     await reactWithCheck(userPhone, messageId)
 
-    // Track cost
-    providerManager.trackSpending(cost, provider as any, 'chat')
+    // Track cost with type guard (Fix B: Prevent silent tracking failures)
+    if (provider && ['gemini', 'openai', 'claude', 'tesseract'].includes(provider)) {
+      providerManager.trackSpending(cost, provider as 'gemini' | 'openai' | 'claude' | 'tesseract', 'chat')
+    } else {
+      logger.warn('[cost] Unknown provider for tracking', {
+        conversationId,
+        userId,
+        metadata: { provider }
+      })
+    }
 
     logger.functionExit('processMessageWithAI', Date.now() - startTime, {
       agent: agentName,
@@ -218,32 +249,62 @@ export async function processMessageWithAI(
       ? 'El sistema está en mantenimiento temporalmente. Por favor intenta más tarde.'
       : 'Disculpa, tuve un problema al procesar tu mensaje. ¿Puedes intentar de nuevo?'
 
-    // Try fallback chain: Gemini → OpenAI → Error message
+    // CRITICAL FIX (2025-10-11): Fallback chain without loops
+    // Try providers NOT yet attempted to prevent infinite loops
     try {
-      logger.info('Attempting Gemini fallback', { conversationId, userId })
       const history = await getConversationHistory(conversationId, 10)
+      const fallbackProviders = ['gemini', 'openai'].filter(p => !providersAttempted.has(p))
 
-      // Try Gemini first if available
-      if (process.env.GOOGLE_AI_API_KEY) {
-        const chatHistory = historyToChatMessageArray(history)
-        const geminiAgent = createGeminiProactiveAgent()
-        const fallbackResponse = await geminiAgent.respond(userMessage, userId, chatHistory)
+      logger.info('Attempting fallback chain', {
+        conversationId,
+        userId,
+        metadata: {
+          primaryProvider: provider,
+          fallbackProviders,
+          alreadyAttempted: Array.from(providersAttempted)
+        }
+      })
 
-        await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
-        await reactWithCheck(userPhone, messageId) // Override warning with success
-        logger.info('Fallback to Gemini successful', { conversationId, userId })
-        return
+      // Try each fallback provider in order
+      for (const fallbackProvider of fallbackProviders) {
+        try {
+          if (fallbackProvider === 'gemini' && process.env.GOOGLE_AI_API_KEY) {
+            logger.info('Attempting Gemini fallback', { conversationId, userId })
+            const chatHistory = historyToChatMessageArray(history)
+            const geminiAgent = createGeminiProactiveAgent()
+            const fallbackResponse = await geminiAgent.respond(userMessage, userId, chatHistory)
+
+            await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
+            await reactWithCheck(userPhone, messageId) // Override warning with success
+            logger.info('Fallback to Gemini successful', { conversationId, userId })
+            return // Success - exit
+          } else if (fallbackProvider === 'openai') {
+            logger.info('Attempting OpenAI fallback', { conversationId, userId })
+            const openaiHistory = historyToOpenAIMessages(history)
+            const proactiveAgent = createProactiveAgent()
+            const fallbackResponse = await proactiveAgent.respond(userMessage, userId, openaiHistory)
+
+            await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
+            await reactWithCheck(userPhone, messageId) // Override warning with success
+            logger.info('Fallback to OpenAI successful', { conversationId, userId })
+            return // Success - exit
+          }
+        } catch (providerError: any) {
+          logger.error(`Fallback ${fallbackProvider} failed`, providerError, {
+            conversationId,
+            userId,
+            metadata: {
+              providerErrorType: providerError?.constructor?.name,
+              providerErrorMessage: providerError?.message,
+            }
+          })
+          // Continue to next fallback provider
+          continue
+        }
       }
 
-      // If Gemini not available or fails, try OpenAI
-      logger.info('Attempting OpenAI fallback', { conversationId, userId })
-      const openaiHistory = historyToOpenAIMessages(history)
-      const proactiveAgent = createProactiveAgent()
-      const fallbackResponse = await proactiveAgent.respond(userMessage, userId, openaiHistory)
-
-      await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
-      await reactWithCheck(userPhone, messageId) // Override warning with success
-      logger.info('Fallback to OpenAI successful', { conversationId, userId })
+      // All fallback providers failed or no fallbacks available
+      throw new Error('All providers failed')
     } catch (fallbackError: any) {
       logger.error('Fallback also failed', fallbackError, {
         conversationId,
@@ -266,7 +327,7 @@ export async function processMessageWithAI(
 }
 
 /**
- * Process audio with Groq (93% cheaper than OpenAI Whisper)
+ * Process audio with OpenAI Whisper
  */
 export async function processAudioMessage(
   conversationId: string,
@@ -321,17 +382,17 @@ export async function processAudioMessage(
       metadata: { bufferSize: audioBuffer.length },
     })
 
-    // Transcribe with Groq (93% cheaper!)
-    logger.debug('[Audio] Starting Groq transcription', {
+    // Transcribe with OpenAI Whisper
+    logger.debug('[Audio] Starting OpenAI Whisper transcription', {
       conversationId,
       userId,
     })
-    const audioFile = bufferToFile(audioBuffer, 'audio.ogg', 'audio/ogg')
-    const transcript = await transcribeWithGroq(audioFile, {
-      model: 'whisper-large-v3',
+    const transcript = await transcribeAudio(audioBuffer, {
       language: 'es',
+      mimeType: 'audio/ogg',
+      fileName: 'audio.ogg'
     })
-    logger.performance('Groq transcription', Date.now() - startTime, {
+    logger.performance('OpenAI Whisper transcription', Date.now() - startTime, {
       conversationId,
       userId,
       metadata: { transcriptLength: transcript.length },
@@ -351,22 +412,22 @@ export async function processAudioMessage(
       normalized.waMessageId
     )
 
-    // Track cost (Groq is way cheaper!)
+    // Track cost
     const durationMinutes = 1 // Assume 1 min average
     providerManager.trackSpending(
-      PROVIDER_COSTS.transcription.groq * durationMinutes,
-      'groq',
+      PROVIDER_COSTS.transcription.openai * durationMinutes,
+      'openai',
       'transcription'
     )
 
-    logger.info('Audio processed with Groq', {
+    logger.info('Audio processed with OpenAI Whisper', {
       metadata: {
         transcript: transcript.slice(0, 100),
-        savings: `$${(PROVIDER_COSTS.transcription.openai - PROVIDER_COSTS.transcription.groq).toFixed(4)}`,
+        cost: `$${(PROVIDER_COSTS.transcription.openai * durationMinutes).toFixed(4)}`,
       },
     })
   } catch (error: any) {
-    logger.error('Groq audio processing error', error, {
+    logger.error('OpenAI audio processing error', error, {
       conversationId,
       userId,
       metadata: {
@@ -375,7 +436,7 @@ export async function processAudioMessage(
       },
     })
 
-    // No fallback available - Groq is primary and only transcription provider
+    // Send error message to user
     if (normalized.from && normalized.waMessageId) {
       await reactWithWarning(normalized.from, normalized.waMessageId)
       await sendTextAndPersist(
@@ -518,6 +579,23 @@ Responde en español de forma clara y estructurada.`
     // Process extracted text with AI for comprehension
     const history = await getConversationHistory(conversationId, 5)
     const provider = await providerManager.selectProvider('chat')
+
+    // CRITICAL FIX (2025-10-11): Handle emergency kill switch
+    if (provider === null) {
+      logger.warn('[Document] Emergency kill switch enabled - AI disabled', {
+        conversationId,
+        userId,
+        metadata: { envVariable: 'AI_EMERGENCY_STOP=true' }
+      })
+
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      await sendTextAndPersist(
+        conversationId,
+        normalized.from,
+        'El sistema está temporalmente deshabilitado por mantenimiento. Por favor intenta más tarde.'
+      )
+      return
+    }
 
     let comprehension: string
 

@@ -115,9 +115,15 @@ export async function updateMessagingWindow(
     })
   } else {
     // Outbound message: just update timestamp, don't reset window
-    await supabase.from('messaging_windows').update({
+    const { error } = await supabase.from('messaging_windows').update({
       updated_at: now.toISOString(),
     }).eq('phone_number', phoneNumber)
+
+    if (error) {
+      logger.error('[MessagingWindow] Failed to update timestamp for outbound message', error, {
+        metadata: { phoneNumber: phoneNumber.slice(0, 8) + '***' },
+      })
+    }
   }
 }
 

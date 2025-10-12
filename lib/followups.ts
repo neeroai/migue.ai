@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from './supabase'
 import { getCurrentHour, COLOMBIA_TZ, BUSINESS_HOURS } from './messaging-windows'
+import { logger } from './logger'
 
 export type FollowUpCategory = 'schedule_confirm' | 'document_status' | 'reminder_check' | 'window_maintenance' | 'custom'
 
@@ -58,14 +59,26 @@ export async function scheduleFollowUp(params: {
     scheduledFor = adjustToBusinessHours(scheduledFor)
   }
 
-  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
-  await (supabase.from('follow_up_jobs') as any)
+  // Delete existing pending follow-ups for same conversation/category (prevent duplicates)
+  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
+  const { error: deleteError } = await supabase.from('follow_up_jobs')
     .delete()
     .eq('conversation_id', params.conversationId)
     .eq('category', params.category)
     .eq('status', 'pending')
-  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
-  const { error } = await (supabase.from('follow_up_jobs') as any).insert({
+
+  if (deleteError) {
+    logger.error('[Followups] Failed to delete existing pending jobs', deleteError, {
+      metadata: {
+        conversationId: params.conversationId,
+        category: params.category,
+      },
+    })
+    // Don't throw - continue with insert even if delete fails
+  }
+
+  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
+  const { error } = await supabase.from('follow_up_jobs').insert({
     user_id: params.userId,
     conversation_id: params.conversationId,
     category: params.category,
@@ -84,20 +97,22 @@ export async function fetchDueFollowUps(limit = 10): Promise<Array<{
 }>> {
   const supabase = getSupabaseServerClient()
   const nowIso = new Date().toISOString()
-  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
-  const { data, error } = await (supabase.from('follow_up_jobs') as any)
+
+  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
+  const { data, error } = await supabase.from('follow_up_jobs')
     .select('id, user_id, conversation_id, category, payload')
     .eq('status', 'pending')
     .lte('scheduled_for', nowIso)
     .limit(limit)
   if (error) throw error
-  return data ?? []
+  return (data as any) ?? []
 }
 
 export async function markFollowUpStatus(id: string, status: 'sent' | 'failed' | 'cancelled') {
   const supabase = getSupabaseServerClient()
-  // @ts-ignore - follow_up_jobs table exists but types not yet regenerated
-  const { error } = await (supabase.from('follow_up_jobs') as any)
+
+  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
+  const { error } = await supabase.from('follow_up_jobs')
     .update({ status })
     .eq('id', id)
   if (error) throw error

@@ -54,7 +54,7 @@ if (process.env.TEST_TYPE !== 'integration') {
   process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'test-google-client-id';
   process.env.GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'test-google-client-secret';
   process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'sk-ant-test-key';
-  process.env.GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_test-key';
+  process.env.GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIza-test-key';
 
   // Keep Supabase/Upstash mocks for unit tests
   if (!process.env.SUPABASE_URL) {

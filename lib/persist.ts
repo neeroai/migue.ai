@@ -124,6 +124,7 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
     const isDuplicate = error.code === '23505'; // PostgreSQL unique violation
     const isEnumViolation = error.code === '22P02'; // Invalid enum value
     const isConstraintViolation = error.code === '23514'; // Check constraint
+    const isRLSError = error.code === '42501'; // RLS permission denied
 
     const errorType = isDuplicate
       ? 'duplicate'
@@ -131,29 +132,59 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
       ? 'invalid_type'
       : isConstraintViolation
       ? 'constraint_violation'
+      : isRLSError
+      ? 'rls_denied'
       : 'critical';
 
-    logger.error(`[DB] Insert inbound message failed (${errorType})`, error, {
-      conversationId,
-      metadata: {
-        errorType,
-        errorCode: error.code,
-        errorMessage: error.message,
-        errorDetails: error.details,
-        errorHint: error.hint,
-        messageType: msg.type, // Original type from WhatsApp
-        validatedType: messageType, // Type after validation
-        payload: {
-          ...payload,
-          wa_message_id: payload.wa_message_id?.slice(0, 20) + '...', // Truncate for privacy
+    // Special handling for RLS errors (critical configuration issue)
+    if (isRLSError) {
+      logger.error('[DB] RLS POLICY DENIED WRITE - Check service role key configuration!', error, {
+        conversationId,
+        metadata: {
+          errorType: 'rls_denied',
+          errorCode: error.code,
+          errorMessage: error.message,
+          errorDetails: error.details,
+          errorHint: error.hint || 'Verify SUPABASE_KEY is service_role (not anon key)',
+          diagnostics: {
+            issue: 'Row Level Security policy is blocking database write',
+            possibleCauses: [
+              'SUPABASE_KEY environment variable is anon key instead of service_role key',
+              'Missing service role bypass policy in database',
+              'Migration 010_add_service_role_policies.sql not applied',
+            ],
+            fix: 'Apply migration 010_add_service_role_policies.sql and verify SUPABASE_KEY',
+          },
+          payload: {
+            ...payload,
+            wa_message_id: payload.wa_message_id?.slice(0, 20) + '...', // Truncate for privacy
+          },
         },
-      },
-    })
+      })
+    } else {
+      logger.error(`[DB] Insert inbound message failed (${errorType})`, error, {
+        conversationId,
+        metadata: {
+          errorType,
+          errorCode: error.code,
+          errorMessage: error.message,
+          errorDetails: error.details,
+          errorHint: error.hint,
+          messageType: msg.type, // Original type from WhatsApp
+          validatedType: messageType, // Type after validation
+          payload: {
+            ...payload,
+            wa_message_id: payload.wa_message_id?.slice(0, 20) + '...', // Truncate for privacy
+          },
+        },
+      })
+    }
 
     // Enhance error with classification for upstream handling
     const enhancedError = new Error(error.message);
     (enhancedError as any).code = error.code;
     (enhancedError as any).isDuplicate = isDuplicate;
+    (enhancedError as any).isRLSError = isRLSError;
     (enhancedError as any).originalError = error;
     throw enhancedError
   }

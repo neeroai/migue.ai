@@ -17,6 +17,8 @@ import { getSupabaseServerClient } from '../../../../lib/supabase';
 import { sendWhatsAppText, reactWithWarning } from '../../../../lib/whatsapp';
 import { retryWithBackoff, isDuplicateError, isTransientError } from '../../../../lib/error-recovery';
 import { updateMessagingWindow } from '../../../../lib/messaging-windows';
+// CRITICAL FIX (2025-10-11): Rate limiting to prevent spam/abuse
+import { checkRateLimit, getRateLimitWaitTime } from '../../../../lib/simple-rate-limiter';
 
 /**
  * Create JSON response helper
@@ -179,6 +181,41 @@ export async function POST(req: Request): Promise<Response> {
       metadata: { messageType: message.type, from: message.from },
     });
     const normalized = whatsAppMessageToNormalized(message);
+
+    // CRITICAL FIX (2025-10-11): Check rate limit BEFORE processing
+    // Prevents spam attacks and burst costs ($277 incident)
+    const isAllowed = checkRateLimit(normalized.from);
+    if (!isAllowed) {
+      const waitTime = getRateLimitWaitTime(normalized.from);
+      const waitSeconds = Math.ceil(waitTime / 1000);
+
+      logger.warn('[webhook] User rate limited - message rejected', {
+        requestId,
+        metadata: {
+          phoneNumber: normalized.from.slice(0, 8) + '***',
+          waitTimeMs: waitTime,
+          waitSeconds
+        }
+      });
+
+      // Send rate limit message to user (fire-and-forget, don't wait)
+      waitUntil(
+        sendWhatsAppText(
+          normalized.from,
+          `⚠️ Estás enviando mensajes muy rápido. Por favor espera ${waitSeconds} segundo${waitSeconds > 1 ? 's' : ''} e intenta de nuevo.`
+        ).catch((err) => {
+          logger.error('[webhook] Failed to send rate limit message', err, { requestId });
+        })
+      );
+
+      // Return success (don't trigger WhatsApp retries)
+      return jsonResponse({
+        success: false,
+        reason: 'rate_limited',
+        request_id: requestId,
+        retry_after_seconds: waitSeconds
+      }, 200);
+    }
 
     // ✅ RETURN 200 OK IMMEDIATELY (<100ms)
     // Fire-and-forget: Process in background using Vercel's waitUntil API
