@@ -18,49 +18,8 @@ async function verifyGeminiRLSFix() {
 
   const supabase = getSupabaseServerClient();
 
-  // Test 1: Check if policy exists
-  console.log('Test 1: Checking RLS policy...');
-  try {
-    const { data: policies, error: policyError } = await supabase
-      .from('pg_policies')
-      .select('policyname, cmd, roles, qual, with_check')
-      .eq('schemaname', 'public')
-      .eq('tablename', 'gemini_usage');
-
-    if (policyError) {
-      console.log(`  ❌ Failed to query policies: ${policyError.message}`);
-    } else if (!policies || policies.length === 0) {
-      console.log(`  ❌ No policies found for gemini_usage table`);
-      console.log(`  ⚠️  Migration 014 may not be applied yet`);
-    } else {
-      console.log(`  ✅ Found ${policies.length} policy(ies):`);
-      policies.forEach(p => {
-        console.log(`     - ${p.policyname}`);
-        console.log(`       Roles: ${JSON.stringify(p.roles)}`);
-        console.log(`       USING: ${p.qual}`);
-        console.log(`       WITH CHECK: ${p.with_check}`);
-      });
-
-      // Check if the correct policy exists
-      const correctPolicy = policies.find(
-        p => p.policyname === 'service_role_gemini_usage_all'
-      );
-
-      if (correctPolicy) {
-        console.log(`  ✅ Correct policy found: service_role_gemini_usage_all`);
-      } else {
-        console.log(`  ⚠️  Expected policy 'service_role_gemini_usage_all' not found`);
-        console.log(`  ℹ️  Found: ${policies.map(p => p.policyname).join(', ')}`);
-      }
-    }
-  } catch (error: any) {
-    console.log(`  ❌ Error checking policies: ${error.message}`);
-  }
-
-  console.log();
-
-  // Test 2: Check if table exists and is accessible
-  console.log('Test 2: Checking table accessibility...');
+  // Test 1: Check if table exists and is accessible
+  console.log('Test 1: Checking table accessibility...');
   try {
     const { data, error } = await supabase
       .from('gemini_usage')
@@ -89,8 +48,8 @@ async function verifyGeminiRLSFix() {
 
   console.log();
 
-  // Test 3: Test canUseFreeTier() function
-  console.log('Test 3: Testing canUseFreeTier() function...');
+  // Test 2: Test canUseFreeTier() function
+  console.log('Test 2: Testing canUseFreeTier() function...');
   try {
     const canUse = await canUseFreeTier();
     if (canUse) {
@@ -110,8 +69,8 @@ async function verifyGeminiRLSFix() {
 
   console.log();
 
-  // Test 4: Test INSERT/UPDATE permissions
-  console.log('Test 4: Testing write permissions...');
+  // Test 3: Test INSERT/UPDATE permissions
+  console.log('Test 3: Testing write permissions...');
   try {
     const testDate = new Date().toISOString().split('T')[0]!;
 
