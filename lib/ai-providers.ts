@@ -101,8 +101,11 @@ export class AIProviderManager {
         case 'chat':
         case 'streaming':
         case 'long_task':
-          if (geminiAvailable) return 'gemini' // FREE
-          return 'openai' // Fallback
+          // EMERGENCY FIX: Force OpenAI even in emergency mode
+          return 'openai' // Force OpenAI (Gemini disabled)
+          // Original code (commented out):
+          // if (geminiAvailable) return 'gemini' // FREE
+          // return 'openai' // Fallback
         case 'transcription':
           return 'openai' // OpenAI Whisper
         case 'ocr':
@@ -113,16 +116,22 @@ export class AIProviderManager {
       }
     }
 
-    // Normal mode: prioritize free options, then optimize by task
+    // EMERGENCY FIX (2025-10-16): Force OpenAI due to Gemini production issues
+    // TODO: Re-enable Gemini once production issue is resolved
     switch (task) {
       case 'chat':
       case 'streaming':
       case 'long_task':
-        if (geminiAvailable) {
-          logger.info('Using Gemini (FREE tier)')
-          return 'gemini'
-        }
-        return 'openai' // GPT-4o-mini fallback
+        // CRITICAL: Force OpenAI to fix bot immediately
+        logger.info('Emergency fix: Using OpenAI (Gemini disabled in production)')
+        return 'openai' // Force GPT-4o-mini
+
+        // Commented out until Gemini production issue is resolved:
+        // if (geminiAvailable) {
+        //   logger.info('Using Gemini (FREE tier)')
+        //   return 'gemini'
+        // }
+        // return 'openai' // GPT-4o-mini fallback
 
       case 'transcription':
         return 'openai' // OpenAI Whisper
@@ -132,8 +141,11 @@ export class AIProviderManager {
         return 'tesseract' // Free OCR fallback
 
       default:
-        if (geminiAvailable) return 'gemini'
+        // EMERGENCY FIX: Force OpenAI for all cases
         return 'openai'
+        // Original code (commented out):
+        // if (geminiAvailable) return 'gemini'
+        // return 'openai'
     }
   }
 
