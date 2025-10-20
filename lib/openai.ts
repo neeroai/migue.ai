@@ -1,23 +1,32 @@
 /**
- * OpenAI Client - Multi-purpose provider
+ * OpenAI Client - Primary AI Provider (Production-Ready)
  *
- * Primary AI provider: Gemini 2.5 Flash (FREE tier - see gemini-client.ts)
- * Fallback AI provider: GPT-4o-mini (see ai-providers.ts)
- * Audio transcription: OpenAI Whisper
- * Primary OCR: Tesseract (see tesseract-ocr.ts)
+ * Primary AI provider: OpenAI GPT-4o-mini ($0.15/$0.60 per 1M tokens)
+ * Fallback: Claude Sonnet 4.5 ($3/$15 per 1M tokens)
+ * Audio transcription: OpenAI Whisper ($0.36/hour)
+ * OCR: Tesseract (free)
  *
- * Cost comparison:
- * - Chat: Gemini FREE → GPT-4o-mini $0.15/$0.60 per 1M tokens → Claude $3/$15 per 1M tokens
- * - Audio: OpenAI Whisper $0.36/hour
+ * Features:
+ * - Singleton client pattern (optimized performance)
+ * - Response validation & usage tracking
+ * - Automatic cost calculation & monitoring
+ * - Typed error handling
+ * - Production-ready streaming
+ * - Anti-repetition parameters
  *
- * OpenAI is used for:
- * - Chat fallback when Gemini is unavailable or exceeds free tier
- * - Audio transcription (primary and only provider)
- * - Backwards compatibility
+ * Based on best practices from /docs-global/ai/openai
  */
 
 import OpenAI from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import { APIError, APIConnectionError } from 'openai/error'
+import {
+  validateChatResponse,
+  logResponse,
+  hasResponseError,
+  type ValidatedChatResponse,
+} from './openai-response-handler'
+import { trackUsage } from './openai-cost-tracker'
 
 let cachedClient: OpenAI | null = null
 
@@ -453,12 +462,14 @@ function hasExpenseKeywords(message: string): boolean {
 
 /**
  * ProactiveAgent con GPT-4o-mini (PRIMARY)
+ * Production-ready with response validation and cost tracking
  */
 export class ProactiveAgent {
   async respond(
     userMessage: string,
     userId: string,
-    conversationHistory: OpenAIMessage[]
+    conversationHistory: OpenAIMessage[],
+    context?: { conversationId?: string; messageId?: string }
   ): Promise<string> {
     const client = getOpenAIClient()
 
@@ -509,10 +520,52 @@ export class ProactiveAgent {
         presence_penalty: 0.2,     // Encourage topic diversity
       })
 
-      const choice = response.choices[0]
-      if (!choice) throw new Error('No response from GPT-4o-mini')
+      // ✅ NEW: Validate response structure
+      const validated = validateChatResponse(response)
 
-      const toolCalls = choice.message.tool_calls
+      // ✅ NEW: Track usage and cost
+      if (validated.metadata.usage && validated.metadata.cost) {
+        // Build context object with only defined properties (exactOptionalPropertyTypes)
+        const trackingContext: {
+          userId: string
+          conversationId?: string
+          messageId?: string
+        } = { userId }
+        if (context?.conversationId) trackingContext.conversationId = context.conversationId
+        if (context?.messageId) trackingContext.messageId = context.messageId
+
+        trackUsage(
+          validated.metadata.model,
+          validated.metadata.usage,
+          validated.metadata.cost,
+          trackingContext
+        )
+      }
+
+      // ✅ NEW: Log response with full metadata
+      const loggingContext: {
+        userId: string
+        conversationId?: string
+        messageId?: string
+      } = { userId }
+      if (context?.conversationId) loggingContext.conversationId = context.conversationId
+      if (context?.messageId) loggingContext.messageId = context.messageId
+
+      logResponse(validated, loggingContext)
+
+      // ✅ NEW: Check for response errors
+      const errorCheck = hasResponseError(validated)
+      if (errorCheck.hasError) {
+        logger.warn('[ProactiveAgent] Response error detected', {
+          metadata: {
+            errorType: errorCheck.errorType,
+            errorMessage: errorCheck.errorMessage,
+            finishReason: validated.metadata.finishReason,
+          },
+        })
+      }
+
+      const toolCalls = validated.toolCalls
 
       // No tool calls → return text
       if (!toolCalls) {
@@ -524,15 +577,15 @@ export class ProactiveAgent {
               hasReminder,
               hasMeeting,
               hasExpense,
-              response: choice.message.content?.slice(0, 150)
+              response: validated.content?.slice(0, 150)
             }
           })
         }
-        return choice.message.content || 'Lo siento, no entendí'
+        return validated.content || 'Lo siento, no entendí'
       }
 
       // Execute tools
-      messages.push(choice.message)
+      messages.push(validated.raw.choices[0]!.message)
       for (const toolCall of toolCalls) {
         if (toolCall.type !== 'function') continue
 

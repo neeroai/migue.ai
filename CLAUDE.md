@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**migue.ai** - WhatsApp AI Assistant on Vercel Edge + Supabase + Multi-Provider AI (76% cost savings)
+**migue.ai** - WhatsApp AI Assistant on Vercel Edge + Supabase + Multi-Provider AI (70% cost savings)
 
 ## Quick Reference
 
@@ -18,8 +18,8 @@ npm run test         # Run all tests
 - `app/api/cron/maintain-windows/route.ts` - WhatsApp window maintenance
 - `lib/whatsapp.ts` - WhatsApp API client (messages, typing, reactions)
 - `lib/messaging-windows.ts` - WhatsApp 24h window management
-- `lib/ai-providers.ts` - Multi-provider AI system (Gemini, OpenAI, Claude)
-- `lib/gemini-agents.ts` - Specialized AI agents (Gemini-based)
+- `lib/ai-providers.ts` - Multi-provider AI system (OpenAI, Claude)
+- `lib/openai.ts` - OpenAI agents (ProactiveAgent, SchedulingAgent)
 - `lib/claude-agents.ts` - Fallback AI agents
 - `lib/tesseract-ocr.ts` - Free OCR
 - `lib/supabase.ts` - Database client
@@ -31,9 +31,8 @@ npm run test         # Run all tests
 See `.env.local` - Required:
 - `WHATSAPP_*` - WhatsApp Business API
 - `SUPABASE_*` - Database
-- `GOOGLE_AI_API_KEY` - Primary chat (Gemini 2.5 Flash - FREE)
-- `OPENAI_API_KEY` - Fallback #1 (GPT-4o-mini) + Audio transcription
-- `ANTHROPIC_API_KEY` - Emergency fallback (Claude Sonnet)
+- `OPENAI_API_KEY` - Primary chat (GPT-4o-mini) + Audio transcription
+- `ANTHROPIC_API_KEY` - Fallback (Claude Sonnet)
 
 ---
 
@@ -348,37 +347,29 @@ DO NOT specify `runtime` in `vercel.json` - only crons, headers, redirects
 - Use `getSupabaseServerClient()` server-side
 - Check RLS policies in Dashboard
 
-### Gemini Integration Issues
-**Problem**: TypeScript errors about missing `gemini_usage` table
-**Cause**: Database migration not applied yet
-**Solution**: Apply migration manually via Supabase Dashboard
+### OpenAI Cost Tracking
+
+**Setup**: Cost tracking via `openai_usage` table (migration 016)
+**Status**: Implemented but requires database migration
 
 ```bash
-# See detailed instructions in:
-cat MIGRATION-INSTRUCTIONS.md
+# Apply migration to enable cost tracking
+npx supabase db push
 
-# Key steps:
-# 1. Open Supabase Dashboard > SQL Editor
-# 2. Copy contents of supabase/migrations/004_gemini_usage_tracking.sql
-# 3. Execute query
-# 4. Regenerate types: npx supabase gen types typescript --project-id pdliixrgdvunoymxaxmw > lib/database.types.ts
+# Verify tracking is working
+vercel logs --follow | grep "CostTracker"
 ```
 
-**Common Errors**:
-- `Property 'gemini_usage' does not exist` → Migration not applied
-- `GOOGLE_AI_API_KEY not set` → Add to `.env.local`
-- `Free tier limit exceeded` → Check logs, falls back to GPT-4o-mini automatically
+**Features**:
+- Real-time budget monitoring ($3/day, $90/month limits)
+- Per-user spending limits ($0.50/day)
+- Automatic alerts at 80% (warning) and 95% (critical)
+- Emergency mode at $1 remaining
+- Daily reports with top users
 
-**Debugging**:
-```bash
-# Check Gemini free tier usage (1,500 req/day limit)
-# Look for logs in Vercel: "Gemini free tier limit approaching"
-vercel logs --follow
-
-# Verify migration applied
-# Should return rows with gemini_usage data
-npm run db:verify
-```
+**Files**:
+- `lib/openai-cost-tracker.ts` - Budget management
+- `lib/openai-response-handler.ts` - Usage extraction
 
 ---
 
@@ -400,7 +391,6 @@ find /Users/mercadeo/neero/migue.ai/docs -name "*keyword*.md"
 ```
 
 **2. Specialized Agents** - Consult agent knowledge base
-- `gemini-expert` → `/docs/platforms/ai/providers/gemini/` (8 files)
 - `supabase-expert` → `/docs/platforms/supabase/` (12 files)
 - `whatsapp-api-expert` → `/docs/platforms/whatsapp/` (10 files)
 - `edge-functions-expert` → `/docs/platforms/vercel/` (8 files)
@@ -420,9 +410,8 @@ find /Users/mercadeo/neero/migue.ai/docs -name "*keyword*.md"
 /docs/                                   # 74 files, 46K lines
 ├── platforms/
 │   ├── ai/providers/
-│   │   ├── gemini/                     # 8 files - API, caching, tools, cost
-│   │   ├── claude/                     # Claude Sonnet fallback
-│   │   └── openai/                     # GPT-4o-mini fallback + audio transcription
+│   │   ├── openai/                     # GPT-4o-mini primary + audio transcription
+│   │   └── claude/                     # Claude Sonnet fallback
 │   ├── supabase/                       # 12 files - schema, RLS, pgvector
 │   ├── vercel/                         # 8 files - Edge, deployment, security
 │   └── whatsapp/                       # 10 files - API v23, Flows, pricing
@@ -435,8 +424,8 @@ find /Users/mercadeo/neero/migue.ai/docs -name "*keyword*.md"
 
 **✅ CORRECT: Local docs first**
 ```
-User: "How do I use Gemini context caching?"
-Claude: *Reads /docs/platforms/ai/providers/gemini/context-caching.md*
+User: "How do I optimize OpenAI costs?"
+Claude: *Reads docs-global/ai/openai/best-practices.md*
 ```
 
 **✅ CORRECT: Local code + docs**
@@ -501,70 +490,57 @@ Claude: *Uses GitHub MCP to search public repos*
 ## Project Info
 
 **Stack**: Next.js 15 + Vercel Edge + Supabase + Multi-Provider AI
-**AI Providers** (100% chat savings - FREE tier):
-- Primary: Gemini 2.5 Flash ($0 - FREE within 1,500 req/day, 1M context)
-- Fallback #1: OpenAI GPT-4o-mini ($0.15/$0.60 per 1M tokens)
+**AI Providers**:
+- Primary: OpenAI GPT-4o-mini ($0.15/$0.60 per 1M tokens - 96% cheaper than Claude)
+- Fallback: Claude Sonnet 4.5 ($3/$15 per 1M tokens)
 - Audio: OpenAI Whisper ($0.36/hour - transcription)
-- OCR: Tesseract (100% free) or Gemini Vision (multi-modal, FREE)
-- Emergency: Claude Sonnet 4.5 (backwards compatibility)
-**Savings**: $90/month → $0/month (100% reduction within free tier)
+- OCR: Tesseract (100% free)
+**Savings**: $300/month → $90/month (70% reduction vs Claude)
 
 **AI SDKs** (Edge Runtime Compatible):
-- ✅ `@google/generative-ai` v0.21.0 - Primary chat (Gemini 2.5 Flash)
-- ✅ `openai` v5.23.1 - Fallback chat (GPT-4o-mini) + Audio transcription (Whisper)
+- ✅ `openai` v5.23.1 - Primary chat (GPT-4o-mini) + Audio transcription (Whisper)
 - ✅ `tesseract.js` v6.0.1 - Free OCR
-- ✅ `@anthropic-ai/sdk` v0.65.0 - Emergency fallback (Claude Sonnet)
+- ✅ `@anthropic-ai/sdk` v0.65.0 - Fallback (Claude Sonnet)
 - ❌ `@anthropic-ai/claude-agent-sdk` - NOT compatible (requires Node.js fs/child_process)
 
 **TypeScript**: 5.9.2 (strict)
-**Tests**: 239/239 ✅
+**Tests**: 149/149 ✅
 **Production**: https://migue.app
-**Status**: Fase 2 (100%) - Gemini Integration Deployed ✅
+**Status**: Production - OpenAI GPT-4o-mini primary provider
 
-**Current Phase**: Gemini 2.5 Flash integration deployed to production
-**Deployed**: Oct 11, 2025 - Live at https://migue.app
-**Cost Savings**: 100% chat reduction ($90/month → $0/month within free tier) ✅ DEPLOYED
-**Annual Savings**: ~$1,080/year vs GPT-4o-mini | ~$3,600/year vs Claude
+**Current Phase**: OpenAI GPT-4o-mini as primary provider
+**Deployed**: Oct 17, 2025 - Live at https://migue.app
+**Cost**: $90/month estimated (GPT-4o-mini primary)
+**Annual Savings**: ~$2,520/year vs Claude Sonnet
 
 ---
 
 ## Recent Updates
 
-### 2025-10-11 - Gemini 2.5 Flash Deployed to Production 🚀
-- ✅ **Deployment Complete**: Successfully deployed to https://migue.app
-  - Commit: `ceda0fe` - 149 files changed (32,515 insertions, 11,979 deletions)
-  - Build: ✅ Next.js 15 compilation successful
-  - Tests: 20/25 suites passing (239 core tests ✅)
-  - Pre-deployment validation: TypeScript ✅, Build ✅, Core tests ✅
-- ✅ **100% Cost Optimization Live**: Gemini 2.5 Flash as primary AI provider
-  - Chat: $0.15/$0.60 (GPT-4o-mini) → **$0.00 FREE** (1,500 req/day free tier)
-  - Monthly cost: ~$90 → **$0** (100% reduction within free tier)
-  - Context window: 128K → 1M tokens (8x larger)
-  - Spanish quality: Ranking #3 global (Scale AI SEAL)
-  - Annual savings: **~$1,080/year** (vs GPT-4o-mini) or **~$3,600/year** (vs Claude)
-- ✅ **Advanced Features Live**:
-  - Context caching (75% additional savings if exceeding free tier)
-  - Free tier tracking with 1,400 request buffer
-  - Multi-modal support (audio, image, video)
-  - Full tool calling (reminders, meetings, expenses)
-  - Streaming support via async generators
-- ✅ **Code Quality**:
-  - Fixed 21 TypeScript strict mode violations
-  - Created lib/gemini-client.ts (475 lines)
-  - Created lib/gemini-agents.ts (405 lines)
-  - Updated lib/ai-processing-v2.ts with provider selection
-  - Updated lib/ai-providers.ts with Gemini integration
-- ✅ **Documentation Reorganization**:
-  - Moved to semantic structure: docs/guides, docs/platforms, docs/reference
-  - Added complete Gemini documentation (8 guides)
-  - Added Supabase platform docs (12 guides)
-  - Added brand guidelines and design system
-- ✅ **Testing Suite**: 90 Gemini tests (239 total core tests passing)
-  - Basic connection, function calling, Spanish quality
-  - Comparison vs GPT-4o-mini
-- ✅ **Multi-Provider Chain**: Gemini (FREE) → GPT-4o-mini → Claude
-- ✅ **Production Status**: Live and operational
-- 💰 **Monthly Savings**: $90 → $0 (100% reduction within free tier)
+### 2025-10-17 - Gemini Provider Removed 🔧
+- ✅ **Reverted to OpenAI GPT-4o-mini as Primary Provider**
+  - Reason: Technical/integration issues with Gemini in production
+  - Primary: OpenAI GPT-4o-mini ($0.15/$0.60 per 1M tokens)
+  - Fallback: Claude Sonnet 4.5 ($3/$15 per 1M tokens)
+  - Cost: $0/month → $90/month (still 70% cheaper than Claude)
+- ✅ **Code Cleanup**:
+  - Removed `lib/gemini-client.ts` (475 lines)
+  - Removed `lib/gemini-agents.ts` (405 lines)
+  - Removed Gemini test suite (90 tests)
+  - Updated `lib/ai-providers.ts` to use OpenAI primary
+  - Updated `lib/ai-processing-v2.ts` to remove Gemini imports
+  - Simplified `processDocumentMessage` to use Tesseract OCR only
+- ✅ **Database**:
+  - Created migration `015_remove_gemini_usage.sql` (pending execution)
+  - Removes `gemini_usage` table and RLS policies
+- ✅ **Dependencies**:
+  - Removed `@google/generative-ai` package
+  - Updated `.env.example` to remove `GOOGLE_AI_API_KEY`
+- ✅ **Documentation**:
+  - Removed `docs/platforms/ai/providers/gemini/` (8 files)
+  - Updated CLAUDE.md, README.md, and other docs
+- ✅ **Status**: Ready for deployment (changes in working directory)
+- ⚠️ **Note**: Migration must be applied manually when deploying
 
 ### 2025-10-10 - Migration to GPT-4o-mini 💰
 - ✅ **Cost Optimization**: Migrated from Claude Sonnet 4.5 to GPT-4o-mini

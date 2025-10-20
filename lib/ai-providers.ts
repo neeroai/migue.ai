@@ -1,23 +1,21 @@
 /**
  * Multi-Provider AI System
- * Intelligent selection between Gemini, OpenAI, and Claude based on cost/quality
+ * Intelligent selection between OpenAI and Claude based on cost/quality
  *
  * Cost optimization:
- * - Gemini 2.5 Flash: FREE (1,500 req/day free tier) - PRIMARY
- * - OpenAI GPT-4o-mini: $0.15/$0.60 per 1M tokens (Fallback #1)
+ * - OpenAI GPT-4o-mini: $0.15/$0.60 per 1M tokens - PRIMARY (96% cheaper than Claude)
  * - OpenAI Whisper: $0.36/hour (Audio transcription)
  * - Tesseract OCR: Free (100% savings vs GPT-4 Vision)
- * - Claude Sonnet: $3/$15 per 1M tokens (Emergency fallback)
+ * - Claude Sonnet: $3/$15 per 1M tokens (Fallback)
  */
 
 import Anthropic from '@anthropic-ai/sdk'
 import { getOpenAIClient } from './openai'
-import { getGeminiClient, canUseFreeTier } from './gemini-client'
 import { logger } from './logger'
 
 export type TaskType = 'chat' | 'transcription' | 'ocr' | 'long_task' | 'streaming'
 
-export type ProviderName = 'claude' | 'openai' | 'tesseract' | 'gemini'
+export type ProviderName = 'claude' | 'openai' | 'tesseract'
 
 /**
  * Cost limits and budgets
@@ -33,16 +31,14 @@ export const COST_LIMITS = {
  */
 export const PROVIDER_COSTS = {
   chat: {
-    gemini: 0,         // FREE (1,500 req/day free tier)
     openai: 0.00005,   // ~$0.00005 per message (GPT-4o-mini, 500 tokens)
-    claude: 0.0003,    // Emergency fallback
+    claude: 0.0003,    // Fallback
   },
   transcription: {
     openai: 0.006,     // $0.006/minute (Whisper)
   },
   ocr: {
     tesseract: 0,      // Free!
-    gemini: 0,         // Free (multi-modal support)
     claude: 0.0002,    // Vision capability
     openai: 0.002,     // GPT-4 Vision
   },
@@ -75,7 +71,7 @@ export class AIProviderManager {
    * @returns Provider name or null if emergency stop is enabled
    */
   async selectProvider(task: TaskType): Promise<ProviderName | null> {
-    // CRITICAL FIX (2025-10-11): Emergency kill switch for cost control
+    // CRITICAL: Emergency kill switch for cost control
     // Set AI_EMERGENCY_STOP=true in Vercel Dashboard to disable all AI processing
     if (process.env.AI_EMERGENCY_STOP === 'true') {
       logger.warn('[emergency] AI processing disabled via kill switch', {
@@ -90,9 +86,6 @@ export class AIProviderManager {
 
     const remainingBudget = COST_LIMITS.dailyMax - this.dailySpent
 
-    // Check if Gemini free tier is available
-    const geminiAvailable = process.env.GOOGLE_AI_API_KEY && await canUseFreeTier()
-
     // Emergency mode: use only free/cheap options
     if (remainingBudget < COST_LIMITS.emergencyMode) {
       logger.warn(`Low budget: $${remainingBudget.toFixed(2)} remaining`)
@@ -101,51 +94,32 @@ export class AIProviderManager {
         case 'chat':
         case 'streaming':
         case 'long_task':
-          // EMERGENCY FIX: Force OpenAI even in emergency mode
-          return 'openai' // Force OpenAI (Gemini disabled)
-          // Original code (commented out):
-          // if (geminiAvailable) return 'gemini' // FREE
-          // return 'openai' // Fallback
+          return 'openai' // GPT-4o-mini
         case 'transcription':
           return 'openai' // OpenAI Whisper
         case 'ocr':
-          if (geminiAvailable) return 'gemini' // FREE with multi-modal
           return 'tesseract' // Free OCR
         default:
-          return geminiAvailable ? 'gemini' : 'openai'
+          return 'openai'
       }
     }
 
-    // EMERGENCY FIX (2025-10-16): Force OpenAI due to Gemini production issues
-    // TODO: Re-enable Gemini once production issue is resolved
+    // Normal mode: OpenAI primary, Claude fallback
     switch (task) {
       case 'chat':
       case 'streaming':
       case 'long_task':
-        // CRITICAL: Force OpenAI to fix bot immediately
-        logger.info('Emergency fix: Using OpenAI (Gemini disabled in production)')
-        return 'openai' // Force GPT-4o-mini
-
-        // Commented out until Gemini production issue is resolved:
-        // if (geminiAvailable) {
-        //   logger.info('Using Gemini (FREE tier)')
-        //   return 'gemini'
-        // }
-        // return 'openai' // GPT-4o-mini fallback
+        logger.info('Using OpenAI GPT-4o-mini (primary provider)')
+        return 'openai' // GPT-4o-mini primary
 
       case 'transcription':
         return 'openai' // OpenAI Whisper
 
       case 'ocr':
-        if (geminiAvailable) return 'gemini' // FREE multi-modal
-        return 'tesseract' // Free OCR fallback
+        return 'tesseract' // Free OCR primary
 
       default:
-        // EMERGENCY FIX: Force OpenAI for all cases
         return 'openai'
-        // Original code (commented out):
-        // if (geminiAvailable) return 'gemini'
-        // return 'openai'
     }
   }
 
@@ -161,21 +135,10 @@ export class AIProviderManager {
   }
 
   /**
-   * Get OpenAI client (fallback)
+   * Get OpenAI client (primary provider)
    */
   getOpenAI() {
     return getOpenAIClient()
-  }
-
-  /**
-   * Get Gemini client
-   * @returns GoogleGenerativeAI client instance
-   */
-  getGemini() {
-    if (!process.env.GOOGLE_AI_API_KEY) {
-      throw new Error('GOOGLE_AI_API_KEY not set - cannot use Gemini')
-    }
-    return getGeminiClient()
   }
 
   /**

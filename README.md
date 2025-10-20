@@ -32,7 +32,8 @@ Desarrollar un asistente personal de IA disponible 24/7 a través de WhatsApp Bu
 - **Frontend/Comunicación**: WhatsApp Business API
 - **Backend**: Vercel Edge Functions (serverless)
 - **Base de Datos**: Supabase PostgreSQL + Auth (RLS)
-- **IA/LLM**: OpenAI API (GPT-4o, Whisper, Embeddings)
+- **IA/LLM**: OpenAI API (GPT-4o-mini primary, Whisper audio, Claude fallback)
+- **OCR**: Tesseract.js (free)
 - **Almacenamiento**: Supabase Storage (archivos multimedia)
 - **Programación**: Vercel Cron Jobs (recordatorios)
 - **Seguridad**: Variables de entorno en Vercel + RLS en Supabase

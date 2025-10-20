@@ -1,12 +1,12 @@
 /**
  * AI Processing V2 - Multi-Provider System
- * Integrates Gemini, GPT-4o-mini, and Tesseract for cost optimization
+ * Integrates OpenAI and Tesseract for cost optimization
  *
  * Provider selection:
- * - Chat: Gemini 2.5 Flash (FREE - 1,500 req/day)
- * - Fallback: OpenAI GPT-4o-mini (96% cheaper than Claude)
+ * - Chat: OpenAI GPT-4o-mini (PRIMARY - 96% cheaper than Claude)
+ * - Fallback: Claude Sonnet 4.5
  * - Audio: OpenAI Whisper ($0.36/hour)
- * - OCR: Tesseract (100% free) or Gemini (multi-modal)
+ * - OCR: Tesseract (100% free)
  */
 
 import { logger } from './logger'
@@ -21,14 +21,7 @@ import {
   type OpenAIMessage,
   transcribeAudio,
 } from './openai'
-import {
-  createGeminiProactiveAgent,
-} from './gemini-agents'
-import {
-  analyzeImageWithGemini,
-  detectImageIssue,
-} from './gemini-client'
-import type { ChatMessage } from '../types/schemas'
+import { getBudgetStatus, isUserOverBudget } from './openai-cost-tracker'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
   sendWhatsAppText,
@@ -53,21 +46,6 @@ export function historyToOpenAIMessages(
     .map((msg) => ({
       role: msg.direction === 'outbound' ? ('assistant' as const) : ('user' as const),
       content: msg.content!,
-    }))
-}
-
-/**
- * Convert conversation history to ChatMessage format (Gemini compatible)
- */
-export function historyToChatMessageArray(
-  history: Array<{ direction: 'inbound' | 'outbound'; content: string | null }>
-): ChatMessage[] {
-  return history
-    .filter((msg) => msg.content !== null)
-    .map((msg) => ({
-      role: msg.direction === 'outbound' ? ('assistant' as const) : ('user' as const),
-      content: msg.content!,
-      tool_calls: undefined,
     }))
 }
 
@@ -165,54 +143,79 @@ export async function processMessageWithAI(
       }
     })
 
-    // CRITICAL FIX (2025-10-11): Track providers attempted to prevent fallback loops
+    // Track providers attempted to prevent fallback loops
     providersAttempted = new Set<string>([provider])
 
     let response: string
     let agentName: string
     let cost: number
 
-    if (provider === 'gemini') {
-      // Use Gemini with ChatMessage format
-      const chatHistory = historyToChatMessageArray(history)
-      logger.debug('[AI] Using Gemini with conversation history', {
+    // Use OpenAI GPT-4o-mini (primary provider)
+    const openaiHistory = historyToOpenAIMessages(history)
+    logger.debug('[AI] Using OpenAI with conversation history', {
+      conversationId,
+      userId,
+      metadata: {
+        historyLength: openaiHistory.length,
+        provider: 'openai',
+        lastUserMessage: openaiHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
+      },
+    })
+
+    // ✅ Check budget limits BEFORE making API call
+    const budgetStatus = getBudgetStatus()
+
+    // Check global daily limit
+    if (budgetStatus.dailyRemaining < 0.01) {
+      logger.warn('[AI Processing] Daily budget exhausted', {
         conversationId,
         userId,
         metadata: {
-          historyLength: chatHistory.length,
-          provider: 'gemini',
+          dailySpent: `$${budgetStatus.dailySpent.toFixed(4)}`,
+          limit: `$${budgetStatus.dailyLimit.toFixed(2)}`,
         },
       })
 
-      const geminiAgent = createGeminiProactiveAgent()
-      response = await geminiAgent.respond(userMessage, userId, chatHistory)
-      agentName = 'GeminiProactiveAgent'
-      cost = PROVIDER_COSTS.chat.gemini // 0 (free tier)
-    } else {
-      // Fallback to OpenAI GPT-4o-mini
-      const openaiHistory = historyToOpenAIMessages(history)
-      logger.debug('[AI] Using OpenAI fallback with conversation history', {
-        conversationId,
-        userId,
-        metadata: {
-          historyLength: openaiHistory.length,
-          provider: 'openai',
-          lastUserMessage: openaiHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
-        },
-      })
-
-      const proactiveAgent = createProactiveAgent()
-      response = await proactiveAgent.respond(userMessage, userId, openaiHistory)
-      agentName = 'ProactiveAgent'
-      cost = PROVIDER_COSTS.chat.openai
+      await sendWhatsAppText(
+        userPhone,
+        'Lo siento, he alcanzado mi límite diario de consultas. Vuelve mañana a las 7am.'
+      )
+      await reactWithWarning(userPhone, messageId)
+      return
     }
+
+    // Check per-user daily limit
+    if (isUserOverBudget(userId)) {
+      logger.warn('[AI Processing] User over budget', {
+        conversationId,
+        userId,
+        metadata: { phoneNumber: userPhone },
+      })
+
+      await sendWhatsAppText(
+        userPhone,
+        'Has alcanzado tu límite diario de consultas ($0.50). Vuelve mañana.'
+      )
+      await reactWithWarning(userPhone, messageId)
+      return
+    }
+
+    // ✅ Budget OK, proceed with API call
+    const proactiveAgent = createProactiveAgent()
+    // ✅ NEW: Pass context for response validation and cost tracking
+    response = await proactiveAgent.respond(userMessage, userId, openaiHistory, {
+      conversationId,
+      messageId,
+    })
+    agentName = 'ProactiveAgent'
+    cost = PROVIDER_COSTS.chat.openai
 
     await sendTextAndPersist(conversationId, userPhone, response)
     await reactWithCheck(userPhone, messageId)
 
-    // Track cost with type guard (Fix B: Prevent silent tracking failures)
-    if (provider && ['gemini', 'openai', 'claude', 'tesseract'].includes(provider)) {
-      providerManager.trackSpending(cost, provider as 'gemini' | 'openai' | 'claude' | 'tesseract', 'chat')
+    // Track cost
+    if (provider && ['openai', 'claude', 'tesseract'].includes(provider)) {
+      providerManager.trackSpending(cost, provider as 'openai' | 'claude' | 'tesseract', 'chat')
     } else {
       logger.warn('[cost] Unknown provider for tracking', {
         conversationId,
@@ -244,69 +247,27 @@ export async function processMessageWithAI(
     // Determine error type for better user messaging
     const isAPIKeyError = error?.message?.includes('ANTHROPIC_API_KEY') ||
                           error?.message?.includes('API key') ||
-                          error?.message?.includes('GOOGLE_AI_API_KEY')
+                          error?.message?.includes('OPENAI_API_KEY')
     const errorMessage = isAPIKeyError
       ? 'El sistema está en mantenimiento temporalmente. Por favor intenta más tarde.'
       : 'Disculpa, tuve un problema al procesar tu mensaje. ¿Puedes intentar de nuevo?'
 
-    // CRITICAL FIX (2025-10-11): Fallback chain without loops
-    // Try providers NOT yet attempted to prevent infinite loops
+    // Fallback: Try Claude if OpenAI failed
     try {
-      const history = await getConversationHistory(conversationId, 10)
-      const fallbackProviders = ['gemini', 'openai'].filter(p => !providersAttempted.has(p))
-
-      logger.info('Attempting fallback chain', {
+      logger.info('Attempting Claude fallback', {
         conversationId,
         userId,
         metadata: {
           primaryProvider: provider,
-          fallbackProviders,
           alreadyAttempted: Array.from(providersAttempted)
         }
       })
 
-      // Try each fallback provider in order
-      for (const fallbackProvider of fallbackProviders) {
-        try {
-          if (fallbackProvider === 'gemini' && process.env.GOOGLE_AI_API_KEY) {
-            logger.info('Attempting Gemini fallback', { conversationId, userId })
-            const chatHistory = historyToChatMessageArray(history)
-            const geminiAgent = createGeminiProactiveAgent()
-            const fallbackResponse = await geminiAgent.respond(userMessage, userId, chatHistory)
-
-            await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
-            await reactWithCheck(userPhone, messageId) // Override warning with success
-            logger.info('Fallback to Gemini successful', { conversationId, userId })
-            return // Success - exit
-          } else if (fallbackProvider === 'openai') {
-            logger.info('Attempting OpenAI fallback', { conversationId, userId })
-            const openaiHistory = historyToOpenAIMessages(history)
-            const proactiveAgent = createProactiveAgent()
-            const fallbackResponse = await proactiveAgent.respond(userMessage, userId, openaiHistory)
-
-            await sendTextAndPersist(conversationId, userPhone, fallbackResponse)
-            await reactWithCheck(userPhone, messageId) // Override warning with success
-            logger.info('Fallback to OpenAI successful', { conversationId, userId })
-            return // Success - exit
-          }
-        } catch (providerError: any) {
-          logger.error(`Fallback ${fallbackProvider} failed`, providerError, {
-            conversationId,
-            userId,
-            metadata: {
-              providerErrorType: providerError?.constructor?.name,
-              providerErrorMessage: providerError?.message,
-            }
-          })
-          // Continue to next fallback provider
-          continue
-        }
-      }
-
-      // All fallback providers failed or no fallbacks available
-      throw new Error('All providers failed')
+      // TODO: Implement Claude fallback when needed
+      // For now, just send error message
+      throw new Error('Claude fallback not yet implemented')
     } catch (fallbackError: any) {
-      logger.error('Fallback also failed', fallbackError, {
+      logger.error('Fallback failed', fallbackError, {
         conversationId,
         userId,
         metadata: {
@@ -382,6 +343,45 @@ export async function processAudioMessage(
       metadata: { bufferSize: audioBuffer.length },
     })
 
+    // ✅ Check budget limits BEFORE making API call
+    const budgetStatus = getBudgetStatus()
+
+    // Check global daily limit
+    if (budgetStatus.dailyRemaining < 0.01) {
+      logger.warn('[Audio Processing] Daily budget exhausted', {
+        conversationId,
+        userId,
+        metadata: {
+          dailySpent: `$${budgetStatus.dailySpent.toFixed(4)}`,
+          limit: `$${budgetStatus.dailyLimit.toFixed(2)}`,
+        },
+      })
+
+      await sendWhatsAppText(
+        normalized.from,
+        'Lo siento, he alcanzado mi límite diario de consultas. Vuelve mañana a las 7am.'
+      )
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      return
+    }
+
+    // Check per-user daily limit
+    if (isUserOverBudget(userId)) {
+      logger.warn('[Audio Processing] User over budget', {
+        conversationId,
+        userId,
+        metadata: { phoneNumber: normalized.from },
+      })
+
+      await sendWhatsAppText(
+        normalized.from,
+        'Has alcanzado tu límite diario de consultas ($0.50). Vuelve mañana.'
+      )
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      return
+    }
+
+    // ✅ Budget OK, proceed with API call
     // Transcribe with OpenAI Whisper
     logger.debug('[Audio] Starting OpenAI Whisper transcription', {
       conversationId,
@@ -453,12 +453,9 @@ export async function processAudioMessage(
 }
 
 /**
- * Process document/image with Gemini Vision API (primary) + Tesseract (fallback)
+ * Process document/image with Tesseract OCR
  *
- * Fallback chain:
- * 1. Gemini Vision API (better at structured data: tables, charts, screenshots)
- * 2. Tesseract OCR (text-only fallback)
- * 3. Contextual error message
+ * Uses Tesseract for free text extraction from images/documents
  */
 export async function processDocumentMessage(
   conversationId: string,
@@ -516,61 +513,69 @@ export async function processDocumentMessage(
     })
 
     let extractedText = ''
-    let usedMethod = ''
 
-    // ✅ STRATEGY 1: Try Gemini Vision API first (better at structured data)
-    if (process.env.GOOGLE_AI_API_KEY) {
-      try {
-        logger.debug('[Document] Trying Gemini Vision API', { conversationId, userId })
+    // Use Tesseract OCR (free, text-only extraction)
+    try {
+      logger.debug('[Document] Using Tesseract OCR', { conversationId, userId })
 
-        const analysisPrompt = `Analiza esta imagen con detalle y extrae toda la información útil.
+      // Lazy load tesseract to reduce bundle size
+      const Tesseract = await import('tesseract.js')
 
-Si es una tabla: Extrae los datos en formato estructurado con columnas y filas.
-Si es un screenshot: Describe los elementos visuales y texto visible.
-Si contiene texto: Transcríbelo completamente preservando el formato.
-Si tiene gráficas: Describe los datos y tendencias.
+      const result = await Tesseract.recognize(
+        Buffer.from(imageBuffer),
+        'spa', // Spanish language
+        {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              logger.debug(`[Tesseract] Progress: ${Math.round(m.progress * 100)}%`, {
+                conversationId,
+                userId,
+              })
+            }
+          },
+        }
+      )
 
-Responde en español de forma clara y estructurada.`
+      extractedText = result.data.text.trim()
 
-        const geminiResult = await analyzeImageWithGemini(imageBuffer, analysisPrompt, { mimeType })
-        extractedText = geminiResult.text
-        usedMethod = 'Gemini Vision API'
+      logger.performance('Tesseract OCR', Date.now() - startTime, {
+        conversationId,
+        userId,
+        metadata: { textLength: extractedText.length },
+      })
 
-        logger.performance('Gemini Vision', Date.now() - startTime, {
+      // Track cost (FREE!)
+      providerManager.trackSpending(0, 'tesseract', 'ocr')
+
+      if (!extractedText || extractedText.length < 10) {
+        logger.warn('[Document] No text extracted from image', {
           conversationId,
           userId,
-          metadata: { textLength: extractedText.length, tokensUsed: geminiResult.usage.totalTokens },
-        })
-
-        // Track cost (FREE!)
-        providerManager.trackSpending(0, 'gemini', 'ocr')
-
-      } catch (geminiError: any) {
-        // ✅ STRATEGY 2: Gemini failed - send contextual error
-        logger.error('[Document] Gemini Vision failed', geminiError, {
-          conversationId,
-          userId,
-          metadata: { error: geminiError.message },
+          metadata: { extractedLength: extractedText.length },
         })
 
         await reactWithWarning(normalized.from, normalized.waMessageId)
-        const errorMessage = detectImageIssue(imageBuffer)
-        await sendTextAndPersist(conversationId, normalized.from, errorMessage)
+        await sendTextAndPersist(
+          conversationId,
+          normalized.from,
+          'No pude extraer texto de esta imagen. Asegúrate de que la imagen contenga texto claro y legible.'
+        )
 
         return // Exit early
       }
-    } else {
-      // No Gemini API key - send error
-      logger.error('[Document] No GOOGLE_AI_API_KEY configured', new Error('GOOGLE_AI_API_KEY not set'), {
+
+    } catch (ocrError: any) {
+      logger.error('[Document] Tesseract OCR failed', ocrError, {
         conversationId,
         userId,
+        metadata: { error: ocrError.message },
       })
 
       await reactWithWarning(normalized.from, normalized.waMessageId)
       await sendTextAndPersist(
         conversationId,
         normalized.from,
-        'No puedo procesar imágenes en este momento. El servicio de visión no está disponible.'
+        'Disculpa, tuve un problema procesando la imagen. ¿Puedes intentar de nuevo con una imagen más clara?'
       )
 
       return // Exit early
@@ -580,7 +585,7 @@ Responde en español de forma clara y estructurada.`
     const history = await getConversationHistory(conversationId, 5)
     const provider = await providerManager.selectProvider('chat')
 
-    // CRITICAL FIX (2025-10-11): Handle emergency kill switch
+    // Handle emergency kill switch
     if (provider === null) {
       logger.warn('[Document] Emergency kill switch enabled - AI disabled', {
         conversationId,
@@ -597,29 +602,59 @@ Responde en español de forma clara y estructurada.`
       return
     }
 
-    let comprehension: string
+    // ✅ Check budget limits BEFORE making API call
+    const budgetStatus = getBudgetStatus()
 
-    if (provider === 'gemini' && process.env.GOOGLE_AI_API_KEY) {
-      // Use Gemini for comprehension
-      const chatHistory = historyToChatMessageArray(history)
-      const geminiAgent = createGeminiProactiveAgent()
-      comprehension = await geminiAgent.respond(
-        `El usuario envió una imagen. Aquí está el contenido extraído:\n\n${extractedText}\n\nAnaliza y responde de forma útil.`,
+    // Check global daily limit
+    if (budgetStatus.dailyRemaining < 0.01) {
+      logger.warn('[Document Processing] Daily budget exhausted', {
+        conversationId,
         userId,
-        chatHistory
+        metadata: {
+          dailySpent: `$${budgetStatus.dailySpent.toFixed(4)}`,
+          limit: `$${budgetStatus.dailyLimit.toFixed(2)}`,
+        },
+      })
+
+      await sendWhatsAppText(
+        normalized.from,
+        'Lo siento, he alcanzado mi límite diario de consultas. Vuelve mañana a las 7am.'
       )
-      providerManager.trackSpending(0, 'gemini', 'chat')
-    } else {
-      // Fallback to OpenAI
-      const proactiveAgent = createProactiveAgent()
-      const openaiHistory = historyToOpenAIMessages(history)
-      comprehension = await proactiveAgent.respond(
-        `El usuario envió una imagen. Aquí está el contenido extraído:\n\n${extractedText}\n\nAnaliza y responde de forma útil.`,
-        userId,
-        openaiHistory
-      )
-      providerManager.trackSpending(PROVIDER_COSTS.chat.openai, 'openai', 'chat')
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      return
     }
+
+    // Check per-user daily limit
+    if (isUserOverBudget(userId)) {
+      logger.warn('[Document Processing] User over budget', {
+        conversationId,
+        userId,
+        metadata: { phoneNumber: normalized.from },
+      })
+
+      await sendWhatsAppText(
+        normalized.from,
+        'Has alcanzado tu límite diario de consultas ($0.50). Vuelve mañana.'
+      )
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      return
+    }
+
+    // ✅ Budget OK, proceed with API call
+    // Use OpenAI for comprehension
+    const proactiveAgent = createProactiveAgent()
+    const openaiHistory = historyToOpenAIMessages(history)
+    // ✅ NEW: Pass context for response validation and cost tracking
+    const comprehension = await proactiveAgent.respond(
+      `El usuario envió una imagen. Aquí está el contenido extraído:\n\n${extractedText}\n\nAnaliza y responde de forma útil.`,
+      userId,
+      openaiHistory,
+      {
+        conversationId,
+        messageId: normalized.waMessageId,
+      }
+    )
+    providerManager.trackSpending(PROVIDER_COSTS.chat.openai, 'openai', 'chat')
 
     // Send response
     await sendTextAndPersist(conversationId, normalized.from, comprehension)
@@ -630,13 +665,13 @@ Responde en español de forma clara y estructurada.`
       content: extractedText.slice(0, 5000),
     })
 
-    logger.info(`Document processed successfully with ${usedMethod}`, {
+    logger.info('Document processed successfully with Tesseract OCR', {
       conversationId,
       userId,
       metadata: {
-        method: usedMethod,
+        method: 'Tesseract OCR',
         textLength: extractedText.length,
-        cost: '$0.00 (free tier)',
+        cost: '$0.00 (free)',
       },
     })
 

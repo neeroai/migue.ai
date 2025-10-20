@@ -8,12 +8,22 @@
 -- Drop overly permissive policy
 DROP POLICY IF EXISTS "allow_all_messaging_windows" ON public.messaging_windows;
 
--- Create secure policy: users can only access their own messaging windows
-CREATE POLICY "users_own_messaging_windows"
-  ON public.messaging_windows
-  FOR ALL
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+-- Create secure policy: users can only access their own messaging windows (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'messaging_windows'
+      AND policyname = 'users_own_messaging_windows'
+  ) THEN
+    CREATE POLICY "users_own_messaging_windows"
+      ON public.messaging_windows
+      FOR ALL
+      USING (user_id = auth.uid())
+      WITH CHECK (user_id = auth.uid());
+  END IF;
+END $$;
 
 -- Comment: Documentation
 COMMENT ON POLICY "users_own_messaging_windows" ON public.messaging_windows IS
