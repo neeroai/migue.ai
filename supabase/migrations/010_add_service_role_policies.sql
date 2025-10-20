@@ -31,33 +31,73 @@
 -- PHASE 1: Core Tables (ALWAYS exist)
 -- ========================================
 
--- Users table: Service role full access
-CREATE POLICY "service_role_users_all" ON public.users
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Users table: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'users'
+      AND policyname = 'service_role_users_all'
+  ) THEN
+    CREATE POLICY "service_role_users_all" ON public.users
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- Conversations table: Service role full access
-CREATE POLICY "service_role_conversations_all" ON public.conversations
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Conversations table: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'conversations'
+      AND policyname = 'service_role_conversations_all'
+  ) THEN
+    CREATE POLICY "service_role_conversations_all" ON public.conversations
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- Messages table: Service role full access
-CREATE POLICY "service_role_messages_all" ON public.messages_v2
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Messages table: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'messages_v2'
+      AND policyname = 'service_role_messages_all'
+  ) THEN
+    CREATE POLICY "service_role_messages_all" ON public.messages_v2
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- Reminders table: Service role full access
-CREATE POLICY "service_role_reminders_all" ON public.reminders
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Reminders table: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'reminders'
+      AND policyname = 'service_role_reminders_all'
+  ) THEN
+    CREATE POLICY "service_role_reminders_all" ON public.reminders
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 -- ========================================
 -- PHASE 2: Calendar & Events Tables (OPTIONAL - may not exist)
@@ -97,12 +137,22 @@ END $$;
 -- PHASE 3: Messaging & Communication Tables
 -- ========================================
 
--- Messaging windows: Service role full access
-CREATE POLICY "service_role_messaging_windows_all" ON public.messaging_windows
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Messaging windows: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'messaging_windows'
+      AND policyname = 'service_role_messaging_windows_all'
+  ) THEN
+    CREATE POLICY "service_role_messaging_windows_all" ON public.messaging_windows
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 -- Conversation actions: Service role full access (if exists)
 DO $$
@@ -138,51 +188,111 @@ END $$;
 -- PHASE 4: WhatsApp v23.0 Tables (ALWAYS exist)
 -- ========================================
 
--- User interactions: Service role full access
-CREATE POLICY "service_role_user_interactions_all" ON public.user_interactions
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- User interactions: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'user_interactions'
+      AND policyname = 'service_role_user_interactions_all'
+  ) THEN
+    CREATE POLICY "service_role_user_interactions_all" ON public.user_interactions
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- User locations: Service role full access
-CREATE POLICY "service_role_user_locations_all" ON public.user_locations
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- User locations: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'user_locations'
+      AND policyname = 'service_role_user_locations_all'
+  ) THEN
+    CREATE POLICY "service_role_user_locations_all" ON public.user_locations
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- Call logs: Service role full access
-CREATE POLICY "service_role_call_logs_all" ON public.call_logs
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Call logs: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'call_logs'
+      AND policyname = 'service_role_call_logs_all'
+  ) THEN
+    CREATE POLICY "service_role_call_logs_all" ON public.call_logs
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- Flow sessions: Service role full access
-CREATE POLICY "service_role_flow_sessions_all" ON public.flow_sessions
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Flow sessions: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'flow_sessions'
+      AND policyname = 'service_role_flow_sessions_all'
+  ) THEN
+    CREATE POLICY "service_role_flow_sessions_all" ON public.flow_sessions
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 -- ========================================
 -- PHASE 5: Documents & AI Tables
 -- ========================================
 
--- Documents: Service role full access
-CREATE POLICY "service_role_documents_all" ON public.documents
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Documents: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'documents'
+      AND policyname = 'service_role_documents_all'
+  ) THEN
+    CREATE POLICY "service_role_documents_all" ON public.documents
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- Embeddings: Service role full access
-CREATE POLICY "service_role_embeddings_all" ON public.embeddings
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Embeddings: Service role full access (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'embeddings'
+      AND policyname = 'service_role_embeddings_all'
+  ) THEN
+    CREATE POLICY "service_role_embeddings_all" ON public.embeddings
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 -- User memory: Service role full access (if exists)
 DO $$

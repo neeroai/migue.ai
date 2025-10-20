@@ -80,17 +80,37 @@ CREATE INDEX IF NOT EXISTS idx_expenses_user_category
 -- Enable RLS
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
--- Service role bypass: Backend can manage all expenses
-CREATE POLICY "service_role_expenses_all" ON public.expenses
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+-- Service role bypass: Backend can manage all expenses (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'expenses'
+      AND policyname = 'service_role_expenses_all'
+  ) THEN
+    CREATE POLICY "service_role_expenses_all" ON public.expenses
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
--- Users can SELECT their own expenses (for future expense reports)
-CREATE POLICY "users_select_own_expenses" ON public.expenses
-  FOR SELECT
-  USING (user_id = (SELECT auth.uid()));
+-- Users can SELECT their own expenses (for future expense reports) (IDEMPOTENT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'expenses'
+      AND policyname = 'users_select_own_expenses'
+  ) THEN
+    CREATE POLICY "users_select_own_expenses" ON public.expenses
+      FOR SELECT
+      USING (user_id = (SELECT auth.uid()));
+  END IF;
+END $$;
 
 -- ========================================
 -- PHASE 4: Triggers
