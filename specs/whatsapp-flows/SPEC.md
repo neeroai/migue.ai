@@ -2,8 +2,8 @@
 title: WhatsApp Flows
 summary: Interactive UX with Flows v3, buttons, lists, encrypted responses
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 status: Draft
 ---
 
@@ -24,4 +24,4 @@ Enable rich interactive UX for complex inputs (appointment booking, expense cate
 2. 10s timeout for Flow responses
 3. Fallback to free-text on error
 
-**Source:** specs/05-whatsapp-integration.md L240-420
+**Source:** .backup/specs/05-whatsapp-integration.md L240-420

@@ -19,7 +19,7 @@ Version: 1.0 | Date: 2026-01-29 | Owner: ClaudeCode&OnlyMe | Status: Active
 - SPEC: specs/whatsapp-webhook/SPEC.md
 - PLAN: specs/whatsapp-webhook/PLAN.md
 - TESTPLAN: specs/whatsapp-webhook/TESTPLAN.md
-- Source Specs: specs/01-api-contracts.md, specs/05-whatsapp-integration.md, specs/06-security-compliance.md
+- Source Specs: .backup/specs/01-api-contracts.md, .backup/specs/05-whatsapp-integration.md, .backup/specs/06-security-compliance.md
 
 **Fresh Context Pattern:** Each task reads SPEC + PLAN + TESTPLAN only
 

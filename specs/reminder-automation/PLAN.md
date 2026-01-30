@@ -18,4 +18,4 @@ date: 2026-01-29
 - S004: Calendar sync bidirectional logic
 - S005: Template fallback for expired windows
 
-**Source:** specs/01-api-contracts.md L260-290
+**Source:** .backup/specs/01-api-contracts.md L260-290

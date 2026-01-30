@@ -2,8 +2,8 @@
 title: Observability
 summary: Cost tracking, error monitoring, health checks, DLQ for failed operations
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 status: Draft
 ---
 
@@ -24,4 +24,4 @@ Track AI costs per user, detect errors quickly, monitor system health, retry fai
 2. DLQ for failed operations
 3. Health endpoint for uptime
 
-**Source:** specs/08-cost-optimization.md, specs/09-runbook.md
+**Source:** .backup/specs/08-cost-optimization.md, .backup/specs/09-runbook.md

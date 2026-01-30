@@ -20,4 +20,4 @@ updated: 2026-01-29
 - S005: Add indexes for performance
 - S006: Test migrations (reversible)
 
-**Source:** specs/02-database-schema.md
+**Source:** .backup/specs/02-database-schema.md

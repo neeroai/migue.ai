@@ -10,7 +10,7 @@ status: Draft
 # SDD Implementation Plan - AI Agent System
 
 ## Stack Validated
-- Vercel AI SDK 4.1
+- Vercel AI SDK 6.0
 - Claude Sonnet 4.5 (anthropic provider)
 - GPT-4o (openai provider)
 - Circuit breaker pattern
@@ -47,4 +47,4 @@ status: Draft
 - Calculate cost based on provider pricing
 - Dashboard query support
 
-**Source:** specs/04-ai-integration.md
+**Source:** .backup/specs/04-ai-integration.md

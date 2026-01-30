@@ -11,7 +11,7 @@ scope: Development setup, deployment, debugging, common issues, troubleshooting
 
 ## Quick Reference
 - **Purpose**: Operational guide for development, deployment, debugging, and troubleshooting
-- **References**: docs/research/prd-gap-analysis.md, specs/00-implementation-phases.md
+- **References**: docs/research/prd-gap-analysis.md, .backup/specs/00-implementation-phases.md
 - **Team**: 2-person (ClaudeCode&OnlyMe)
 - **Support**: Self-service debugging + Vercel logs
 

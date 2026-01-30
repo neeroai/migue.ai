@@ -53,6 +53,25 @@ This directory contains **6 core features** organized following the **SDD (Spec-
 
 ---
 
+## Feature Dependencies
+
+Technical dependencies between features (order of implementation):
+
+| Feature | Depends On | Provides To | Rationale |
+|---------|------------|-------------|-----------|
+| **database-foundation** | None (foundation) | All features | Core tables, RLS policies, pgvector |
+| **whatsapp-webhook** | database-foundation | ai-agent-system | Queues normalized messages to DB |
+| **ai-agent-system** | database-foundation, whatsapp-webhook | reminder-automation, observability | Reads messages, writes ai_requests |
+| **reminder-automation** | database-foundation, ai-agent-system | None | Uses reminders table + AI tools |
+| **whatsapp-flows** | ai-agent-system | None | Interactive messages triggered by AI |
+| **observability** | ai-agent-system | None | Tracks ai_requests for cost analysis |
+
+**Implementation order:** database-foundation → whatsapp-webhook → ai-agent-system → (reminder-automation \|\| whatsapp-flows \|\| observability)
+
+**Note:** reminder-automation, whatsapp-flows, and observability can be developed in parallel after ai-agent-system is complete.
+
+---
+
 ## Directory Structure
 
 ```

@@ -2,8 +2,8 @@
 title: Database Foundation
 summary: Supabase PostgreSQL schema with 14 tables, RLS policies, pgvector for memory
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 status: Draft
 ---
 
@@ -29,4 +29,4 @@ Support 10K users, <100ms query latency, 99.99% data durability, pgvector semant
 3. Automatic updated_at triggers
 4. Cascading deletes (user → conversations → messages)
 
-**Source:** specs/02-database-schema.md
+**Source:** .backup/specs/02-database-schema.md

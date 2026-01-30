@@ -3,8 +3,8 @@ title: AI Agent System
 summary: Multi-provider AI processing with tool orchestration, circuit breaker, token budget
 description: Vercel AI SDK integration with Claude Sonnet 4.5 primary and GPT-4o fallback, 20+ tools for calendar/reminders/expenses, circuit breaker for reliability, token budget tracking
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 scope: AI SDK setup, tool definitions, multi-provider failover, cost tracking
 status: Draft
 ---
@@ -32,7 +32,7 @@ Process user WhatsApp messages with AI to understand intent and execute tools (c
 - Token budget enforcement (block users exceeding 100K tokens/month)
 - Cost per conversation < $0.05
 
-**Source:** specs/04-ai-integration.md L1-50, specs/08-cost-optimization.md L37-80
+**Source:** .backup/specs/04-ai-integration.md L1-50, .backup/specs/08-cost-optimization.md L37-80
 
 ---
 
@@ -40,7 +40,7 @@ Process user WhatsApp messages with AI to understand intent and execute tools (c
 
 | In | Out |
 |---|---|
-| Vercel AI SDK 4.1 setup | Custom LLM integration |
+| Vercel AI SDK 6.0 setup | Custom LLM integration |
 | Claude Sonnet 4.5 primary provider | Other models (GPT-3.5, Gemini) |
 | GPT-4o fallback provider | Fine-tuning |
 | 20+ tools (calendar, reminders, expenses) | Web scraping, advanced reasoning |
@@ -48,7 +48,7 @@ Process user WhatsApp messages with AI to understand intent and execute tools (c
 | Token budget tracking per user | Billing/payment processing |
 
 **References:**
-- AI integration: specs/04-ai-integration.md
+- AI integration: .backup/specs/04-ai-integration.md
 - Multi-provider: docs/architecture/multi-provider-strategy.md
 - Tool orchestration: docs/patterns/tool-orchestration.md
 
@@ -89,7 +89,7 @@ Process user WhatsApp messages with AI to understand intent and execute tools (c
 6. **Timeout:** Abort AI request after 25s (prevents hanging requests)
 7. **Cost Tracking:** Record every request to `ai_requests` table with provider, tokens, cost
 
-**Source:** specs/04-ai-integration.md L410-470 (circuit breaker), specs/08-cost-optimization.md L80-120
+**Source:** .backup/specs/04-ai-integration.md L410-470 (circuit breaker), .backup/specs/08-cost-optimization.md L80-120
 
 ---
 

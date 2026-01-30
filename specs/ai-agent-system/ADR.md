@@ -2,8 +2,8 @@
 title: ADR-002 Claude Primary, OpenAI Fallback
 summary: Multi-provider AI strategy for reliability and cost optimization
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 status: Accepted
 ---
 

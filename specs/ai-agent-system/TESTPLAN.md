@@ -26,4 +26,4 @@ status: Draft
 
 **Coverage Target:** 80% critical paths
 
-**Source:** specs/07-testing-strategy.md L53-89
+**Source:** .backup/specs/07-testing-strategy.md L53-89

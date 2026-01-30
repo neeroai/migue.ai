@@ -61,7 +61,7 @@ Version: 1.0 | Date: 2026-01-29 | Owner: ClaudeCode&OnlyMe | Status: Draft
 - Runtime: Edge
 - Validation: Check `hub.mode === "subscribe"` and `hub.verify_token === process.env.WHATSAPP_VERIFY_TOKEN`
 
-**Source:** specs/01-api-contracts.md L34-60
+**Source:** .backup/specs/01-api-contracts.md L34-60
 
 ---
 
@@ -80,7 +80,7 @@ Version: 1.0 | Date: 2026-01-29 | Owner: ClaudeCode&OnlyMe | Status: Draft
 - Algorithm: SHA256 HMAC with constant-time comparison
 - Signature format: `sha256={hash}`
 
-**Source:** specs/06-security-compliance.md L47-89, WhatsApp Webhook Security docs
+**Source:** .backup/specs/06-security-compliance.md L47-89, WhatsApp Webhook Security docs
 
 ---
 
@@ -113,7 +113,7 @@ type MessageType =
   | 'unsupported';
 ```
 
-**Source:** specs/01-api-contracts.md L46-120, WhatsApp Business API v2.3
+**Source:** .backup/specs/01-api-contracts.md L46-120, WhatsApp Business API v2.3
 
 ---
 
@@ -134,7 +134,7 @@ type MessageType =
 - Queue: Simple in-process queue (later: Supabase Edge Functions or Vercel Queue)
 - Response: `{ status: "ok", received: number }`
 
-**Source:** specs/01-api-contracts.md L34-170, Edge Runtime patterns
+**Source:** .backup/specs/01-api-contracts.md L34-170, Edge Runtime patterns
 
 ---
 
@@ -152,7 +152,7 @@ type MessageType =
 - Function: `checkAndMarkProcessed(messageId: string): boolean`
 - TTL: Automatic cleanup after 24h (PostgreSQL `pg_cron` or manual cron)
 
-**Source:** specs/02-database-schema.md, WhatsApp duplicate delivery behavior
+**Source:** .backup/specs/02-database-schema.md, WhatsApp duplicate delivery behavior
 
 ---
 
@@ -171,7 +171,7 @@ type MessageType =
 - Error strategy: Try-catch around all logic, log error, return 200 OK
 - Observability: Request ID tracking across spans
 
-**Source:** specs/07-testing-strategy.md, specs/09-runbook.md L80-150
+**Source:** .backup/specs/07-testing-strategy.md, .backup/specs/09-runbook.md L80-150
 
 ---
 

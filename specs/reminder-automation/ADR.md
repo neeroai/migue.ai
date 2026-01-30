@@ -1,7 +1,7 @@
 ---
 title: ADR-004 Vercel Cron over External Scheduler
 version: 1.0
-date: 2026-01-29
+date: 2026-01-29 14:15
 ---
 
 # ADR-004: Vercel Cron

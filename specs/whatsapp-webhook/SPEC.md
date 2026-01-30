@@ -3,8 +3,8 @@ title: WhatsApp Webhook Handler
 summary: Receive and validate WhatsApp messages, normalize payload, fire-forget to AI processing
 description: Edge Runtime webhook that receives WhatsApp Business API messages, validates HMAC signatures, normalizes payloads into consistent format, and queues for async AI processing within 5s timeout
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 scope: Webhook verification, HMAC validation, message normalization, fire-forget queueing
 status: Draft
 ---
@@ -44,9 +44,9 @@ WhatsApp Business API requires webhook handlers to respond within 5 seconds. Mes
 | Idempotency deduplication | WhatsApp API sending (separate module) |
 
 **References:**
-- Webhook spec: specs/01-api-contracts.md L34-170
-- Security: specs/06-security-compliance.md L47-89
-- WhatsApp integration: specs/05-whatsapp-integration.md L20-120
+- Webhook spec: .backup/specs/01-api-contracts.md L34-170
+- Security: .backup/specs/06-security-compliance.md L47-89
+- WhatsApp integration: .backup/specs/05-whatsapp-integration.md L20-120
 
 ---
 
@@ -75,7 +75,7 @@ WhatsApp Business API requires webhook handlers to respond within 5 seconds. Mes
 **Message Types Supported:**
 - text, image, audio, video, document, location, interactive (button_reply, list_reply), template
 
-**Source:** specs/01-api-contracts.md L46-120, WhatsApp Business API v2.3
+**Source:** .backup/specs/01-api-contracts.md L46-120, WhatsApp Business API v2.3
 
 ### Output (GET)
 
@@ -109,7 +109,7 @@ WhatsApp Business API requires webhook handlers to respond within 5 seconds. Mes
 6. **Status Updates:** IGNORE status updates (read receipts, delivery confirmations) - only process messages
 7. **Error Handling:** Log errors but ALWAYS return 200 OK (prevent retry storms)
 
-**Source:** WhatsApp Business API Policy, specs/06-security-compliance.md L33-89
+**Source:** WhatsApp Business API Policy, .backup/specs/06-security-compliance.md L33-89
 
 ---
 

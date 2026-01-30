@@ -2,8 +2,8 @@
 title: Reminder Automation
 summary: Automated reminders with cron jobs, Google Calendar sync, 24h window tracking
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 status: Draft
 ---
 
@@ -24,4 +24,4 @@ Users need automated WhatsApp reminders for appointments and calendar event sync
 2. Sync Google Calendar every 5 minutes
 3. Reminder accuracy ±1 minute
 
-**Source:** specs/01-api-contracts.md L260-290, specs/06-security-compliance.md L43-89
+**Source:** .backup/specs/01-api-contracts.md L260-290, .backup/specs/06-security-compliance.md L43-89

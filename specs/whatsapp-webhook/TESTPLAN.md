@@ -39,7 +39,7 @@ Version: 1.0 | Date: 2026-01-29 | Owner: ClaudeCode&OnlyMe | Status: Draft
 - Artillery (load testing)
 - WhatsApp Business API Test Number (E2E)
 
-**Source:** specs/07-testing-strategy.md L20-89
+**Source:** .backup/specs/07-testing-strategy.md L20-89
 
 ---
 
@@ -58,7 +58,7 @@ Version: 1.0 | Date: 2026-01-29 | Owner: ClaudeCode&OnlyMe | Status: Draft
 - Normalization (all 8 message types + unsupported)
 - Idempotency check (duplicate detection)
 
-**Source:** specs/07-testing-strategy.md L53-89
+**Source:** .backup/specs/07-testing-strategy.md L53-89
 
 ---
 
@@ -79,7 +79,7 @@ Version: 1.0 | Date: 2026-01-29 | Owner: ClaudeCode&OnlyMe | Status: Draft
 - Idempotency (duplicate prevention)
 - Fire-forget queueing (response time)
 
-**Source:** specs/07-testing-strategy.md L103-156
+**Source:** .backup/specs/07-testing-strategy.md L103-156
 
 ---
 
@@ -120,7 +120,7 @@ scenarios:
             # Fixture payload
 ```
 
-**Source:** specs/07-testing-strategy.md L222-250
+**Source:** .backup/specs/07-testing-strategy.md L222-250
 
 ---
 

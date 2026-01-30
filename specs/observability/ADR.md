@@ -1,7 +1,7 @@
 ---
 title: ADR-006 Supabase for Monitoring
 version: 1.0
-date: 2026-01-29
+date: 2026-01-29 14:15
 ---
 
 # ADR-006: Supabase for Monitoring

@@ -17,4 +17,4 @@ date: 2026-01-29
 - S003: Health endpoint
 - S004: Monitoring dashboard (Supabase)
 
-**Source:** specs/08-cost-optimization.md L37-180
+**Source:** .backup/specs/08-cost-optimization.md L37-180

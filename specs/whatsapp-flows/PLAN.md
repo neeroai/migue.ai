@@ -17,4 +17,4 @@ date: 2026-01-29
 - S003: Flows endpoint /api/whatsapp/flows
 - S004: Interactive message builders
 
-**Source:** specs/05-whatsapp-integration.md L240-420
+**Source:** .backup/specs/05-whatsapp-integration.md L240-420

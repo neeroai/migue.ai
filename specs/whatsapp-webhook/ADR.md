@@ -3,8 +3,8 @@ title: ADR-001 Edge Runtime for Webhook Handler
 summary: Use Next.js Edge Runtime (not Node.js Runtime) for WhatsApp webhook to meet 5s timeout
 description: Architecture decision to use Vercel Edge Runtime for webhook handler to guarantee <5s response time, evaluated against ClaudeCode&OnlyMe 4-question filter
 version: 1.0
-date: 2026-01-29
-updated: 2026-01-29
+date: 2026-01-29 14:15
+updated: 2026-01-29 15:50
 scope: Runtime choice for /api/whatsapp/webhook
 status: Accepted
 ---
@@ -41,7 +41,7 @@ Edge Runtime has <50ms cold starts vs Node.js Runtime's 200-500ms. With fire-for
 
 **Source:**
 - Vercel Edge Runtime docs: https://nextjs.org/docs/app/building-your-application/rendering/edge-and-nodejs-runtimes
-- specs/01-api-contracts.md L22-28 (timeout requirements)
+- .backup/specs/01-api-contracts.md L22-28 (timeout requirements)
 - docs/patterns/edge-runtime-optimization.md L36-89
 
 ---

@@ -24,4 +24,4 @@ status: Active
 | T028 | Unit tests for tools | Mock execution, validate schemas | 4h |
 | T029 | Integration test with real AI | Full conversation flow | 2h |
 
-**Source:** specs/00-implementation-phases.md Week 2-3
+**Source:** .backup/specs/00-implementation-phases.md Week 2-3
