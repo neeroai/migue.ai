@@ -1,115 +1,181 @@
 # CLAUDE.md
 
-**migue.ai** - WhatsApp AI Assistant (Vercel Edge + Supabase + Multi-Provider AI)
+**migue.ai** - WhatsApp AI Assistant (Fresh Start)
+
+Version: 2.1 | Date: 2026-01-28 01:00 | Updated: 2026-01-29 15:50
+
+---
+
+<must_follow>
+- ALL 4 DECISION questions = YES (Real TODAY? Simplest? 2-person? Value NOW?)
+- NO CLAIMS WITHOUT CITATIONS (NO_INVENTAR protocol - 7 gates)
+- DATETIME WITH TIME MANDATORY: YYYY-MM-DD HH:MM format REQUIRED (NOT date-only)
+- FORMAT HIERARCHY MANDATORY: Table > YAML > List > Prose (NO prose when table possible)
+- LLM_FORMAT MANDATORY: ALL files MUST follow token-optimized format (use /llm-format skill)
+- EMOJIS ABSOLUTELY FORBIDDEN: NEVER use emoji in ANY file (BLOCKING violation)
+</must_follow>
 
 ---
 
 ## Quick Reference
 
 ```bash
-npm run dev          # Vercel dev server
-npm run test         # All tests (239 passing)
-/deploy              # Automated deployment (pre-deploy + push)
+bun install          # Install dependencies
+bun run dev          # Dev server (localhost:3000)
+bun run build        # Production build
+bun run lint         # Check code with Biome
+bun run lint:fix     # Auto-fix with Biome
 ```
 
-**Key Files**: `app/api/whatsapp/webhook/route.ts`, `lib/ai-providers.ts`
-**Environment**: `.env.local` - `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
-**Production**: https://migue.app
-
----
-
-## Critical Rules
-
-**ONE TASK AT A TIME**:
-- Execute ONLY explicit task requested | NEVER propose next steps
-- STOP after task, WAIT for approval
-
-**MANDATORY**:
-- Read files FIRST before edits
-- Small changes: ≤300 LOC/file, ≤50 LOC/function
-- NEVER commit secrets | ALL routes: `export const runtime = 'edge'`
-- TypeScript strict mode (use `!` when index certain)
+**Current State**: Landing page only
+**Next**: Phase 1 MVP (WhatsApp webhook + AI agent + database)
 
 ---
 
 ## Stack
 
-**Frontend**: WhatsApp Business API (Bird.com)
-**Backend**: Next.js 16.0.10 + Vercel Edge Functions + Vercel AI SDK 4.1+
-**Database**: Supabase PostgreSQL + pgvector
-**AI**: OpenAI GPT-4o-mini ($0.15/$0.60/1M) + Claude Sonnet fallback ($3/$15/1M)
+**Framework**: Next.js 15.1.6 (App Router, Edge Runtime)
+**Runtime**: React 19.2.3 + TypeScript 5.7.3
+**AI**: Vercel AI SDK 6.0.62 (Claude Sonnet 4.5 primary, GPT-4o fallback)
+**Database**: Supabase PostgreSQL 15.8 + pgvector
+**Validation**: Zod 4.3.6
+**Styling**: Tailwind CSS 4.1.0
+**Linting**: Biome 1.9.4
+**Package Manager**: Bun 1.3.5
 
-**Migration**: Transitioning to Vercel AI SDK (Phase 1 of 3 - see `/planning/ROADMAP.md`)
+**Dependencies**:
+- ai@6.0.62 - Vercel AI SDK core
+- @ai-sdk/anthropic@3.0.31 - Claude provider
+- @ai-sdk/openai@3.0.23 - OpenAI provider
+- @supabase/supabase-js@2.93.3 - Database client
+- zod@4.3.6 - Schema validation
+- lucide-react@0.469.0 - Icons
 
 ---
 
-## Recent Security Updates
+## Project Structure
 
-**2026-01-20**: Upgraded to Next.js 16.0.10 & React 19.2.3
-- Fixed CVE-2025-55182 (React2Shell) - CVSS 10.0 critical RCE
-- Upgraded from Next.js 15.5.4 + React 19.1.1
-- Added missing AI SDK dependencies (ai, @ai-sdk/openai, @ai-sdk/anthropic)
-- All quality gates passing (239 tests)
-- Deployed to Vercel (commit 0558915)
+```
+migue.ai/
+├── app/
+│   ├── components/         # 9 landing page components
+│   ├── page.tsx            # Landing page
+│   ├── layout.tsx          # Root layout
+│   └── globals.css         # Global styles
+├── specs/                  # SDD-organized features (6 features)
+│   ├── whatsapp-webhook/   # P0: Webhook + HMAC + normalization
+│   ├── ai-agent-system/    # P0: Vercel AI SDK + tools
+│   ├── database-foundation/# P0: Supabase + RLS + pgvector
+│   ├── reminder-automation/# P1: Reminders + Calendar sync
+│   ├── whatsapp-flows/     # P2: Interactive UX
+│   ├── observability/      # P2: Monitoring + cost tracking
+│   ├── ops/                # Deployment + runbook
+│   └── _archive/           # Old flat specs
+├── docs/                   # Technical research (13 files)
+│   ├── architecture/       # AI agent system, multi-provider, memory/RAG
+│   ├── features/           # Agentic patterns, flows, interactive
+│   ├── patterns/           # Tool orchestration, edge optimization
+│   └── research/           # molbot analysis, PRD gap analysis
+├── public/
+│   └── assets/             # Branding (logos, icons)
+├── .backup/
+│   └── 2026-01-28-full-archive/  # Previous implementation
+└── .claude/                # Tracking files (plan, status, todo, etc.)
+```
 
 ---
 
-## Features
+## Archived Code
 
-- Conversational AI (GPT-4o-mini primary, Claude fallback)
-- Smart Reminders (24h window optimization, 90% free messages)
-- Google Calendar integration + Audio transcription (Whisper) + OCR (Tesseract)
+Previous implementation (with API routes, AI providers, tests, etc.) archived in:
+`.backup/2026-01-28-full-archive/`
 
-**Full reference**: [WhatsApp Features](./docs/whatsapp-features-reference.md)
+**Reason**: Fresh start - previous version had critical errors
+**Archived**: lib/, app/api/, tests/, supabase/, scripts/, docs/, types/
+
+See `.backup/2026-01-28-full-archive/ARCHIVE-MANIFEST.md` for full details.
 
 ---
 
 ## Development
 
-### Add Endpoint
-1. Create `app/api/<name>/route.ts` with `export const runtime = 'edge'`
-2. Implement `GET`, `POST` (named exports only)
-3. Add tests in `tests/unit/`
+### Current Features
+- Landing page with branding
+- Responsive design (Tailwind CSS 4)
+- TypeScript strict mode
+- Biome linting
 
-### Deploy
-```bash
-/deploy              # Automated workflow (runs pre-deploy + git push)
-# OR: npm run pre-deploy && git push origin main
-```
+### Implementation Plan (SDD Format)
 
-**Edge Runtime**: Max 5s timeout | Use streaming for long operations | 100% test coverage
+**Phase 1 - MVP** (specs/whatsapp-webhook, ai-agent-system, database-foundation):
+- WhatsApp webhook with HMAC validation
+- Vercel AI SDK with Claude Sonnet 4.5 + GPT-4o fallback
+- Supabase database with 14 tables + RLS
+- 20+ AI tools (reminders, calendar, expenses)
+- 35 tasks total
 
----
+**Phase 2 - Features** (specs/reminder-automation):
+- Automated reminders with cron
+- Google Calendar bidirectional sync
+- 24h messaging window tracking
+- 6 tasks total
 
-## Project Tracking (/planning)
+**Phase 3 - Advanced** (specs/whatsapp-flows, observability):
+- WhatsApp Flows v3 (interactive UX)
+- Cost tracking per user
+- Dead letter queue (DLQ)
+- 9 tasks total
 
-**MANDATORIOS** (auto-created on plan approval):
-- `plan.md` (MAX 50 lines) - Stack, architecture, current phase
-- `todo.md` (MAX 50 lines) - DOING/TODO/DONE tasks
-
-**Optional**:
-- `prd.md` (127 lines) - Product requirements (Vercel AI SDK migration)
-- `ROADMAP.md` (194 lines) - 3-phase implementation (14-19 weeks)
-- `bugs.md` (MAX 100 lines) - Bug tracking with priorities (CRITICAL/HIGH/MEDIUM/FIXED)
-
-**Workflow**:
-1. User approves plan → @claude-master auto-creates plan.md + todo.md in `/planning`
-2. Every interaction → auto-updates tracking files (move tasks, update phase, add features)
-3. Size limits enforced → oldest/least relevant content trimmed automatically
-
-**Status**: Phase 1 (60% complete) | 239 tests | $90/month
+**Technical research** (docs/):
+- Architecture patterns, tool orchestration, edge optimization
+- molbot competitor analysis, PRD gap analysis
 
 ---
 
-## Documentation
+## Configuration
 
-**Search Order**: `/docs/` → Agents → MCP → WebFetch (last resort)
-
-**Key Docs**:
-- [Documentation Search Policy](./docs/documentation-search-policy.md)
-- [Troubleshooting](./docs/troubleshooting-guide.md) | [CHANGELOG](./docs/CHANGELOG.md)
-- [Capabilities Research](./docs/capabilities-research/) - Vercel AI SDK analysis
+**Bun**: package.json has `"packageManager": "bun@1.3.5"`
+**TypeScript**: moduleResolution set to "Bundler" for Bun compatibility
+**Biome**: Unified linting + formatting (replaces ESLint + Prettier)
 
 ---
 
-**Last Updated**: 2025-11-11 | **Maintained by**: @claude-master
+## Rules
+
+**ONE TASK AT A TIME**:
+- Execute ONLY explicit task requested
+- NEVER propose next steps
+- STOP after task, WAIT for approval
+
+**MANDATORY**:
+- Read files FIRST before edits
+- Small changes: ≤300 LOC/file, ≤50 LOC/function
+- TypeScript strict mode
+- No secrets in code
+
+---
+
+## Next Steps
+
+**Ready to start Phase 1 (MVP)**:
+
+1. Database setup (specs/database-foundation/)
+   - 6 tasks: Migrations, RLS policies, indexes
+
+2. WhatsApp webhook (specs/whatsapp-webhook/)
+   - 18 tasks: Edge Runtime, HMAC, normalization
+
+3. AI agent system (specs/ai-agent-system/)
+   - 11 tasks: Vercel AI SDK, tools, circuit breaker
+
+**Total**: 35 tasks, SDD methodology
+
+**References**:
+- All specs: specs/README.md
+- Task breakdown: specs/*/TASKS.md
+- Architecture decisions: specs/*/ADR.md
+
+---
+
+**Last Updated**: 2026-01-29 15:50
+**Maintained by**: ClaudeCode&OnlyMe

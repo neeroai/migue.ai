@@ -1,2 +1,0 @@
-# Fast type checking before commit
-npm run typecheck

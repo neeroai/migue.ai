@@ -1,257 +1,204 @@
-# migue.ai - Documentation
-
-WhatsApp AI Assistant built with Next.js 15, Vercel Edge, Supabase, and Multi-Provider AI (Gemini, OpenAI, Claude, Groq).
-
-## Quick Navigation
-
-### 🚀 New to migue.ai?
-1. [Getting Started Guide](./guides/getting-started.md) - Setup and local development
-2. [Architecture Overview](./architecture/README.md) - System design and patterns
-3. [Deployment Guide](./platforms/vercel/README.md) - Deploy to production
-
-### 🛠️ Building Features?
-- [How-to Guides](./guides/README.md) - Tutorials and feature implementation
-- [API Reference](./reference/README.md) - API specs, schemas, performance guides
-- [WhatsApp Integration](./platforms/whatsapp/README.md) - WhatsApp Business API v23.0
-
-### 🌐 Platform Integrations
-- [WhatsApp](./platforms/whatsapp/README.md) - Business API, interactive messages, flows
-- [Vercel](./platforms/vercel/README.md) - Edge Functions, deployment, optimization
-- [Supabase](./platforms/supabase/README.md) - PostgreSQL, real-time, auth, storage
-- [AI Providers](./platforms/ai/README.md) - Gemini, OpenAI, Claude, Groq
-
-### 📊 Project Management?
-- [Project Roadmap](../.claude/ROADMAP.md) - Complete project plan & timeline
-- [Current Phase](../.claude/phases/current.md) - Fase 2 (95% complete)
-- [PRD & Planning](./project/README.md) - Product requirements & feature expansion
-
 ---
+title: migue.ai Documentation Index
+summary: Central index for all migue.ai project documentation
+description: Navigation guide to research findings, technical patterns, architecture decisions, and implementation guides for migue.ai WhatsApp AI assistant
+version: 1.0
+date: 2026-01-28
+updated: 2026-01-28
+scope: documentation
+---
+
+# migue.ai Documentation
+
+**Project**: WhatsApp-based business automation assistant for LATAM
+**Status**: Development (Phase 1 planning complete)
+**Last Updated**: 2026-01-28
+
+## Quick Links
+
+| Document | Purpose | Status |
+|----------|---------|--------|
+| [PRD](/specs/PRD.md) | Complete product requirements | Approved |
+| [CLAUDE.md](/CLAUDE.md) | Project context for Claude | Current |
+| [README.md](/README.md) | Developer quickstart | Current |
 
 ## Documentation Structure
 
-Following industry best practices from **Supabase**, **AWS**, and **Next.js**:
-
 ```
 docs/
-├── README.md                          # This file
-│
-├── guides/                            # How-to guides & tutorials (Diataxis)
-│   ├── getting-started.md
-│   ├── calendar-reminders.md
-│   ├── interactive-messages.md
-│   ├── reminder-automation.md
-│   ├── typing-indicators.md
-│   └── whatsapp-window-maintenance.md
-│
-├── architecture/                      # System design & explanations
-│   ├── README.md
-│   └── overview.md
-│
-├── reference/                         # API references & specs
-│   ├── README.md
-│   ├── whatsapp-webhook-spec.md
-│   ├── edge-runtime-api.md
-│   ├── api-performance-guide.md
-│   ├── supabase-schema.md
-│   └── supabase-access.md
-│
-├── platforms/                         # Platform-specific documentation
-│   ├── README.md                      # Platform overview
-│   ├── whatsapp/                      # WhatsApp Business API
-│   │   ├── api-v23-guide.md
-│   │   ├── flows-implementation.md
-│   │   ├── interactive-features.md
-│   │   ├── pricing-guide-2025.md
-│   │   └── flows/                     # WhatsApp Flows subdocs
-│   ├── vercel/                        # Vercel Edge deployment
-│   │   ├── edge-error-handling.md
-│   │   ├── edge-functions-optimization.md
-│   │   ├── edge-observability.md
-│   │   ├── edge-security-guide.md
-│   │   └── functions-guide.md
-│   ├── supabase/                      # Supabase PostgreSQL
-│   │   ├── README.md
-│   │   └── database-setup.md
-│   └── ai/                            # Multi-provider AI
-│       ├── README.md                  # Multi-provider overview
-│       ├── provider-selection.md
-│       └── providers/
-│           ├── gemini/                # Primary (FREE)
-│           ├── openai/                # Fallback #1
-│           ├── claude/                # Emergency
-│           └── groq/                  # Audio transcription
-│
-├── project/                           # Project management
-│   ├── pitch-deck.md
-│   └── presentations/
-│
-├── branding/                          # Brand assets
-│   ├── logo-concept-presentation.md
-│   ├── brand-guidelines.md
-│   └── assets/
-│
-├── _partials/                         # Reusable content (Supabase pattern)
-│   └── README.md
-│
-└── archive/                           # Historical documentation
-    ├── research/                      # Pre-implementation research
-    └── technical/                     # Completed audits
+├── research/          # Market research, competitor analysis, compliance
+├── decisions/         # Architecture Decision Records (ADRs)
+├── patterns/          # Technical patterns and best practices
+└── README.md          # This file
 ```
 
-### Organization Philosophy
+## Research
 
-This structure follows **proven patterns** from industry leaders:
+**Purpose**: Findings from market research, policy analysis, and competitive landscape
 
-- **Supabase**: `content/guides/` organized by topic (storage, auth, functions)
-- **AWS**: Platform-based organization (`applications/`, language-specific folders)
-- **Next.js**: Clear separation of guides, reference, and platform docs
+| Document | Summary | Date |
+|----------|---------|------|
+| [WhatsApp Compliance 2026](research/whatsapp-compliance-2026.md) | Critical policy changes banning general AI chatbots | 2026-01-28 |
+| [Competitor Analysis](research/competitor-analysis.md) | Analysis of Zapia, Waply, TheLibrarian | 2026-01-28 |
 
-**Key Benefits:**
-- ✅ **No numeric prefixes** - Professional, modern structure
-- ✅ **Platform-based** - Easy to find integration-specific docs
-- ✅ **Diataxis framework** - Guides (how-to), Reference (API), Explanations (architecture)
-- ✅ **Scalable** - Easy to add new platforms (Stripe, Twilio, etc.)
-- ✅ **Reusable content** - `_partials/` for common snippets (Supabase pattern)
+**Key Findings**:
+- WhatsApp banned general-purpose AI chatbots (Jan 15, 2026)
+- Only business automation allowed (scheduling, reminders, tasks)
+- migue.ai must be positioned as productivity tool, NOT chat assistant
+- Competitors charge $19-29/month, target $5-10/month
 
----
+## Architecture Decisions
 
-## Quick Links by Topic
+**Purpose**: Record of key technical decisions with rationale and tradeoffs
 
-### WhatsApp Integration
-- [WhatsApp API v23 Guide](./platforms/whatsapp/api-v23-guide.md)
-- [Interactive Messages](./guides/interactive-messages.md)
-- [WhatsApp Flows](./platforms/whatsapp/flows-implementation.md)
-- [Pricing Guide 2025](./platforms/whatsapp/pricing-guide-2025.md)
-- [Webhook Specification](./reference/whatsapp-webhook-spec.md)
+| ADR | Title | Status | Date |
+|-----|-------|--------|------|
+| [001](decisions/001-multi-provider-ai-strategy.md) | Multi-Provider AI Strategy | Accepted | 2026-01-28 |
+| [002](decisions/002-vercel-edge-functions.md) | Vercel Edge Functions for Webhooks | Accepted | 2026-01-28 |
 
-### AI & Machine Learning
-- [Multi-Provider AI Overview](./platforms/ai/README.md)
-- [Gemini 2.5 Flash (Primary)](./platforms/ai/providers/gemini/README.md)
-- [OpenAI GPT-4o-mini (Fallback)](./platforms/ai/providers/openai/README.md)
-- [Claude Sonnet (Emergency)](./platforms/ai/providers/claude/README.md)
-- [Groq Whisper (Audio)](./platforms/ai/providers/groq/README.md)
+**Summary**:
+- **AI**: OpenAI GPT-4o-mini primary ($0.03/user/month), Claude fallback
+- **Runtime**: Vercel Edge Functions (<200ms latency), Serverless for AI processing
+- **Database**: Supabase PostgreSQL with RLS
+- **Pattern**: Fire-and-forget webhooks with background processing
 
-### Deployment & DevOps
-- [Vercel Edge Functions](./platforms/vercel/README.md)
-- [Edge Functions Optimization](./platforms/vercel/edge-functions-optimization.md)
-- [Edge Security Guide](./platforms/vercel/edge-security-guide.md)
-- [Error Handling](./platforms/vercel/edge-error-handling.md)
-- [Observability](./platforms/vercel/edge-observability.md)
+## Technical Patterns
 
-### Database & Backend
-- [Supabase Overview](./platforms/supabase/README.md)
-- [Database Schema](./reference/supabase-schema.md)
-- [Supabase Access Guide](./reference/supabase-access.md)
-- [Vercel-Supabase Integration](./platforms/vercel/supabase-integration.md)
+**Purpose**: Reusable implementation patterns learned from archived code and research
 
-### Features & Guides
-- [Getting Started](./guides/getting-started.md)
-- [Calendar & Reminders](./guides/calendar-reminders.md)
-- [Reminder Automation](./guides/reminder-automation.md)
-- [Typing Indicators](./guides/typing-indicators.md)
-- [WhatsApp Window Management](./guides/whatsapp-window-maintenance.md)
+| Pattern | Summary | Complexity |
+|---------|---------|------------|
+| [Fire-and-Forget Webhook](patterns/fire-and-forget-webhook.md) | Immediate 200 response, async processing | Medium |
+| [24h Window Management](patterns/24h-window-management.md) | Track and maintain WhatsApp messaging windows | Medium |
 
----
+**Key Patterns**:
+1. **Fire-and-Forget**: Prevents WhatsApp retry storms, enables long AI processing
+2. **Window Management**: Proactive template messages to keep 24h window open
+3. **Multi-Provider AI**: Auto-failover for reliability
+4. **Message Queue**: Store messages when window expired, send when re-opened
+
+## Implementation Phases
+
+**Timeline**: 12 weeks (Q2 2026)
+
+| Phase | Weeks | Focus | Status |
+|-------|-------|-------|--------|
+| 1: Foundation | 1-3 | Webhook, basic AI, fire-and-forget | Planned |
+| 2: Core Features | 4-6 | Reminders, expenses, interactive messages | Planned |
+| 3: Calendar | 7-9 | Google Calendar integration, scheduling | Planned |
+| 4: Voice & Polish | 10-12 | Whisper transcription, onboarding, beta | Planned |
+| 5: Scale | Post-launch | Performance, cost optimization, growth | Future |
+
+**Current Phase**: Planning complete, ready for Phase 1 implementation
+
+## Core Features
+
+**P0 (Launch Critical)**:
+1. Natural language reminders (Spanish NLP)
+2. Text message processing (conversational AI)
+3. Interactive buttons (max 3 per message)
+4. Interactive lists (max 10 items)
+5. 24h window management (proactive maintenance)
+
+**P1 (Core Value)**:
+1. Google Calendar integration (OAuth, event creation)
+2. Meeting scheduling (availability sharing)
+3. Voice transcription (OpenAI Whisper)
+4. Expense tracking (multi-currency, receipts)
+5. Window maintenance automation (cron-based)
+
+**P2 (Future)**:
+- Multi-user workspaces
+- CRM integration (HubSpot, Pipedrive)
+- Payment links
+- Analytics dashboard
+- Custom workflows
 
 ## Tech Stack
 
-**Frontend & Backend:**
-- Next.js 15 (App Router)
-- Vercel Edge Functions
-- TypeScript 5.9.2 (strict mode)
+| Layer | Technology | Rationale |
+|-------|-----------|-----------|
+| **Frontend** | Next.js 16.0.10 + React 19.2.3 | Landing page only (current) |
+| **Runtime** | Vercel Edge Functions | <100ms global latency |
+| **AI Primary** | OpenAI GPT-4o-mini | $0.15/$0.60 per 1M tokens |
+| **AI Fallback** | Claude 3.5 Sonnet | Auto-failover reliability |
+| **Database** | Supabase PostgreSQL 15.8 | RLS, pgvector, LATAM region |
+| **Transcription** | OpenAI Whisper | $0.006/min audio |
+| **Package Manager** | Bun 1.3.5 | 3x faster than npm |
+| **Linting** | Biome 1.9.4 | Replaces ESLint + Prettier |
 
-**Database & Auth:**
-- Supabase PostgreSQL
-- Row Level Security (RLS)
-- Real-time subscriptions
+## Cost Targets
 
-**AI Providers:**
-- 🥇 Gemini 2.5 Flash (Primary - FREE, 1,500 req/day)
-- 🥈 OpenAI GPT-4o-mini (Fallback - 96% cheaper than Claude)
-- 🥉 Claude Sonnet 4.5 (Emergency - highest quality)
-- 🎤 Groq Whisper (Audio - 93% cheaper than OpenAI)
+| Component | Target | Actual (Projected) |
+|-----------|--------|-------------------|
+| AI processing | <$0.05/user/month | $0.03/user/month ✅ |
+| Infrastructure | <$0.10/user/month | $0.02/user/month ✅ |
+| Voice transcription | <$0.05/user/month | $0.024/user/month ✅ |
+| **Total** | **<$0.20/user/month** | **$0.074/user/month** ✅ |
 
-**Integrations:**
-- WhatsApp Business API v23.0
-- MCP (Model Context Protocol) for Supabase
+**Pricing Strategy**: $5-10/month (vs competitors $19-29/month)
 
----
+## Compliance Requirements
 
-## Contributing to Docs
+**WhatsApp Policy (Jan 2026)**:
+- ✅ Appointment scheduling (reminders)
+- ✅ Task management (expenses, todos)
+- ✅ Calendar integration (Google Calendar)
+- ✅ Document processing (receipts)
+- ❌ General conversation (explicitly rejected)
 
-### Adding Documentation
+**Enforcement**:
+- System prompt rejects general queries
+- Product positioning as business tool
+- Onboarding message clarifies scope
 
-1. **Choose the right section:**
-   - **guides/** - How-to tutorials ("How to implement X")
-   - **reference/** - API specs, schemas ("API endpoint Y returns Z")
-   - **architecture/** - Design explanations ("Why we chose X over Y")
-   - **platforms/** - Platform-specific integration ("WhatsApp Flows setup")
+## Sources & References
 
-2. **Follow naming conventions:**
-   - Lowercase filenames: `getting-started.md` not `Getting-Started.md`
-   - Kebab-case: `api-v23-guide.md` not `api_v23_guide.md`
-   - Descriptive: `edge-functions-optimization.md` not `optimization.md`
+**Archived Code** (reference patterns):
+- Fire-and-forget webhook: `.backup/2026-01-28-full-archive/app/api/whatsapp/webhook/route.ts`
+- Window management: `.backup/2026-01-28-full-archive/lib/messaging-windows.ts`
+- Interactive messages: `.backup/2026-01-28-full-archive/lib/message-builders/`
 
-3. **Update READMEs:**
-   - Add entry to section README
-   - Link from this main index
-   - Update related docs
+**Related Projects**:
+- **molbot** (`/Users/mercadeo/neero/molbot`) - Multi-channel architecture, AI failover
+- **docs-global** (`/Users/mercadeo/neero/docs-global`) - Shared technical standards
 
-4. **Code examples:**
-   - Always include TypeScript types
-   - Show imports (`import { X } from '@/lib/Y'`)
-   - Include error handling
-   - Add comments for complex logic
+**External Documentation**:
+- [WhatsApp Cloud API v23.0](https://developers.facebook.com/docs/whatsapp/cloud-api)
+- [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling)
+- [Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security)
+- [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
 
-5. **Keep it maintainable:**
-   - Files <300 lines (split if needed)
-   - Use `_partials/` for reusable content
-   - Link to related docs
+## Getting Started
 
-### Archiving Old Docs
+**For Developers**:
+1. Read [CLAUDE.md](/CLAUDE.md) for project context
+2. Read [PRD](/specs/PRD.md) for complete requirements
+3. Review [ADRs](decisions/) for technical decisions
+4. Study [patterns](patterns/) for implementation guidance
 
-Move superseded content to `archive/`:
+**For Implementation**:
+1. Start with Phase 1 (Foundation)
+2. Reference archived code for proven patterns
+3. Follow ADRs for technical decisions
+4. Update docs as implementation progresses
 
-```bash
-git mv docs/old-guide.md docs/archive/research/old-guide.md
-# Update archive/README.md with context
-```
+## Maintenance
 
----
+**Update Frequency**:
+- Research docs: As new findings emerge
+- ADRs: When architectural decisions made
+- Patterns: When new patterns discovered or refined
+- README: Monthly or on major changes
 
-## Production Links
-
-- **Production**: https://migue.app
-- **CLAUDE.md**: [Project instructions](../CLAUDE.md)
-- **Main README**: [../README.md](../README.md)
-- **Supabase Dashboard**: https://supabase.com/dashboard/project/pdliixrgdvunoymxaxmw
-- **Vercel Dashboard**: https://vercel.com/dashboard
-
----
-
-## Phase Alignment
-
-**Current Phase**: Fase 2 - Core Features (95% complete)
-
-**Completed:**
-- ✅ Gemini 2.5 Flash integration (100% cost savings)
-- ✅ Multi-provider AI system (Gemini → GPT → Claude)
-- ✅ Audio transcription with Groq Whisper (93% cheaper)
-- ✅ Tool calling (reminders, meetings, expenses)
-- ✅ WhatsApp 24h window management
-- ✅ Interactive messages (buttons, lists)
-- ✅ Calendar integration
-
-**Next Steps:**
-- [ ] Test suite validation (Gemini tests)
-- [ ] Edge Runtime deployment verification
-- [ ] Production monitoring & cost tracking
-- [ ] Documentation completion
-
-See [Roadmap](../.claude/ROADMAP.md) for complete timeline.
+**Review Schedule**:
+- Weekly during active development
+- Monthly post-launch
+- Quarterly for long-term docs
 
 ---
 
-**Last Updated**: 2025-10-11
-**Version**: 3.0.0 (Platform-based reorganization)
-**Pattern Sources**: Supabase, AWS, Next.js documentation structures
+**Team**: ClaudeCode&OnlyMe
+**Maintained by**: Javier Polo (CEO, Neero SAS)
+**Region**: LATAM (Colombia primary market)
+**Launch Target**: Q2 2026

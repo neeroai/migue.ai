@@ -14,8 +14,8 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-# package-lock.json - MUST be tracked for npm ci in GitHub Actions
-yarn.lock
+bun.lockb
+.bun/
 
 # Python
 __pycache__/
@@ -163,7 +163,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public - keeping for assets
 
 # Storybook build outputs
 .out
@@ -222,6 +222,11 @@ out/
 *.tgz
 *.tar.gz
 .archive/
+.backup/
 
 .npm-cache/
 .vercel
+
+# Symlinks to external directories (cause ENOENT in Vercel)
+
+.claude/settings.local.json

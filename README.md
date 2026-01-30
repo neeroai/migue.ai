@@ -1,38 +1,38 @@
-# 🤖 migue.ai - Personal AI Assistant
+# migue.ai - Personal AI Assistant
 
 > Un asistente personal de inteligencia artificial que opera a través de WhatsApp Business API, proporcionando funcionalidades avanzadas de productividad, gestión de citas, análisis de contenido y automatización de tareas diarias.
 
-## 🎯 Objetivo
+## Objetivo
 
 Desarrollar un asistente personal de IA disponible 24/7 a través de WhatsApp Business API, que combine la utilidad de Zapia con la sofisticación técnica de Martin, enfocado en el mercado latinoamericano.
 
-## ✨ Características Principales
+## Características Principales
 
-### 🤝 Gestión de Citas y Reservas
+### Gestión de Citas y Reservas
 - **Agendamiento 24/7**: Disponibilidad continua para reservas
 - **Confirmaciones Automáticas**: Reducción de no-shows
 - **Integración Calendario**: Sincronización con Google Calendar/Outlook
 - **Recuperación de Cancelaciones**: Reprogramación automática
 
-### 🎵 Análisis de Contenido Multimodal
-- **Transcripción de Audio**: WhatsApp audios → texto
-- **Resumen de Videos**: YouTube → resumen textual
- - **Análisis de PDFs**: RAG con embeddings OpenAI + metadata en Supabase
+### Análisis de Contenido Multimodal
+- **Transcripción de Audio**: WhatsApp audios a texto
+- **Resumen de Videos**: YouTube a resumen textual
+- **Análisis de PDFs**: RAG con embeddings + metadata en Supabase
 - **Interpretación de Imágenes**: Identificación de productos/información
 
-### ⚡ Productividad Personal
+### Productividad Personal
 - **Recordatorios Inteligentes**: Programación con Vercel Cron + Supabase
 - **Gestión de Tareas**: Listas y seguimiento
 - **Programación de Mensajes**: Envío diferido en WhatsApp
 - **Búsqueda de Información**: Noticias, clima, datos en tiempo real
 
-## 🏗️ Arquitectura Técnica
+## Arquitectura Técnica
 
 ### Stack Tecnológico
 - **Frontend/Comunicación**: WhatsApp Business API
 - **Backend**: Vercel Edge Functions (serverless)
 - **Base de Datos**: Supabase PostgreSQL + Auth (RLS)
-- **IA/LLM**: OpenAI API (GPT-4o-mini primary, Whisper audio, Claude fallback)
+- **IA/LLM**: Vercel AI SDK 6.0 (Claude Sonnet 4.5 primary, GPT-4o fallback)
 - **OCR**: Tesseract.js (free)
 - **Almacenamiento**: Supabase Storage (archivos multimedia)
 - **Programación**: Vercel Cron Jobs (recordatorios)
@@ -40,309 +40,319 @@ Desarrollar un asistente personal de IA disponible 24/7 a través de WhatsApp Bu
 
 ### Arquitectura Recomendada
 ```
-WhatsApp Business API → Vercel Edge Functions → Supabase → OpenAI API
+WhatsApp Business API → Vercel Edge Functions → Supabase → Vercel AI SDK
 ```
 
-## 📊 Análisis de Mercado
+## Análisis de Mercado
 
 - **Mercado Objetivo**: 10K usuarios iniciales en Latinoamérica
 - **Competidores**: Zapia (1M+ usuarios), Martin (premium), Meta AI
 - **Propuesta de Valor**: Alta utilidad gratuita + latencia ultra-baja (1-2 segundos)
 
-## 🚀 Estado del Proyecto
+## Estado del Proyecto
 
-- ✅ **Fase 1**: MVP completado
-  - ✅ Documentación y análisis
-  - ✅ Arquitectura Vercel + Supabase
-  - ✅ Deployment en producción
-  - ✅ Edge Functions configuradas
-- 🔄 **Fase 2**: Funcionalidades Core (60% completado)
-  - ✅ Sistema de IA con GPT-4o
-  - ✅ Intent classification (8 categorías)
-  - ✅ Response generation contextual
-  - ✅ Conversation history management
-  - ✅ Database optimization (RLS 100x mejora)
-  - ✅ Documentación completa Vercel 2025
-  - ✅ **Testing Infrastructure**: Jest + Edge Runtime + 39 unit tests
-  - ✅ **Zod Validation**: WhatsApp webhook schemas (types/schemas.ts)
-  - ✅ **Type Safety**: 13 formatos de mensaje validados
-  - 🔄 Audio transcription (Whisper) - En progreso
-  - ✅ Calendar integration (Google Calendar)
-  - ✅ Reminder automation (Supabase + WhatsApp cron)
-  - 🔄 Streaming responses
-- ⏳ **Fase 3**: Funcionalidades avanzadas
-- ⏳ **Fase 4**: Escalamiento y optimización
+**CURRENT STATE**: Landing page only (fresh start 2026-01-29)
+**NEXT**: Phase 1 MVP implementation (35 tasks)
 
-### 🎉 Deployment Exitoso
-- **URL**: https://migue.app (producción)
-- **Status**: ✅ Ready
-- **Build Time**: ~57 segundos
-- **Edge Functions**: Todas funcionando correctamente
-- **Último Deploy**: 2025-01-29
+### Previous Implementation (Archived)
+- DONE: Documentation and analysis
+- DONE: Vercel + Supabase architecture
+- DONE: Production deployment
+- DONE: Edge Functions configured
+- ARCHIVED: Previous code in .archive/2026-01-28-full-archive/
 
-## 📁 Estructura del Proyecto
+### Fresh Start Approach (SDD Methodology)
+**Status**: Specifications 100% complete, code 1% (landing page)
+**Reason**: Previous implementation had critical errors (ADR-001)
+**Strategy**: Spec-first, test-driven, incremental implementation
+
+See specs/README.md for implementation plan.
+
+## Vercel AI SDK Integration
+
+**Status:** Core dependency installed (v6.0.62)
+**Provider:** Claude Sonnet 4.5 (primary), GPT-4o (fallback)
+**Goal:** Multi-provider AI with tool orchestration, streaming, caching
+
+### Benefits
+- **Multi-provider**: Automatic fallback Claude to OpenAI
+- **Streaming**: Real-time responses (<1s perceived latency)
+- **Tool orchestration**: 20+ tools (calendar, reminders, expenses)
+- **Cost tracking**: Per-user token budget enforcement
+- **Caching**: Prompt caching reduces costs 60-70%
+
+### Implementation Status
+- INSTALLED: ai@6.0.62, @ai-sdk/anthropic@3.0.31, @ai-sdk/openai@3.0.23
+- PENDING: Tool definitions, circuit breaker, cost tracking
+- REFERENCE: specs/ai-agent-system/
+
+## Estructura del Proyecto
 
 ```
 migue.ai/
-├── api/                            # Vercel Edge Functions
-│   ├── whatsapp/                   # Webhook and messaging
-│   │   ├── webhook.ts              # Message reception + AI processing
-│   │   └── send.ts                 # Message sending
-│   └── cron/                       # Scheduled tasks
-│       └── check-reminders.ts      # Daily reminder checks
-├── lib/                            # Shared utilities
-│   ├── supabase.ts                 # Database client
-│   ├── persist.ts                  # Data persistence
-│   ├── openai.ts                   # OpenAI client (Edge-compatible)
-│   ├── intent.ts                   # Intent classification
-│   ├── response.ts                 # Response generation
-│   └── context.ts                  # Conversation history
-├── types/                          # TypeScript definitions
-│   └── env.d.ts                    # Environment variables
-├── supabase/                       # Database schema
-│   ├── schema.sql                  # Tables and types
-│   ├── security.sql                # RLS policies
-│   └── migrations/                 # Database migrations
-│       └── 001_optimize_rls_indexes.sql
-├── docs/                           # Documentation
-│   ├── deployment/                 # Vercel deployment docs
-│   │   └── README.md               # Deployment index
-│   ├── VERCEL-EDGE-FUNCTIONS-GUIDE.md
-│   ├── VERCEL-DEPLOYMENT-BEST-PRACTICES-2025.md
-│   ├── VERCEL-STREAMING-AI-RESPONSES.md
-│   ├── VERCEL-MONITORING-ANALYTICS.md
-│   ├── VERCEL-WHATSAPP-BOT-ARCHITECTURE.md
-│   ├── VERCEL-SUPABASE-INTEGRATION.md
-│   ├── setup.md                    # Setup instructions
-│   ├── architecture.md             # Architecture docs
-│   └── SUPABASE.md                 # Database docs
-├── .bmad-core/                     # ⚠️ CRITICAL: Never delete
-├── .cursor/                        # IDE rules
-├── .claude/                        # Claude configuration
+├── app/                            # Next.js App Router
+│   ├── components/                 # Landing page components (9 files)
+│   ├── page.tsx                    # Landing page
+│   └── layout.tsx                  # Root layout
+├── specs/                          # SDD specifications (6 features)
+│   ├── whatsapp-webhook/           # P0: Webhook + HMAC + normalization
+│   ├── ai-agent-system/            # P0: Vercel AI SDK + tools
+│   ├── database-foundation/        # P0: Supabase + RLS + pgvector
+│   ├── reminder-automation/        # P1: Reminders + Calendar sync
+│   ├── whatsapp-flows/             # P2: Interactive UX
+│   └── observability/              # P2: Monitoring + cost tracking
+├── docs/                           # Technical documentation
+│   ├── architecture/               # System design docs
+│   ├── features/                   # Feature specifications
+│   ├── patterns/                   # Implementation patterns
+│   └── research/                   # Market analysis
+├── .claude/                        # Claude tracking files
+│   ├── plan.md                     # Current plan
+│   ├── status.md                   # Project status
+│   ├── todo.md                     # Task list
+│   ├── decisions.md                # ADRs
+│   └── CHANGELOG.md                # Granular changelog
+├── .archive/                       # Archived implementations
+│   └── 2026-01-28-full-archive/    # Previous code
+├── public/                         # Static assets
 ├── CLAUDE.md                       # Claude Code guide
-├── AGENTS.md                       # Project blueprint
-└── README.md                       # Este archivo
+└── README.md                       # This file
 ```
 
-## 💰 Modelo de Costos Actualizado
+## Modelo de Costos Estimado
 
 ### Costos Fijos (Mensual)
 - **Vercel Pro**: $20/mes (Edge Functions, Analytics, Cron)
 - **Supabase Pro**: $25/mes (PostgreSQL + Auth + Storage)
 - **Total Fijo**: $45/mes
 
-### Costos Variables
-- **OpenAI API**: $30-50/mes (estimado 10K usuarios activos)
-  - GPT-4o: $15/1M tokens input, $60/1M tokens output
-  - Whisper: $0.006/minuto de audio
-  - Embeddings: $0.13/1M tokens
-- **WhatsApp Templates**: $0.005-$0.08 por mensaje (fuera CSW)
+### Costos Variables (10K usuarios activos)
+- **Anthropic API**: $15-25/mes (Claude Sonnet 4.5)
+  - Input: $3/1M tokens
+  - Output: $15/1M tokens
+  - Caching: 90% discount on cached tokens
+- **OpenAI API (fallback)**: $5-10/mes (GPT-4o)
+  - Input: $2.50/1M tokens
+  - Output: $10/1M tokens
+- **WhatsApp Templates**: $10-30/mes (outside messaging windows)
+  - Marketing: $0.005-$0.08 per message
+  - Service: Free within 24h window
 
 ### Estrategia de Optimización
-- **Uso máximo de CSW**: 24h gratis por conversación
-- **Entry Point Window**: 72h gratis con Click-to-WhatsApp
-- **Caché de respuestas**: Reducir llamadas a OpenAI
-- **Template monitoring**: Rastrear costos de mensajes facturables
+- **Customer Service Window**: 24h free per conversation
+- **Entry Point Window**: 72h free with Click-to-WhatsApp
+- **Prompt caching**: 60-70% cost reduction
+- **Multi-provider failover**: Use cheaper provider when possible
+- **Template monitoring**: Track billable messages
 
-**Total Estimado**: $75-120/mes (incluye WhatsApp y OpenAI)
+**Total Estimado**: $75-120/mes (all services included)
 
-## 🎯 Métricas de Éxito
+## Métricas de Éxito
 
 ### Técnicas
-- **Latencia promedio**: < 1.5 segundos
-- **Disponibilidad**: > 99.9%
-- **Error rate**: < 1%
-- **Throughput**: 1000+ mensajes/hora
+- **Latency p95**: <3s AI response
+- **Availability**: >99.9%
+- **Error rate**: <1%
+- **Throughput**: 1000+ messages/hour
 
 ### De Negocio
-- **Usuarios activos**: Meta mensual
-- **Retención**: > 70% después de 30 días
-- **Satisfacción**: > 4.5/5 en feedback
-- **Costo por usuario**: < $2/mes
+- **Active users**: Growth targets
+- **Retention**: >70% after 30 days
+- **Satisfaction**: >4.5/5 in feedback
+- **Cost per user**: <$2/mes
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. Instalación
+### 1. Installation
 ```bash
-npm install
+bun install  # or npm install
 ```
 
-### 2. Configuración de Variables
-Copia `.env.local.example` a `.env.local` y configura:
+### 2. Environment Variables
+Copy `.env.example` to `.env` and configure:
 ```bash
 # WhatsApp Business API
-WHATSAPP_TOKEN=tu_token
-WHATSAPP_PHONE_ID=tu_phone_id
-WHATSAPP_VERIFY_TOKEN=tu_verify_token
-WHATSAPP_APP_SECRET=tu_app_secret
+WHATSAPP_TOKEN=your_token
+WHATSAPP_PHONE_ID=your_phone_id
+WHATSAPP_VERIFY_TOKEN=your_verify_token
+WHATSAPP_APP_SECRET=your_app_secret
 
 # Supabase
-SUPABASE_URL=https://pdliixrgdvunoymxaxmw.supabase.co
-SUPABASE_KEY=tu_supabase_key
-SUPABASE_ANON_KEY=tu_anon_key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_key
 
-# OpenAI
-OPENAI_API_KEY=tu_openai_key
+# AI Providers
+ANTHROPIC_API_KEY=your_anthropic_key
+OPENAI_API_KEY=your_openai_key
 
-# Configuración
+# Configuration
 TIMEZONE=America/Mexico_City
 NODE_ENV=development
 ```
 
-### 3. Setup de Base de Datos
-```sql
--- Ejecutar en Supabase SQL Editor
-\i supabase/schema.sql
-\i supabase/security.sql
-```
-
-### 4. Desarrollo
+### 3. Database Setup
 ```bash
-npm run dev        # Servidor de desarrollo
-npm run typecheck  # Verificación de tipos
-npm run build      # Build de producción
+# Initialize Supabase project
+npx supabase init
+
+# Run migrations
+npx supabase db push
 ```
 
-### 5. Endpoints Disponibles
-- `GET /api/whatsapp/webhook` - Verificación de webhook
-- `POST /api/whatsapp/webhook` - Recepción de mensajes
-- `POST /api/whatsapp/send` - Envío de mensajes
-- `GET /api/cron/check-reminders` - Cron diario (9 AM UTC)
+### 4. Development
+```bash
+bun run dev        # Development server
+bun run build      # Production build
+bun run lint       # Check code with Biome
+bun run lint:fix   # Auto-fix with Biome
+```
 
-## 🗺️ Roadmap Detallado
+### 5. Available Endpoints (Future)
+- `GET /api/whatsapp/webhook` - Webhook verification
+- `POST /api/whatsapp/webhook` - Message reception
+- `POST /api/whatsapp/send` - Message sending
+- `GET /api/cron/check-reminders` - Daily cron (9 AM UTC)
 
-### Fase 1: MVP (Mes 1-2) ✅
-- [x] Configuración WhatsApp Business API
-- [x] Arquitectura Vercel + Supabase
-- [x] Schema de base de datos (sessions, messages, reminders)
-- [x] Variables de entorno configuradas
-- [x] Deployment exitoso en Vercel (producción)
-- [x] Edge Functions con static imports
-- [x] Webhook endpoint implementado
-- [x] Sistema de recordatorios (cron diario)
-- [x] Integración OpenAI completa (GPT-4o)
-- [x] Webhook funcional con AI processing
-- [x] Sistema de IA con intent classification
-- [x] Database optimization (RLS 100x mejora)
+## Roadmap
 
-### Fase 2: Core Features (Mes 3-4) 🔄 50%
-- [x] Reconocimiento de intención con GPT-4o (8 categorías)
-- [x] Response generation contextual con historial
-- [x] Conversation history management
-- [x] Documentación completa Vercel 2025 (6 guías)
-- [x] Performance optimization (Edge < 100ms)
-- [ ] Transcripción de audios (Whisper API)
-- [x] Gestión de calendarios (Google Calendar)
-- [ ] RAG básico con embeddings + Supabase
-- [ ] Streaming de respuestas GPT-4o
-- [x] Sistema de recordatorios completo
+### Phase 1: MVP (Weeks 1-3) - PENDING
+- [ ] Database foundation (14 tables, RLS, pgvector)
+- [ ] WhatsApp webhook (HMAC, normalization, fire-forget)
+- [ ] AI agent system (Vercel AI SDK, 20+ tools, circuit breaker)
+- [ ] Basic reminders (create, list, delete)
+- [ ] Calendar integration (Google Calendar OAuth)
 
-### Fase 3: Advanced (Mes 5-6) ⏳
-- [ ] Agente autónomo para reservas
-- [ ] Análisis avanzado de PDFs
-- [ ] Dashboard de monitoreo (métricas)
-- [ ] Integraciones múltiples (Outlook, Calendly)
-- [ ] Sistema de notificaciones push
+See specs/whatsapp-webhook/TASKS.md for detailed breakdown (35 tasks).
 
-### Fase 4: Scale (Mes 7-8) ⏳
-- [ ] Optimización de costos WhatsApp
-- [ ] Monitoreo avanzado (alertas, KPIs)
-- [ ] Rate limiting y seguridad
-- [ ] Testing automatizado (e2e)
-- [ ] Preparación para producción
+### Phase 2: Features (Weeks 4-5) - PENDING
+- [ ] Automated reminders (cron jobs)
+- [ ] Calendar bidirectional sync
+- [ ] 24h messaging window tracking
+- [ ] Expense tracking
+- [ ] Task management
 
-## ⚙️ Configuración Actual
+See specs/reminder-automation/TASKS.md for details (6 tasks).
 
-### APIs Configuradas ✅
-- **WhatsApp Business API**: Token y Phone ID configurados
-- **Supabase**: https://pdliixrgdvunoymxaxmw.supabase.co (activo)
-- **OpenAI API**: GPT-4o, Whisper, Embeddings disponibles
-- **Vercel**: Edge Functions y Cron Jobs activos
-  - **Production URL**: https://migue.app
-  - **Deployment**: ✅ Successful (Build: ~57s)
-  - **Cron**: check-reminders (daily at 9 AM UTC)
+### Phase 3: Advanced (Weeks 6-8) - PENDING
+- [ ] WhatsApp Flows v3 (interactive UX)
+- [ ] Cost tracking per user
+- [ ] Dead letter queue (DLQ)
+- [ ] Observability (metrics, alerts)
+- [ ] RAG system (pgvector semantic search)
 
-### Base de Datos 🗄️
-- **Tablas**: sessions, messages, reminders (schema.sql)
-- **Seguridad**: RLS habilitado en todas las tablas
-- **Extensiones**: pgcrypto, pg_trgm configuradas
-- **Tipos**: Enums personalizados para estados y direcciones
+See specs/whatsapp-flows/, specs/observability/ for details (9 tasks).
 
-## 🧪 Testing & Seguridad
+## Configuration
+
+### Stack Versions
+- Next.js: 15.1.6
+- React: 19.2.3
+- TypeScript: 5.7.3
+- Vercel AI SDK: 6.0.62
+- Anthropic SDK: 3.0.31
+- OpenAI SDK: 3.0.23
+- Supabase: 2.93.3
+- Biome: 1.9.4
+- Bun: 1.3.5
+
+### Decision Log
+See .claude/decisions.md for all architectural decisions (ADRs):
+- ADR-001: Fresh start strategy
+- ADR-002: Biome for linting
+- ADR-003: Bun as package manager
+- ADR-004: Vercel AI SDK multi-provider
+
+## Testing & Security
 
 ### Testing Strategy
-- **Unit Tests**: Jest/Vitest para lógica de negocio
-- **Integration Tests**: Supertest para APIs
-- **E2E Tests**: Playwright para flujos completos
-- **Coverage**: Mínimo 80% para módulos críticos
+- **Unit Tests**: Vitest for business logic
+- **Integration Tests**: API route testing
+- **E2E Tests**: Playwright for complete flows
+- **Coverage**: Minimum 80% for critical modules
+
+See specs/*/TESTPLAN.md for test specifications.
 
 ### Security Features
-- **RLS**: Row Level Security en todas las tablas
-- **Webhook Validation**: Signature verification con APP_SECRET
-- **Input Sanitization**: Validación en todos los endpoints
-- **Environment**: Variables seguras en Vercel (nunca en código)
-- **Rate Limiting**: Middleware de Vercel Edge
+- **RLS**: Row Level Security on all user-facing tables
+- **HMAC validation**: Webhook signature verification
+- **Input sanitization**: Zod validation on all endpoints
+- **Environment**: Secure variables in Vercel (never in code)
+- **Rate limiting**: Vercel Edge middleware
 
-## 📚 Documentación
+See specs/whatsapp-webhook/SPEC.md L47-89 for security details.
 
-### Documentación del Proyecto
-- [CLAUDE.md](./CLAUDE.md) - Guía para Claude Code
-- [AGENTS.md](./AGENTS.md) - Blueprint del proyecto
-- [docs/setup.md](./docs/setup.md) - Instrucciones de setup
-- [docs/architecture.md](./docs/architecture.md) - Documentación de arquitectura
-- [docs/SUPABASE.md](./docs/SUPABASE.md) - Documentación de base de datos
+## Documentation
 
-### Documentación Vercel 2025 (Nuevo) 🆕
-- **[docs/deployment/README.md](./docs/deployment/README.md)** - Índice completo de deployment
-- [VERCEL-EDGE-FUNCTIONS-GUIDE.md](./docs/VERCEL-EDGE-FUNCTIONS-GUIDE.md) - Edge Functions completo
-- [VERCEL-DEPLOYMENT-BEST-PRACTICES-2025.md](./docs/VERCEL-DEPLOYMENT-BEST-PRACTICES-2025.md) - Best practices
-- [VERCEL-STREAMING-AI-RESPONSES.md](./docs/VERCEL-STREAMING-AI-RESPONSES.md) - Streaming GPT-4o
-- [VERCEL-MONITORING-ANALYTICS.md](./docs/VERCEL-MONITORING-ANALYTICS.md) - Observabilidad
-- [VERCEL-WHATSAPP-BOT-ARCHITECTURE.md](./docs/VERCEL-WHATSAPP-BOT-ARCHITECTURE.md) - Arquitectura bot
-- [VERCEL-SUPABASE-INTEGRATION.md](./docs/VERCEL-SUPABASE-INTEGRATION.md) - Integración Supabase
+### Project Documentation
+- [CLAUDE.md](./CLAUDE.md) - Claude Code guide
+- [specs/README.md](./specs/README.md) - SDD specifications index
+- [.claude/status.md](./.claude/status.md) - Current project status
+- [.claude/decisions.md](./.claude/decisions.md) - Architecture decisions
 
-### APIs Externas
+### Technical Research
+- [docs/architecture/](./docs/architecture/) - System design
+- [docs/features/](./docs/features/) - Feature specifications
+- [docs/patterns/](./docs/patterns/) - Implementation patterns
+- [docs/research/](./docs/research/) - Market analysis
+
+### External APIs
 - [WhatsApp Business API](https://developers.facebook.com/docs/whatsapp)
+- [Vercel AI SDK](https://sdk.vercel.ai/docs)
 - [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
 - [Supabase Documentation](https://supabase.com/docs)
+- [Anthropic API](https://docs.anthropic.com)
 - [OpenAI API](https://platform.openai.com/docs)
 
-## 🤝 Contribución
+## Contributing
 
-Este proyecto sigue las mejores prácticas definidas en [AGENTS.md](./AGENTS.md). Para contribuir:
+This project follows best practices defined in CLAUDE.md and docs-global standards.
 
-### Estándares de Desarrollo
-1. **Lectura completa**: Lee archivos completos antes de modificar
-2. **Commits pequeños**: Mantén cambios pequeños y seguros
-3. **Documentar suposiciones**: Registra decisiones en Issues/PRs
-4. **Testing**: Incluye tests para nuevo código
-5. **Seguridad**: Nunca commitear secretos
-6. **⚠️ CRÍTICO: NUNCA eliminar `.bmad-core/`** - Contiene configuración esencial
+### Development Standards
+1. **Read first**: Read complete files before modifying
+2. **Small commits**: Keep changes small and safe
+3. **Document decisions**: Record decisions in .claude/decisions.md
+4. **Testing**: Include tests for new code
+5. **Security**: Never commit secrets
+6. **Format**: Use Biome for linting and formatting
 
-### Límites de Código
-- Archivo: ≤ 300 LOC
-- Función: ≤ 50 LOC
-- Parámetros: ≤ 5
-- Complejidad ciclomática: ≤ 10
+### Code Limits
+- File: ≤300 LOC
+- Function: ≤50 LOC
+- Parameters: ≤5
+- Cyclomatic complexity: ≤10
 
-## 📄 Licencia
+### Commit Message Format
+```
+type(scope): brief description
 
-[Definir licencia]
+- Detailed change 1
+- Detailed change 2
 
-## 📞 Contacto
+Generated with Neero.ai & Claude Code
+```
 
-- **Proyecto**: migue.ai Personal Assistant
-- **Estado**: En desarrollo - Fase 2 (Core Features - 50% completado)
-- **Versión**: 1.2
-- **Deployment**: ✅ Producción activa (https://migue.app)
-- **Última actualización**: 2025-10-03
+## License
 
-### 🎉 Logros Recientes
-- ✅ Sistema de IA con GPT-4o implementado (intent classification + response generation)
-- ✅ Documentación completa de Vercel 2025 (6 guías técnicas + índice)
-- ✅ Optimización de base de datos (RLS indexes 100x mejora)
-- ✅ Edge Functions optimizadas (latencia < 100ms)
+[To be defined]
+
+## Contact
+
+- **Project**: migue.ai Personal Assistant
+- **Status**: Fresh start - Specifications complete, ready for Phase 1
+- **Version**: 2.0
+- **Team**: ClaudeCode&OnlyMe (2-person team)
+- **Last updated**: 2026-01-30
+
+### Recent Changes
+- DONE: Fresh start strategy (ADR-001)
+- DONE: Biome linting setup (ADR-002)
+- DONE: Bun package manager (ADR-003)
+- DONE: Core dependencies installed
+- DONE: SDD specifications (6 features, 2360 LOC)
+- DONE: Landing page implementation
+- PENDING: Phase 1 MVP (35 tasks)
 
 ---
 
-**Desarrollado con ❤️ para optimizar la productividad personal a través de IA conversacional**
+**Developed for optimizing personal productivity through conversational AI**
