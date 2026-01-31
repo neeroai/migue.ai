@@ -4,7 +4,7 @@ summary: "Granular changelog following Keep a Changelog format"
 description: "All notable changes to migue.ai project - code changes in lib/, app/api/, src/, app/components/"
 version: "1.0"
 date: "2026-01-28 01:00"
-updated: "2026-01-29 15:50"
+updated: "2026-01-30 15:30"
 scope: "project"
 ---
 
@@ -16,6 +16,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added - 2026-01-30 15:30
+- **Agentic Tool Calling System** - Implemented tool orchestration with multi-step execution
+  - lib/ai/tools/types.ts - Shared types for tool definitions and execution context
+  - lib/ai/tools/calendar.ts - 4 calendar tools with approval workflows (Google Calendar)
+  - lib/ai/tools/reminders.ts - 4 reminder tools (Supabase integration)
+  - lib/ai/tools/index.ts - Unified tool registry with 8 tools (26 planned)
+  - lib/ai/orchestrator.ts - Multi-step agent with ToolLoopAgent, dependency graphs, parallel execution
+  - docs/ai/agentic-tool-calling.md - Architecture documentation (26 tools, execution patterns)
+  - docs/ai/tool-calling-examples.md - 8 practical usage examples with latency metrics
+  - Features: Multi-step loops, parallel execution, streaming, approval workflows, Edge Runtime compatible
+  - Dependencies: Vercel AI SDK 6.0.62 ToolLoopAgent, stepCountIs, hasToolCall
+
+### Added - 2026-01-30 14:30
+- **Multi-Model Routing** - Implemented intelligent model selection system (Phase 1)
+  - lib/ai/task-classifier.ts - Task classification with 8 categories
+  - lib/ai/model-router.ts - Model configuration and routing logic
+  - lib/ai/circuit-breaker.ts - Provider failure management
+  - lib/ai/cost-tracker.ts - Cost tracking and analytics
+  - lib/ai/agent.ts - Main AI agent with integrated routing
+  - tests/task-classifier.test.ts - 21 unit tests (100% pass)
+  - supabase/migrations/006_add_category_to_ai_requests.sql - Database schema update
+  - docs/ai/multi-model-routing.md - Implementation documentation
+  - Installed @ai-sdk/google and @ai-sdk/cohere providers
+  - Target: 88% cost reduction ($1.53 → $0.18 per user/month)
 
 ### Changed - 2026-01-29 15:50
 - **CLAUDE.md** - Updated stack documentation to reflect Vercel AI SDK as primary AI framework
@@ -162,4 +187,4 @@ Previous implementation archived. See .backup/2026-01-28-full-archive/ for histo
 
 ---
 
-**Last Updated**: 2026-01-29 18:30
+**Last Updated**: 2026-01-30 15:30
