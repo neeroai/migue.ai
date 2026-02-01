@@ -319,7 +319,7 @@ export const GeminiPartSchema = z.union([
   z.object({
     functionCall: z.object({
       name: z.string(),
-      args: z.record(z.unknown())
+      args: z.record(z.string(), z.unknown())
     })
   }),
   z.object({
@@ -338,7 +338,7 @@ export const GeminiMessageSchema = z.object({
 // Gemini function call result (strongly typed)
 export const GeminiFunctionCallSchema = z.object({
   name: z.string(),
-  args: z.record(z.unknown())
+  args: z.record(z.string(), z.unknown())
 });
 
 // Generic chat message (compatible with OpenAI/Claude/Gemini)

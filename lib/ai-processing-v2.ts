@@ -12,15 +12,10 @@
 import { logger } from './logger'
 import { getConversationHistory, historyToChatMessages } from './conversation-utils'
 import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
-import {
-  getProviderManager,
-  PROVIDER_COSTS,
-} from './ai-providers'
-import {
-  createProactiveAgent,
-  type OpenAIMessage,
-  transcribeAudio,
-} from './openai'
+// PROVIDER_COSTS removed - cost now comes from AI response
+import { transcribeAudio } from './openai'
+import { createProactiveAgent } from './ai/proactive-agent'
+import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget } from './openai-cost-tracker'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
@@ -36,11 +31,11 @@ import {
 import type { NormalizedMessage } from './message-normalization'
 
 /**
- * Convert conversation history to OpenAI format
+ * Convert conversation history to Vercel AI SDK ModelMessage format
  */
-export function historyToOpenAIMessages(
+export function historyToModelMessages(
   history: Array<{ direction: 'inbound' | 'outbound'; content: string | null }>
-): OpenAIMessage[] {
+): ModelMessage[] {
   return history
     .filter((msg) => msg.content !== null)
     .map((msg) => ({
@@ -87,16 +82,12 @@ export async function processMessageWithAI(
   })
 
   let typingManager
-  let providerManager
-  let provider: string | null = null
-  let providersAttempted: Set<string> = new Set()
 
   try {
-    // Initialize managers inside try-catch to prevent synchronous errors
+    // Initialize typing manager inside try-catch to prevent synchronous errors
     typingManager = createTypingManager(userPhone, messageId)
-    providerManager = getProviderManager()
 
-    logger.debug('[AI] Initialized managers', {
+    logger.debug('[AI] Initialized typing manager', {
       conversationId,
       userId,
     })
@@ -115,54 +106,22 @@ export async function processMessageWithAI(
     })
     const history = await getConversationHistory(conversationId, 15)
 
-    // Select provider based on availability and cost
-    provider = await providerManager.selectProvider('chat')
-
-    // CRITICAL FIX (2025-10-11): Handle emergency kill switch
-    if (provider === null) {
-      logger.warn('[AI] Emergency kill switch enabled - AI disabled', {
-        conversationId,
-        userId,
-        metadata: { envVariable: 'AI_EMERGENCY_STOP=true' }
-      })
-
-      await reactWithWarning(userPhone, messageId)
-      await sendTextAndPersist(
-        conversationId,
-        userPhone,
-        'El sistema está temporalmente deshabilitado por mantenimiento. Por favor intenta más tarde.'
-      )
-      return
-    }
-
-    logger.decision('Provider selection', `Selected ${provider} for chat`, {
-      conversationId,
-      userId,
-      metadata: {
-        provider,
-      }
-    })
-
-    // Track providers attempted to prevent fallback loops
-    providersAttempted = new Set<string>([provider])
-
     let response: string
     let agentName: string
-    let cost: number
 
-    // Use OpenAI GPT-4o-mini (primary provider)
-    const openaiHistory = historyToOpenAIMessages(history)
-    logger.debug('[AI] Using OpenAI with conversation history', {
+    // Use Vercel AI SDK (primary provider)
+    const modelHistory = historyToModelMessages(history)
+    logger.debug('[AI] Using Vercel AI SDK with conversation history', {
       conversationId,
       userId,
       metadata: {
-        historyLength: openaiHistory.length,
+        historyLength: modelHistory.length,
         provider: 'openai',
-        lastUserMessage: openaiHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
+        lastUserMessage: modelHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
       },
     })
 
-    // ✅ Check budget limits BEFORE making API call
+    // Check budget limits BEFORE making API call
     const budgetStatus = getBudgetStatus()
 
     // Check global daily limit
@@ -200,35 +159,22 @@ export async function processMessageWithAI(
       return
     }
 
-    // ✅ Budget OK, proceed with API call
+    // Budget OK, proceed with API call
     const proactiveAgent = createProactiveAgent()
-    // ✅ NEW: Pass context for response validation and cost tracking
-    response = await proactiveAgent.respond(userMessage, userId, openaiHistory, {
+    const aiResponse = await proactiveAgent.respond(userMessage, userId, modelHistory, {
       conversationId,
       messageId,
     })
+    response = aiResponse.text
     agentName = 'ProactiveAgent'
-    cost = PROVIDER_COSTS.chat.openai
 
     await sendTextAndPersist(conversationId, userPhone, response)
     await reactWithCheck(userPhone, messageId)
 
-    // Track cost
-    if (provider && ['openai', 'claude', 'tesseract'].includes(provider)) {
-      providerManager.trackSpending(cost, provider as 'openai' | 'claude' | 'tesseract', 'chat')
-    } else {
-      logger.warn('[cost] Unknown provider for tracking', {
-        conversationId,
-        userId,
-        metadata: { provider }
-      })
-    }
-
     logger.functionExit('processMessageWithAI', Date.now() - startTime, {
       agent: agentName,
-      provider,
       responseLength: response.length,
-      cost: `$${cost.toFixed(4)}`,
+      cost: `$${aiResponse.cost.total.toFixed(4)}`,
     }, { conversationId, userId })
   } catch (error: any) {
     logger.error('AI processing error', error, {
@@ -257,10 +203,6 @@ export async function processMessageWithAI(
       logger.info('Attempting Claude fallback', {
         conversationId,
         userId,
-        metadata: {
-          primaryProvider: provider,
-          alreadyAttempted: Array.from(providersAttempted)
-        }
       })
 
       // TODO: Implement Claude fallback when needed
@@ -316,12 +258,10 @@ export async function processAudioMessage(
     return
   }
 
-  let providerManager
   let typingManager
 
   try {
-    // Initialize managers inside try-catch to prevent synchronous errors
-    providerManager = getProviderManager()
+    // Initialize typing manager inside try-catch to prevent synchronous errors
     typingManager = createTypingManager(
       normalized.from,
       normalized.waMessageId
@@ -412,18 +352,9 @@ export async function processAudioMessage(
       normalized.waMessageId
     )
 
-    // Track cost
-    const durationMinutes = 1 // Assume 1 min average
-    providerManager.trackSpending(
-      PROVIDER_COSTS.transcription.openai * durationMinutes,
-      'openai',
-      'transcription'
-    )
-
     logger.info('Audio processed with OpenAI Whisper', {
       metadata: {
         transcript: transcript.slice(0, 100),
-        cost: `$${(PROVIDER_COSTS.transcription.openai * durationMinutes).toFixed(4)}`,
       },
     })
   } catch (error: any) {
@@ -483,12 +414,10 @@ export async function processDocumentMessage(
     return
   }
 
-  let providerManager
   let typingManager
 
   try {
-    // Initialize managers inside try-catch to prevent synchronous errors
-    providerManager = getProviderManager()
+    // Initialize typing manager inside try-catch to prevent synchronous errors
     typingManager = createTypingManager(
       normalized.from,
       normalized.waMessageId
@@ -544,9 +473,6 @@ export async function processDocumentMessage(
         metadata: { textLength: extractedText.length },
       })
 
-      // Track cost (FREE!)
-      providerManager.trackSpending(0, 'tesseract', 'ocr')
-
       if (!extractedText || extractedText.length < 10) {
         logger.warn('[Document] No text extracted from image', {
           conversationId,
@@ -583,26 +509,8 @@ export async function processDocumentMessage(
 
     // Process extracted text with AI for comprehension
     const history = await getConversationHistory(conversationId, 5)
-    const provider = await providerManager.selectProvider('chat')
 
-    // Handle emergency kill switch
-    if (provider === null) {
-      logger.warn('[Document] Emergency kill switch enabled - AI disabled', {
-        conversationId,
-        userId,
-        metadata: { envVariable: 'AI_EMERGENCY_STOP=true' }
-      })
-
-      await reactWithWarning(normalized.from, normalized.waMessageId)
-      await sendTextAndPersist(
-        conversationId,
-        normalized.from,
-        'El sistema está temporalmente deshabilitado por mantenimiento. Por favor intenta más tarde.'
-      )
-      return
-    }
-
-    // ✅ Check budget limits BEFORE making API call
+    // Check budget limits BEFORE making API call
     const budgetStatus = getBudgetStatus()
 
     // Check global daily limit
@@ -640,21 +548,20 @@ export async function processDocumentMessage(
       return
     }
 
-    // ✅ Budget OK, proceed with API call
-    // Use OpenAI for comprehension
+    // Budget OK, proceed with API call
+    // Use Vercel AI SDK for comprehension
     const proactiveAgent = createProactiveAgent()
-    const openaiHistory = historyToOpenAIMessages(history)
-    // ✅ NEW: Pass context for response validation and cost tracking
-    const comprehension = await proactiveAgent.respond(
+    const modelHistory = historyToModelMessages(history)
+    const aiResponse = await proactiveAgent.respond(
       `El usuario envió una imagen. Aquí está el contenido extraído:\n\n${extractedText}\n\nAnaliza y responde de forma útil.`,
       userId,
-      openaiHistory,
+      modelHistory,
       {
         conversationId,
         messageId: normalized.waMessageId,
       }
     )
-    providerManager.trackSpending(PROVIDER_COSTS.chat.openai, 'openai', 'chat')
+    const comprehension = aiResponse.text
 
     // Send response
     await sendTextAndPersist(conversationId, normalized.from, comprehension)

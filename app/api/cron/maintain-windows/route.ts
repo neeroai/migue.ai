@@ -4,9 +4,9 @@ import { getEnv } from '../../../../lib/env';
 import { logger } from '../../../../lib/logger';
 import { sendWhatsAppText } from '../../../../lib/whatsapp';
 import { getSupabaseServerClient } from '../../../../lib/supabase';
-import { createProactiveAgent } from '../../../../lib/openai';
+import { createProactiveAgent } from '../../../../lib/ai/proactive-agent';
 import { getConversationHistory, type ConversationMessage } from '../../../../lib/conversation-utils';
-import { historyToOpenAIMessages } from '../../../../lib/ai-processing-v2';
+import { historyToModelMessages } from '../../../../lib/ai-processing-v2';
 import {
   findWindowsNearExpiration,
   shouldSendProactiveMessage,
@@ -73,7 +73,7 @@ async function generateContextualMessage(
 ): Promise<string> {
   // Load recent conversation history for context
   const history = await getConversationHistory(conversationId, 5);
-  const openaiHistory = historyToOpenAIMessages(history);
+  const modelHistory = historyToModelMessages(history);
 
   // Use ProactiveAgent to generate natural, contextual message
   const agent = createProactiveAgent();
@@ -96,7 +96,8 @@ Ejemplos:
 - "¿Te sirvió la información sobre [tema]? Cualquier duda, escríbeme"`;
 
   try {
-    const response = await agent.respond(prompt, userId, openaiHistory);
+    const aiResponse = await agent.respond(prompt, userId, modelHistory);
+    const response = aiResponse.text;
     return response;
   } catch (err: any) {
     logger.error('[maintain-windows] Failed to generate contextual message', err);

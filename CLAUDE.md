@@ -12,7 +12,7 @@ npm run test         # All tests (239 passing)
 /deploy              # Automated deployment (pre-deploy + push)
 ```
 
-**Key Files**: `app/api/whatsapp/webhook/route.ts`, `lib/ai-providers.ts`
+**Key Files**: `app/api/whatsapp/webhook/route.ts`, `lib/ai/providers.ts`, `lib/ai/proactive-agent.ts`
 **Environment**: `.env.local` - `WHATSAPP_*`, `SUPABASE_*`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
 **Production**: https://migue.app
 
@@ -35,11 +35,11 @@ npm run test         # All tests (239 passing)
 ## Stack
 
 **Frontend**: WhatsApp Business API (Bird.com)
-**Backend**: Next.js 16.0.10 + Vercel Edge Functions + Vercel AI SDK 4.1+
+**Backend**: Next.js 16.0.10 + Vercel Edge Functions + Vercel AI SDK 6.0
 **Database**: Supabase PostgreSQL + pgvector
 **AI**: OpenAI GPT-4o-mini ($0.15/$0.60/1M) + Claude Sonnet fallback ($3/$15/1M)
 
-**Migration**: Transitioning to Vercel AI SDK (Phase 1 of 3 - see `/planning/ROADMAP.md`)
+**Status**: Vercel AI SDK 6.0 migration COMPLETE (2026-02-01)
 
 ---
 
@@ -97,7 +97,7 @@ npm run test         # All tests (239 passing)
 2. Every interaction → auto-updates tracking files (move tasks, update phase, add features)
 3. Size limits enforced → oldest/least relevant content trimmed automatically
 
-**Status**: Phase 1 (60% complete) | 239 tests | $90/month
+**Status**: Vercel AI SDK 6.0 LIVE | 278 tests | $90/month
 
 ---
 
@@ -112,4 +112,4 @@ npm run test         # All tests (239 passing)
 
 ---
 
-**Last Updated**: 2025-11-11 | **Maintained by**: @claude-master
+**Last Updated**: 2026-02-01 16:00 | **Maintained by**: @claude-master
