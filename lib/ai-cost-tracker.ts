@@ -342,6 +342,7 @@ export class CostTracker {
   }
 
   private async persistUsageToDatabase(record: UsageRecord): Promise<void> {
+    if (process.env.NODE_ENV === 'test') return
     try {
       const supabase = getSupabaseServerClient()
 

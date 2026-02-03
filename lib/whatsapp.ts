@@ -36,6 +36,9 @@ const MEDIA_FETCH_TIMEOUT_MS = 7000;
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  if (typeof (timeoutId as NodeJS.Timeout).unref === 'function') {
+    (timeoutId as NodeJS.Timeout).unref();
+  }
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
@@ -91,6 +94,9 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 7000);
+  if (typeof (timeoutId as NodeJS.Timeout).unref === 'function') {
+    (timeoutId as NodeJS.Timeout).unref();
+  }
 
   const url = `${GRAPH_BASE_URL}/${phoneId}/messages`;
   const startTime = Date.now();
@@ -671,6 +677,9 @@ export function createTypingManager(to: string, messageId: string) {
         active = false;
         timeoutId = null;
       }, duration * 1000);
+      if (typeof (timeoutId as NodeJS.Timeout).unref === 'function') {
+        (timeoutId as NodeJS.Timeout).unref();
+      }
     },
     isActive() {
       return active;

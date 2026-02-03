@@ -112,7 +112,12 @@ function cleanupOldEntries(): void {
 }
 
 // Auto-cleanup every 5 minutes
-setInterval(cleanupOldEntries, CLEANUP_INTERVAL_MS)
+if (process.env.NODE_ENV !== 'test') {
+  const cleanupInterval = setInterval(cleanupOldEntries, CLEANUP_INTERVAL_MS)
+  if (typeof (cleanupInterval as NodeJS.Timeout).unref === 'function') {
+    (cleanupInterval as NodeJS.Timeout).unref()
+  }
+}
 
 /**
  * Get current stats (for monitoring/debugging)
