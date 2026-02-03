@@ -58,7 +58,6 @@ node_modules/
 # ============================================
 # Config files not needed at runtime
 # ============================================
-tsconfig.json
 tailwind.config.*
 .prettierrc
 .prettierrc.*
