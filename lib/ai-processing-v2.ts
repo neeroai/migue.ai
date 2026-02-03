@@ -16,7 +16,7 @@ import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
 import { transcribeAudio } from './openai'
 import { createProactiveAgent } from './ai/proactive-agent'
 import type { ModelMessage } from 'ai'
-import { getBudgetStatus, isUserOverBudget } from './openai-cost-tracker'
+import { getBudgetStatus, isUserOverBudget, trackUsage } from './ai-cost-tracker'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
   sendWhatsAppText,
@@ -194,34 +194,18 @@ export async function processMessageWithAI(
     const isAPIKeyError = error?.message?.includes('ANTHROPIC_API_KEY') ||
                           error?.message?.includes('API key') ||
                           error?.message?.includes('OPENAI_API_KEY')
+    const isFallbackExhausted = error?.message?.includes('Primary provider failed and insufficient budget')
+
     const errorMessage = isAPIKeyError
       ? 'El sistema está en mantenimiento temporalmente. Por favor intenta más tarde.'
+      : isFallbackExhausted
+      ? 'He alcanzado el límite de presupuesto. Intenta mañana.'
       : 'Disculpa, tuve un problema al procesar tu mensaje. ¿Puedes intentar de nuevo?'
 
-    // Fallback: Try Claude if OpenAI failed
-    try {
-      logger.info('Attempting Claude fallback', {
-        conversationId,
-        userId,
-      })
-
-      // TODO: Implement Claude fallback when needed
-      // For now, just send error message
-      throw new Error('Claude fallback not yet implemented')
-    } catch (fallbackError: any) {
-      logger.error('Fallback failed', fallbackError, {
-        conversationId,
-        userId,
-        metadata: {
-          fallbackErrorType: fallbackError?.constructor?.name,
-          fallbackErrorMessage: fallbackError?.message,
-        },
-      })
-
-      // ALWAYS send a response to the user
-      await sendTextAndPersist(conversationId, userPhone, errorMessage)
-      logger.info('Sent error message to user', { conversationId, userId })
-    }
+    // Fallback is now handled inside proactive-agent.ts via executeWithFallback
+    // No need for outer fallback logic - just send error to user
+    await sendTextAndPersist(conversationId, userPhone, errorMessage)
+    logger.info('Sent error message to user', { conversationId, userId })
   } finally {
     if (typingManager) {
       await typingManager.stop()

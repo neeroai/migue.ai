@@ -26,7 +26,7 @@ import {
   hasResponseError,
   type ValidatedChatResponse,
 } from './openai-response-handler'
-import { trackUsage } from './openai-cost-tracker'
+import { trackUsage } from './ai-cost-tracker'
 
 let cachedClient: OpenAI | null = null
 
@@ -535,6 +535,7 @@ export class ProactiveAgent {
         if (context?.messageId) trackingContext.messageId = context.messageId
 
         trackUsage(
+          'openai',
           validated.metadata.model,
           validated.metadata.usage,
           validated.metadata.cost,

@@ -1,14 +1,18 @@
 /**
- * OpenAI Cost Tracker - Production Budget Management
+ * @file ai-cost-tracker.ts
+ * @description Multi-provider AI cost tracking (OpenAI, Claude)
+ * @module lib
+ * @exports trackUsage, getBudgetStatus, canAffordRequest, CostTracker
+ * @date 2026-02-02 11:00
+ * @updated 2026-02-02 11:00
  *
  * Features:
- * - Real-time usage tracking (token-based, not estimated)
+ * - Multi-provider tracking (OpenAI, Claude)
+ * - Real-time usage tracking (token-based)
  * - Daily/monthly budget monitoring
  * - Automatic alerts when limits exceeded
  * - Per-user and per-conversation analytics
  * - Database logging for historical analysis
- *
- * Based on best practices from /docs-global/ai/openai
  */
 
 import type { UsageMetrics, CostMetrics } from './openai-response-handler'
@@ -44,6 +48,7 @@ const ALERT_THRESHOLDS = {
 
 export type UsageRecord = {
   timestamp: Date
+  provider: 'openai' | 'claude'
   model: string
   usage: UsageMetrics
   cost: CostMetrics
@@ -280,6 +285,7 @@ export class CostTracker {
       ...(record.conversationId && { conversationId: record.conversationId }),
       ...(record.userId && { userId: record.userId }),
       metadata: {
+        provider: record.provider,
         model: record.model,
         tokens: record.usage.totalTokens,
         cost: `$${record.cost.totalCost.toFixed(6)}`,
@@ -341,6 +347,7 @@ export class CostTracker {
 
       // @ts-expect-error - openai_usage table exists (migration 016) but types not regenerated yet
       const { error } = await supabase.from('openai_usage').insert({
+        provider: record.provider,
         model: record.model,
         prompt_tokens: record.usage.promptTokens,
         completion_tokens: record.usage.completionTokens,
@@ -382,8 +389,14 @@ export function getCostTracker(): CostTracker {
 
 /**
  * Track usage (convenience wrapper)
+ * @param provider - AI provider ('openai' | 'claude')
+ * @param model - Model name (e.g., 'gpt-4o-mini', 'claude-sonnet-4')
+ * @param usage - Usage metrics (tokens)
+ * @param cost - Cost metrics (USD)
+ * @param context - Optional context (conversationId, userId, messageId)
  */
 export function trackUsage(
+  provider: 'openai' | 'claude',
   model: string,
   usage: UsageMetrics,
   cost: CostMetrics,
@@ -396,6 +409,7 @@ export function trackUsage(
   const tracker = getCostTracker()
   tracker.trackUsage({
     timestamp: new Date(),
+    provider,
     model,
     usage,
     cost,

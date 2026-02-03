@@ -14,6 +14,16 @@ import { models } from './providers'
 import { logger } from '../logger'
 import { createReminder } from '../reminders'
 import { scheduleMeetingFromIntent } from '../scheduling'
+import {
+  selectModel,
+  getFallbackSelection,
+  analyzeComplexity,
+  estimateTokens,
+  type ModelSelection,
+} from './model-router'
+import { getModel } from './gateway'
+import { executeWithFallback, canAffordFallback, type FallbackResult } from './fallback'
+import { getBudgetStatus } from '../ai-cost-tracker'
 
 /**
  * Generate system prompt with current time context
@@ -192,12 +202,50 @@ export async function respond(
     )
   }
 
-  // AI SDK 6.0: Tool definitions with new structure
-  const { text, usage, finishReason, steps } = await generateText({
-    model: models.openai.primary,
-    messages,
+  // Intelligent model selection
+  const hasTools = hasReminder || hasMeeting || hasExpense
+  const complexity = analyzeComplexity(userMessage, history.length, hasTools)
+  const estimatedTokenCount = estimateTokens(userMessage, history.length)
+  const budgetStatus = getBudgetStatus()
 
-    tools: {
+  const primarySelection = selectModel({
+    estimatedTokens: estimatedTokenCount,
+    complexity,
+    budgetRemaining: budgetStatus.dailyRemaining,
+    hasTools,
+  })
+
+  logger.info('[ProactiveAgent] Model selected', {
+    metadata: {
+      provider: primarySelection.provider,
+      model: primarySelection.modelName,
+      reason: primarySelection.reason,
+      complexity,
+      estimatedTokens: estimatedTokenCount,
+      budgetRemaining: budgetStatus.dailyRemaining,
+    },
+  })
+
+  // Get fallback selection
+  const fallbackSelection = getFallbackSelection(primarySelection, {
+    estimatedTokens: estimatedTokenCount,
+    complexity,
+    budgetRemaining: budgetStatus.dailyRemaining,
+    hasTools,
+  })
+
+  // Budget check for fallback
+  const budgetCheck = canAffordFallback(
+    budgetStatus.dailyRemaining,
+    fallbackSelection.estimatedCost
+  )
+
+  // Get model instance
+  const primaryModel = getModel(primarySelection)
+  const fallbackModel = getModel(fallbackSelection)
+
+  // AI SDK 6.0: Tool definitions with new structure
+  const toolsDefinition = {
       create_reminder: {
         description: 'Crea recordatorio cuando usuario dice: recuérdame, no olvides, tengo que, avísame',
         inputSchema: z.object({
@@ -206,7 +254,12 @@ export async function respond(
           description: z.string().optional().describe('Detalles'),
           datetimeIso: z.string().describe('ISO format: YYYY-MM-DDTHH:MM:SS-05:00'),
         }),
-        execute: async ({ userId: _userId, title, description, datetimeIso }) => {
+        execute: async ({ userId: _userId, title, description, datetimeIso }: {
+          userId: string
+          title: string
+          description?: string
+          datetimeIso: string
+        }) => {
           await createReminder(userId, title, description || null, datetimeIso)
           return `Recordatorio creado: "${title}"`
         },
@@ -220,7 +273,13 @@ export async function respond(
           endTime: z.string().describe('ISO format'),
           description: z.string().optional(),
         }),
-        execute: async ({ userId: _userId, title, startTime, endTime, description }) => {
+        execute: async ({ userId: _userId, title, startTime, endTime, description }: {
+          userId: string
+          title: string
+          startTime: string
+          endTime: string
+          description?: string
+        }) => {
           const result = await scheduleMeetingFromIntent({
             userId,
             userMessage: `${title}${description ? ': ' + description : ''}`,
@@ -238,28 +297,90 @@ export async function respond(
           category: z.string(),
           description: z.string(),
         }),
-        execute: async ({ userId: _userId, amount, currency, category, description }) => {
+        execute: async ({ userId: _userId, amount, currency, category, description }: {
+          userId: string
+          amount: number
+          currency: string
+          category: string
+          description: string
+        }) => {
           logger.info('[trackExpense] Registered', {
             metadata: { amount, currency, category, description },
           })
           return `Gasto registrado: ${currency} ${amount} en ${category}`
         },
       },
+  }
+
+  // Execute with fallback chain
+  const result = await executeWithFallback<{
+    text: string
+    usage: { inputTokens: number; outputTokens: number; totalTokens: number }
+    finishReason: string
+    steps: any[]
+  }>(
+    // Primary provider
+    async () => {
+      const response = await generateText({
+        model: primaryModel,
+        messages,
+        tools: toolsDefinition,
+        temperature: 0.8,
+        frequencyPenalty: 0.3,
+        presencePenalty: 0.2,
+      })
+      return {
+        text: response.text,
+        usage: {
+          inputTokens: response.usage.inputTokens ?? 0,
+          outputTokens: response.usage.outputTokens ?? 0,
+          totalTokens: response.usage.totalTokens ?? 0,
+        },
+        finishReason: response.finishReason,
+        steps: response.steps,
+      }
     },
+    // Fallback provider
+    async () => {
+      const response = await generateText({
+        model: fallbackModel,
+        messages,
+        tools: toolsDefinition,
+        temperature: 0.8,
+        frequencyPenalty: 0.3,
+        presencePenalty: 0.2,
+      })
+      return {
+        text: response.text,
+        usage: {
+          inputTokens: response.usage.inputTokens ?? 0,
+          outputTokens: response.usage.outputTokens ?? 0,
+          totalTokens: response.usage.totalTokens ?? 0,
+        },
+        finishReason: response.finishReason,
+        steps: response.steps,
+      }
+    },
+    {
+      primarySelection,
+      fallbackSelection,
+      userId,
+      conversationId: context?.conversationId || 'unknown',
+    },
+    budgetCheck
+  )
 
-    // Anti-repetition parameters
-    temperature: 0.8,
-    frequencyPenalty: 0.3,
-    presencePenalty: 0.2,
-  })
+  const { text, usage, finishReason, steps } = result.result
+  const usedProvider = result.provider
 
-  // Calculate cost (handle undefined tokens)
+  // Calculate cost based on actual provider used
   const inputTokens = usage.inputTokens ?? 0
   const outputTokens = usage.outputTokens ?? 0
   const totalTokens = usage.totalTokens ?? (inputTokens + outputTokens)
 
-  const inputCost = (inputTokens / 1_000_000) * models.openai.costPer1MTokens.input
-  const outputCost = (outputTokens / 1_000_000) * models.openai.costPer1MTokens.output
+  const providerConfig = models[usedProvider]
+  const inputCost = (inputTokens / 1_000_000) * providerConfig.costPer1MTokens.input
+  const outputCost = (outputTokens / 1_000_000) * providerConfig.costPer1MTokens.output
   const totalCost = inputCost + outputCost
 
   // Count tool calls
@@ -268,6 +389,8 @@ export async function respond(
   logger.info('[ProactiveAgent] Response generated', {
     metadata: {
       ...context,
+      provider: usedProvider,
+      fallbackUsed: result.fallbackUsed,
       usage: {
         inputTokens,
         outputTokens,
@@ -279,6 +402,30 @@ export async function respond(
       textLength: text.length,
     },
   })
+
+  // Track usage for budget monitoring
+  const { trackUsage } = await import('../ai-cost-tracker')
+  const modelName = usedProvider === 'openai' ? 'gpt-4o-mini' : 'claude-sonnet-4'
+  trackUsage(
+    usedProvider,
+    modelName,
+    {
+      promptTokens: inputTokens,
+      completionTokens: outputTokens,
+      totalTokens,
+    },
+    {
+      inputCost,
+      outputCost,
+      totalCost,
+      model: modelName,
+    },
+    {
+      ...(context?.conversationId && { conversationId: context.conversationId }),
+      userId,
+      ...(context?.messageId && { messageId: context.messageId }),
+    }
+  )
 
   return {
     text,

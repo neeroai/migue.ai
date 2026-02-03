@@ -20,7 +20,7 @@
     ],
     "skipLibCheck": true,
     "outDir": "dist",
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
