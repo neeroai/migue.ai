@@ -1,30 +1,28 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { scheduleMeetingFromIntent } from '../../lib/scheduling'
-import { chatCompletion } from '../../lib/openai'
+import { generateText } from 'ai'
 
-jest.mock('../../lib/openai', () => ({
-  chatCompletion: jest.fn(),
+jest.mock('ai', () => ({
+  generateText: jest.fn(),
 }))
 
-type Mocked<T> = jest.MockedFunction<T>
-
-const mockedChatCompletion = chatCompletion as Mocked<typeof chatCompletion>
+const mockedGenerateText = generateText as jest.MockedFunction<typeof generateText>
 
 describe('scheduleMeetingFromIntent', () => {
   beforeEach(() => {
-    mockedChatCompletion.mockReset()
+    mockedGenerateText.mockReset()
   })
 
   it('extracts meeting details when ready', async () => {
-    mockedChatCompletion.mockResolvedValueOnce(
-      JSON.stringify({
+    mockedGenerateText.mockResolvedValueOnce({
+      text: JSON.stringify({
         ready: true,
         summary: 'Reunión de seguimiento',
         start_iso: '2025-10-05T15:00:00-05:00',
         end_iso: '2025-10-05T15:30:00-05:00',
         timezone: 'America/Bogota',
-      })
-    )
+      }),
+    } as any)
 
     const result = await scheduleMeetingFromIntent({
       userId: 'user-1',
@@ -37,9 +35,9 @@ describe('scheduleMeetingFromIntent', () => {
   })
 
   it('asks for missing data when extraction not ready', async () => {
-    mockedChatCompletion.mockResolvedValueOnce(
-      JSON.stringify({ ready: false, missing: ['fecha', 'hora'] })
-    )
+    mockedGenerateText.mockResolvedValueOnce({
+      text: JSON.stringify({ ready: false, missing: ['fecha', 'hora'] }),
+    } as any)
 
     const result = await scheduleMeetingFromIntent({
       userId: 'user-2',
@@ -51,7 +49,7 @@ describe('scheduleMeetingFromIntent', () => {
   })
 
   it('handles extraction errors gracefully', async () => {
-    mockedChatCompletion.mockRejectedValueOnce(new Error('API Error'))
+    mockedGenerateText.mockRejectedValueOnce(new Error('API Error'))
 
     const result = await scheduleMeetingFromIntent({
       userId: 'user-3',
@@ -63,7 +61,7 @@ describe('scheduleMeetingFromIntent', () => {
   })
 
   it('handles invalid JSON response', async () => {
-    mockedChatCompletion.mockResolvedValueOnce('invalid json')
+    mockedGenerateText.mockResolvedValueOnce({ text: 'invalid json' } as any)
 
     const result = await scheduleMeetingFromIntent({
       userId: 'user-4',
