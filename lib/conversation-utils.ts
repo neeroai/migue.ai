@@ -9,6 +9,8 @@ import type { ModelMessage } from 'ai'
 
 export type ChatMessage = ChatCompletionMessageParam
 
+type SupabaseClient = ReturnType<typeof getSupabaseServerClient>
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -47,9 +49,9 @@ export type ActionDefinition = {
  */
 export async function getConversationHistory(
   conversationId: string,
-  limit = 10
+  limit = 10,
+  supabase: SupabaseClient = getSupabaseServerClient()
 ): Promise<ConversationMessage[]> {
-  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('messages_v2')
     .select('id, direction, type, content, timestamp')

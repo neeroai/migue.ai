@@ -25,38 +25,18 @@ import { getModel } from './gateway'
 import { executeWithFallback, canAffordFallback, type FallbackResult } from './fallback'
 import { getBudgetStatus } from '../ai-cost-tracker'
 
-/**
- * Generate system prompt with current time context
- * CRITICAL: Time context enables GPT to calculate "en 5 minutos", "mañana", etc.
- */
-function generateSystemPrompt(): string {
-  const now = new Date()
-  const nowISO = now.toISOString()
-  const nowBogota = new Intl.DateTimeFormat('es-CO', {
-    timeZone: 'America/Bogota',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(now)
+const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
+  timeZone: 'America/Bogota',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+})
 
-  return `# CURRENT TIME CONTEXT (CRITICAL for tool calling)
-Current time (UTC): ${nowISO}
-Current time (Bogotá, Colombia): ${nowBogota} (America/Bogota, UTC-5)
-
-When user says:
-- "en X minutos" → Add X minutes to current time
-- "en X horas" → Add X hours to current time
-- "mañana a las Xam/pm" → Tomorrow at specified time
-- "el [día] a las X" → Specified day at specified time
-
-ALWAYS use Colombia timezone (America/Bogota, UTC-5) for datetimeIso.
-Format: YYYY-MM-DDTHH:MM:SS-05:00
-
-# ROLE AND OBJECTIVE
+const SYSTEM_PROMPT_BASE = `# ROLE AND OBJECTIVE
 Eres Migue, un asistente personal conversacional en WhatsApp. Tu objetivo es mantener conversaciones naturales, cálidas y útiles en español colombiano, usando herramientas solo cuando el usuario lo necesite claramente.
 
 # RESPONSE RULES (Critical)
@@ -134,6 +114,30 @@ ALWAYS confirm actions with "Listo!" after executing tools
 YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses - USE IT!
 
 You are an agent - continue the conversation naturally until the user's need is completely resolved.`
+
+/**
+ * Generate system prompt with current time context
+ * CRITICAL: Time context enables GPT to calculate "en 5 minutos", "mañana", etc.
+ */
+function generateSystemPrompt(): string {
+  const now = new Date()
+  const nowISO = now.toISOString()
+  const nowBogota = BOGOTA_FORMATTER.format(now)
+
+  const timeContext = `# CURRENT TIME CONTEXT (CRITICAL for tool calling)
+Current time (UTC): ${nowISO}
+Current time (Bogotá, Colombia): ${nowBogota} (America/Bogota, UTC-5)
+
+When user says:
+- "en X minutos" → Add X minutes to current time
+- "en X horas" → Add X hours to current time
+- "mañana a las Xam/pm" → Tomorrow at specified time
+- "el [día] a las X" → Specified day at specified time
+
+ALWAYS use Colombia timezone (America/Bogota, UTC-5) for datetimeIso.
+Format: YYYY-MM-DDTHH:MM:SS-05:00`
+
+  return `${timeContext}\n\n${SYSTEM_PROMPT_BASE}`
 }
 
 /**
@@ -180,9 +184,12 @@ export async function respond(
 }> {
   const systemPrompt = generateSystemPrompt()
 
+  const maxHistory = userMessage.length > 600 ? 6 : userMessage.length > 200 ? 8 : 12
+  const trimmedHistory = history.slice(-maxHistory)
+
   const messages: ModelMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...history,
+    ...trimmedHistory,
     { role: 'user', content: userMessage },
   ]
 
@@ -204,8 +211,8 @@ export async function respond(
 
   // Intelligent model selection
   const hasTools = hasReminder || hasMeeting || hasExpense
-  const complexity = analyzeComplexity(userMessage, history.length, hasTools)
-  const estimatedTokenCount = estimateTokens(userMessage, history.length)
+  const complexity = analyzeComplexity(userMessage, trimmedHistory.length, hasTools)
+  const estimatedTokenCount = estimateTokens(userMessage, trimmedHistory.length)
   const budgetStatus = getBudgetStatus()
 
   const primarySelection = selectModel({
@@ -310,7 +317,7 @@ export async function respond(
           return `Gasto registrado: ${currency} ${amount} en ${category}`
         },
       },
-  }
+  } as const
 
   // Execute with fallback chain
   const result = await executeWithFallback<{
@@ -324,7 +331,7 @@ export async function respond(
       const response = await generateText({
         model: primaryModel,
         messages,
-        tools: toolsDefinition,
+        tools: toolsDefinition as any,
         temperature: 0.8,
         frequencyPenalty: 0.3,
         presencePenalty: 0.2,
@@ -345,7 +352,7 @@ export async function respond(
       const response = await generateText({
         model: fallbackModel,
         messages,
-        tools: toolsDefinition,
+        tools: toolsDefinition as any,
         temperature: 0.8,
         frequencyPenalty: 0.3,
         presencePenalty: 0.2,

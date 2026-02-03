@@ -31,6 +31,17 @@ type WhatsAppPayload = {
 // Rate limiting: 250 msg/sec (WhatsApp Cloud API 2025 limit)
 const rateLimitBuckets = new Map<number, number[]>();
 const RATE_LIMIT = 250; // messages per second
+const MEDIA_FETCH_TIMEOUT_MS = 7000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 /**
  * Clear internal caches - for testing purposes only
@@ -78,6 +89,9 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
   // Apply rate limiting
   await rateLimit();
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 7000);
+
   const url = `${GRAPH_BASE_URL}/${phoneId}/messages`;
   const startTime = Date.now();
 
@@ -88,7 +102,10 @@ export async function sendWhatsAppRequest(payload: WhatsAppPayload) {
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(payload),
+    signal: controller.signal,
   });
+
+  clearTimeout(timeoutId);
 
   const latency = Date.now() - startTime;
 
@@ -741,9 +758,9 @@ export type WhatsAppMediaDownload = {
 
 async function fetchGraphResource(path: string, token: string) {
   const url = `${GRAPH_BASE_URL}/${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${token}` },
-  })
+  }, MEDIA_FETCH_TIMEOUT_MS)
   if (!res.ok) {
     throw new Error(`WhatsApp media fetch failed with ${res.status}`)
   }
@@ -776,9 +793,9 @@ export async function downloadWhatsAppMedia(mediaId: string): Promise<WhatsAppMe
     throw new Error('WHATSAPP_TOKEN is not configured')
   }
   const { url, mimeType } = await resolveMediaUrl(mediaId, token)
-  const mediaRes = await fetch(url, {
+  const mediaRes = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${token}` },
-  })
+  }, MEDIA_FETCH_TIMEOUT_MS)
   if (!mediaRes.ok) {
     throw new Error(`WhatsApp media content fetch failed with ${mediaRes.status}`)
   }

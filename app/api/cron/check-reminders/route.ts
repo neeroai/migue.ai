@@ -14,6 +14,33 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+type ReminderProcessResult = {
+  processed: boolean
+  error?: string
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  handler: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  if (items.length === 0) return []
+  const results: R[] = new Array(items.length)
+  let nextIndex = 0
+  const workerCount = Math.min(limit, items.length)
+
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const current = nextIndex++
+      if (current >= items.length) return
+      results[current] = await handler(items[current]!, current)
+    }
+  })
+
+  await Promise.all(workers)
+  return results
+}
+
 // Type for reminders with joined users table
 type ReminderRow = Tables<'reminders'> & {
   users: {
@@ -25,8 +52,9 @@ type DueReminder = Tables<'reminders'> & {
   phone_number: string | null;
 };
 
-async function getDueReminders(): Promise<DueReminder[]> {
-  const supabase = getSupabaseServerClient();
+type SupabaseClient = ReturnType<typeof getSupabaseServerClient>;
+
+async function getDueReminders(supabase: SupabaseClient): Promise<DueReminder[]> {
   const nowIso = new Date().toISOString();
   const { data, error } = await supabase
     .from('reminders')
@@ -48,8 +76,11 @@ async function getDueReminders(): Promise<DueReminder[]> {
   }));
 }
 
-async function markReminderStatus(id: string, status: 'sent' | 'failed' | 'pending') {
-  const supabase = getSupabaseServerClient();
+async function markReminderStatus(
+  supabase: SupabaseClient,
+  id: string,
+  status: 'sent' | 'failed' | 'pending'
+) {
   const patch: Record<string, unknown> = { status };
   if (status === 'sent') {
     patch.send_token = crypto.randomUUID();
@@ -77,65 +108,69 @@ export async function GET(req: Request): Promise<Response> {
   }
 
   try {
-    const due = await getDueReminders();
-    let processed = 0;
-    const failures: Array<{ id: string; error: string }> = [];
-    for (const r of due) {
-      try {
-        const phone = r.phone_number;
-        if (!phone) {
-          await markReminderStatus(r.id, 'failed');
-          failures.push({ id: r.id, error: 'missing phone number' });
-          continue;
-        }
+    const supabase = getSupabaseServerClient();
+    const due = await getDueReminders(supabase);
+    const concurrencyLimit = 4
 
-        // ✅ FIX: Mark as 'sent' BEFORE sending to prevent race condition duplicates
-        await markReminderStatus(r.id, 'sent');
-
-        // Format message with emoji and context for better UX
-        const emoji = '🔔';
-        const body = r.description
-          ? `${emoji} Recordatorio: ${r.title}\n\n${r.description}`
-          : `${emoji} Recordatorio: ${r.title}`;
-
+    const results = await mapWithConcurrency(
+      due,
+      concurrencyLimit,
+      async (r): Promise<ReminderProcessResult> => {
         try {
-          // Send WhatsApp message
-          await sendWhatsAppText(phone, body);
-
-          // Record calendar event (non-critical - log failure but don't rollback)
-          try {
-            await recordCalendarEvent({
-              userId: r.user_id,
-              provider: 'google',
-              externalId: `reminder-${r.id}`,
-              summary: r.title,
-              description: r.description,
-              startTime: r.scheduled_time,
-              endTime: r.scheduled_time,
-              meetingUrl: null,
-              metadata: { source: 'reminder-cron' },
-            });
-          } catch (calErr: any) {
-            // Log calendar failure but don't fail the reminder
-            // User got the WhatsApp notification which is the primary goal
-            console.warn(`Calendar event failed for reminder ${r.id}:`, calErr.message);
+          const phone = r.phone_number
+          if (!phone) {
+            await markReminderStatus(supabase, r.id, 'failed')
+            return { processed: false, error: 'missing phone number' }
           }
 
-          processed++;
-        } catch (whatsappErr: any) {
-          // WhatsApp send failed - rollback status to 'pending' for retry
-          await markReminderStatus(r.id, 'pending');
-          const reason = whatsappErr?.message ?? 'WhatsApp send failed';
-          failures.push({ id: r.id, error: reason });
+          // ✅ FIX: Mark as 'sent' BEFORE sending to prevent race condition duplicates
+          await markReminderStatus(supabase, r.id, 'sent')
+
+          // Format message with emoji and context for better UX
+          const emoji = '🔔'
+          const body = r.description
+            ? `${emoji} Recordatorio: ${r.title}\n\n${r.description}`
+            : `${emoji} Recordatorio: ${r.title}`
+
+          try {
+            await sendWhatsAppText(phone, body)
+
+            try {
+              await recordCalendarEvent({
+                userId: r.user_id,
+                provider: 'google',
+                externalId: `reminder-${r.id}`,
+                summary: r.title,
+                description: r.description,
+                startTime: r.scheduled_time,
+                endTime: r.scheduled_time,
+                meetingUrl: null,
+                metadata: { source: 'reminder-cron' },
+              })
+            } catch (calErr: any) {
+              console.warn(`Calendar event failed for reminder ${r.id}:`, calErr.message)
+            }
+
+            return { processed: true }
+          } catch (whatsappErr: any) {
+            await markReminderStatus(supabase, r.id, 'pending')
+            const reason = whatsappErr?.message ?? 'WhatsApp send failed'
+            return { processed: false, error: reason }
+          }
+        } catch (err: any) {
+          const reason = err?.message ?? 'unknown error'
+          await markReminderStatus(supabase, r.id, 'failed')
+          return { processed: false, error: reason }
         }
-      } catch (err: any) {
-        // Unexpected error in outer try block
-        const reason = err?.message ?? 'unknown error';
-        await markReminderStatus(r.id, 'failed');
-        failures.push({ id: r.id, error: reason });
       }
-    }
-    return jsonResponse({ processed, failures });
+    )
+
+    const processed = results.filter((r) => r.processed).length
+    const failures = results
+      .map((r, index) => (r.error ? { id: due[index]!.id, error: r.error } : null))
+      .filter((r): r is { id: string; error: string } => !!r)
+
+    return jsonResponse({ processed, failures })
   } catch (err: any) {
     return jsonResponse({ error: err?.message ?? 'Cron error' }, 500);
   }

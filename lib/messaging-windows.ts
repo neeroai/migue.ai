@@ -52,6 +52,8 @@ interface WindowRow {
   free_entry_point_expires_at: string | null
 }
 
+type SupabaseClient = ReturnType<typeof getSupabaseServerClient>
+
 /**
  * Update messaging window when a message is sent/received
  * Call this from webhook for every inbound/outbound message
@@ -130,8 +132,10 @@ export async function updateMessagingWindow(
 /**
  * Get current messaging window status for a phone number
  */
-export async function getMessagingWindow(phoneNumber: string): Promise<MessagingWindow> {
-  const supabase = getSupabaseServerClient()
+export async function getMessagingWindow(
+  phoneNumber: string,
+  supabase: SupabaseClient = getSupabaseServerClient()
+): Promise<MessagingWindow> {
 
   const { data, error } = await supabase.from('messaging_windows')
     .select('*')
@@ -231,7 +235,14 @@ async function isUserActiveRecently(userId: string, conversationId: string): Pro
 export async function shouldSendProactiveMessage(
   userId: string,
   phoneNumber: string,
-  conversationId?: string
+  conversationId?: string,
+  supabase: SupabaseClient = getSupabaseServerClient(),
+  snapshot?: {
+    proactive_messages_sent_today: number
+    last_proactive_sent_at: string | null
+    window_expires_at: string
+    free_entry_point_expires_at: string | null
+  } | null
 ): Promise<ProactiveMessageDecision> {
   // 1. Check if within business hours
   const withinHours = await isWithinBusinessHours()
@@ -243,7 +254,32 @@ export async function shouldSendProactiveMessage(
   }
 
   // 2. Check messaging window status
-  const window = await getMessagingWindow(phoneNumber)
+  const window = snapshot
+    ? (() => {
+        const now = new Date()
+        const expiresAt = new Date(snapshot.window_expires_at)
+        const freeEntryExpiresAt = snapshot.free_entry_point_expires_at
+          ? new Date(snapshot.free_entry_point_expires_at)
+          : null
+        const isOpen = expiresAt > now
+        const isFreeEntry = freeEntryExpiresAt ? freeEntryExpiresAt > now : false
+        const hoursRemaining = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))
+        const messagesRemainingToday = Math.max(0, MAX_PROACTIVE_PER_DAY - snapshot.proactive_messages_sent_today)
+        const canSendProactive = isOpen && messagesRemainingToday > 0
+
+        return {
+          isOpen,
+          isFreeEntry,
+          expiresAt,
+          hoursRemaining,
+          canSendProactive,
+          messagesRemainingToday,
+          lastProactiveSentAt: snapshot.last_proactive_sent_at
+            ? new Date(snapshot.last_proactive_sent_at)
+            : null,
+        }
+      })()
+    : await getMessagingWindow(phoneNumber, supabase)
 
   if (!window.isOpen && !window.isFreeEntry) {
     return {
@@ -301,8 +337,10 @@ export async function shouldSendProactiveMessage(
 /**
  * Increment proactive message counter after sending
  */
-export async function incrementProactiveCounter(phoneNumber: string): Promise<void> {
-  const supabase = getSupabaseServerClient()
+export async function incrementProactiveCounter(
+  phoneNumber: string,
+  supabase: SupabaseClient = getSupabaseServerClient()
+): Promise<void> {
 
   // First get current count
   const { data: current } = await supabase.from('messaging_windows')

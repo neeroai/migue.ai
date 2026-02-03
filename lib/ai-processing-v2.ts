@@ -12,6 +12,7 @@
 import { logger } from './logger'
 import { getConversationHistory, historyToModelMessages } from './conversation-utils'
 import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
+import { getSupabaseServerClient } from './supabase'
 // PROVIDER_COSTS removed - cost now comes from AI response
 import { transcribeAudio } from './openai'
 import { createProactiveAgent } from './ai/proactive-agent'
@@ -27,8 +28,12 @@ import {
   reactWithThinking,
   reactWithCheck,
   reactWithWarning,
+  downloadWhatsAppMedia,
 } from './whatsapp'
 import type { NormalizedMessage } from './message-normalization'
+
+const proactiveAgent = createProactiveAgent()
+const supabaseClient = getSupabaseServerClient()
 
 
 /**
@@ -70,43 +75,24 @@ export async function processMessageWithAI(
 
   let typingManager
 
+  const shouldShowTyping = userMessage.length >= 80
+
   try {
-    // Initialize typing manager inside try-catch to prevent synchronous errors
-    typingManager = createTypingManager(userPhone, messageId)
-
-    logger.debug('[AI] Initialized typing manager', {
-      conversationId,
-      userId,
-    })
-
     // Mark message as read
     await markAsRead(messageId)
-    await reactWithThinking(userPhone, messageId)
 
-    // Start typing
-    await typingManager.start()
+    if (shouldShowTyping) {
+      // Initialize typing manager inside try-catch to prevent synchronous errors
+      typingManager = createTypingManager(userPhone, messageId)
 
-    // Get conversation history (increased from 10 to 15 for better context)
-    logger.debug('[AI] Getting conversation history', {
-      conversationId,
-      userId,
-    })
-    const history = await getConversationHistory(conversationId, 15)
+      logger.debug('[AI] Initialized typing manager', {
+        conversationId,
+        userId,
+      })
 
-    let response: string
-    let agentName: string
-
-    // Use Vercel AI SDK (primary provider)
-    const modelHistory = historyToModelMessages(history)
-    logger.debug('[AI] Using Vercel AI SDK with conversation history', {
-      conversationId,
-      userId,
-      metadata: {
-        historyLength: modelHistory.length,
-        provider: 'openai',
-        lastUserMessage: modelHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
-      },
-    })
+      await reactWithThinking(userPhone, messageId)
+      await typingManager.start()
+    }
 
     // Check budget limits BEFORE making API call
     const budgetStatus = getBudgetStatus()
@@ -146,8 +132,30 @@ export async function processMessageWithAI(
       return
     }
 
+    // Get conversation history (adaptive limit to reduce tokens for long messages)
+    logger.debug('[AI] Getting conversation history', {
+      conversationId,
+      userId,
+    })
+    const historyLimit = userMessage.length > 600 ? 8 : userMessage.length > 200 ? 12 : 15
+    const history = await getConversationHistory(conversationId, historyLimit, supabaseClient)
+
+    let response: string
+    let agentName: string
+
+    // Use Vercel AI SDK (primary provider)
+    const modelHistory = historyToModelMessages(history)
+    logger.debug('[AI] Using Vercel AI SDK with conversation history', {
+      conversationId,
+      userId,
+      metadata: {
+        historyLength: modelHistory.length,
+        provider: 'openai',
+        lastUserMessage: modelHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
+      },
+    })
+
     // Budget OK, proceed with API call
-    const proactiveAgent = createProactiveAgent()
     const aiResponse = await proactiveAgent.respond(userMessage, userId, modelHistory, {
       conversationId,
       messageId,
@@ -232,29 +240,9 @@ export async function processAudioMessage(
   let typingManager
 
   try {
-    // Initialize typing manager inside try-catch to prevent synchronous errors
-    typingManager = createTypingManager(
-      normalized.from,
-      normalized.waMessageId
-    )
     await markAsRead(normalized.waMessageId)
-    await reactWithThinking(normalized.from, normalized.waMessageId)
-    await typingManager.start()
 
-    // Download audio
-    logger.debug('[Audio] Downloading audio file', {
-      conversationId,
-      userId,
-    })
-    const audioResponse = await fetch(normalized.mediaUrl)
-    const audioBuffer = new Uint8Array(await audioResponse.arrayBuffer())
-    logger.debug('[Audio] Audio downloaded', {
-      conversationId,
-      userId,
-      metadata: { bufferSize: audioBuffer.length },
-    })
-
-    // ✅ Check budget limits BEFORE making API call
+    // ✅ Check budget limits BEFORE download/processing
     const budgetStatus = getBudgetStatus()
 
     // Check global daily limit
@@ -276,6 +264,14 @@ export async function processAudioMessage(
       return
     }
 
+    // Initialize typing manager inside try-catch to prevent synchronous errors
+    typingManager = createTypingManager(
+      normalized.from,
+      normalized.waMessageId
+    )
+    await reactWithThinking(normalized.from, normalized.waMessageId)
+    await typingManager.start()
+
     // Check per-user daily limit
     if (isUserOverBudget(userId)) {
       logger.warn('[Audio Processing] User over budget', {
@@ -291,6 +287,18 @@ export async function processAudioMessage(
       await reactWithWarning(normalized.from, normalized.waMessageId)
       return
     }
+
+    // Download audio
+    logger.debug('[Audio] Downloading audio file', {
+      conversationId,
+      userId,
+    })
+    const { bytes: audioBuffer } = await downloadWhatsAppMedia(normalized.mediaUrl)
+    logger.debug('[Audio] Audio downloaded', {
+      conversationId,
+      userId,
+      metadata: { bufferSize: audioBuffer.length },
+    })
 
     // ✅ Budget OK, proceed with API call
     // Transcribe with OpenAI Whisper
@@ -313,6 +321,19 @@ export async function processAudioMessage(
     await updateInboundMessageByWaId(normalized.waMessageId, {
       content: transcript,
     })
+
+    // Budget check before AI follow-up
+    const followupBudgetStatus = getBudgetStatus()
+    if (followupBudgetStatus.dailyRemaining < 0.01 || isUserOverBudget(userId)) {
+      await sendWhatsAppText(
+        normalized.from,
+        followupBudgetStatus.dailyRemaining < 0.01
+          ? 'Lo siento, he alcanzado mi límite diario de consultas. Vuelve mañana a las 7am.'
+          : 'Has alcanzado tu límite diario de consultas ($0.50). Vuelve mañana.'
+      )
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      return
+    }
 
     // Process transcribed text with AI
     await processMessageWithAI(
@@ -388,12 +409,51 @@ export async function processDocumentMessage(
   let typingManager
 
   try {
+    await markAsRead(normalized.waMessageId)
+
+    // Check budget limits BEFORE download/processing
+    const budgetStatus = getBudgetStatus()
+
+    // Check global daily limit
+    if (budgetStatus.dailyRemaining < 0.01) {
+      logger.warn('[Document Processing] Daily budget exhausted', {
+        conversationId,
+        userId,
+        metadata: {
+          dailySpent: `$${budgetStatus.dailySpent.toFixed(4)}`,
+          limit: `$${budgetStatus.dailyLimit.toFixed(2)}`,
+        },
+      })
+
+      await sendWhatsAppText(
+        normalized.from,
+        'Lo siento, he alcanzado mi límite diario de consultas. Vuelve mañana a las 7am.'
+      )
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      return
+    }
+
+    // Check per-user daily limit
+    if (isUserOverBudget(userId)) {
+      logger.warn('[Document Processing] User over budget', {
+        conversationId,
+        userId,
+        metadata: { phoneNumber: normalized.from },
+      })
+
+      await sendWhatsAppText(
+        normalized.from,
+        'Has alcanzado tu límite diario de consultas ($0.50). Vuelve mañana.'
+      )
+      await reactWithWarning(normalized.from, normalized.waMessageId)
+      return
+    }
+
     // Initialize typing manager inside try-catch to prevent synchronous errors
     typingManager = createTypingManager(
       normalized.from,
       normalized.waMessageId
     )
-    await markAsRead(normalized.waMessageId)
     await reactWithThinking(normalized.from, normalized.waMessageId)
     await typingManager.start()
 
@@ -402,10 +462,7 @@ export async function processDocumentMessage(
       conversationId,
       userId,
     })
-    const imageResponse = await fetch(normalized.mediaUrl)
-    const imageArrayBuffer = await imageResponse.arrayBuffer()
-    const imageBuffer = new Uint8Array(imageArrayBuffer)
-    const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg'
+    const { bytes: imageBuffer, mimeType } = await downloadWhatsAppMedia(normalized.mediaUrl)
     logger.debug('[Document] Document downloaded', {
       conversationId,
       userId,
@@ -479,49 +536,10 @@ export async function processDocumentMessage(
     }
 
     // Process extracted text with AI for comprehension
-    const history = await getConversationHistory(conversationId, 5)
-
-    // Check budget limits BEFORE making API call
-    const budgetStatus = getBudgetStatus()
-
-    // Check global daily limit
-    if (budgetStatus.dailyRemaining < 0.01) {
-      logger.warn('[Document Processing] Daily budget exhausted', {
-        conversationId,
-        userId,
-        metadata: {
-          dailySpent: `$${budgetStatus.dailySpent.toFixed(4)}`,
-          limit: `$${budgetStatus.dailyLimit.toFixed(2)}`,
-        },
-      })
-
-      await sendWhatsAppText(
-        normalized.from,
-        'Lo siento, he alcanzado mi límite diario de consultas. Vuelve mañana a las 7am.'
-      )
-      await reactWithWarning(normalized.from, normalized.waMessageId)
-      return
-    }
-
-    // Check per-user daily limit
-    if (isUserOverBudget(userId)) {
-      logger.warn('[Document Processing] User over budget', {
-        conversationId,
-        userId,
-        metadata: { phoneNumber: normalized.from },
-      })
-
-      await sendWhatsAppText(
-        normalized.from,
-        'Has alcanzado tu límite diario de consultas ($0.50). Vuelve mañana.'
-      )
-      await reactWithWarning(normalized.from, normalized.waMessageId)
-      return
-    }
+    const history = await getConversationHistory(conversationId, 5, supabaseClient)
 
     // Budget OK, proceed with API call
     // Use Vercel AI SDK for comprehension
-    const proactiveAgent = createProactiveAgent()
     const modelHistory = historyToModelMessages(history)
     const aiResponse = await proactiveAgent.respond(
       `El usuario envió una imagen. Aquí está el contenido extraído:\n\n${extractedText}\n\nAnaliza y responde de forma útil.`,

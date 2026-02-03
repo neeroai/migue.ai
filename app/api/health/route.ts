@@ -30,6 +30,19 @@ interface CheckResult {
   latency?: number;
 }
 
+const HEALTH_CACHE_TTL_MS = 30_000;
+let healthCache: { timestamp: number; body: string; status: number } | null = null;
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Check if all required environment variables are configured
  */
@@ -75,12 +88,12 @@ async function checkWhatsAppAPI(): Promise<CheckResult> {
 
     // Test WhatsApp API by getting phone number info
     const url = `${GRAPH_BASE_URL}/${env.WHATSAPP_PHONE_ID}?fields=display_phone_number,quality_rating,verified_name`;
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${env.WHATSAPP_TOKEN}`,
       },
-    });
+    }, 5000);
 
     const latency = Date.now() - startTime;
 
@@ -117,11 +130,15 @@ async function checkSupabase(): Promise<CheckResult> {
     const startTime = Date.now();
 
     // Simple health check - try to authenticate
-    const response = await fetch(`${env.SUPABASE_URL}/auth/v1/health`, {
-      headers: {
-        'apikey': env.SUPABASE_KEY,
+    const response = await fetchWithTimeout(
+      `${env.SUPABASE_URL}/auth/v1/health`,
+      {
+        headers: {
+          'apikey': env.SUPABASE_KEY,
+        },
       },
-    });
+      5000
+    );
 
     const latency = Date.now() - startTime;
 
@@ -155,12 +172,12 @@ async function checkOpenAI(): Promise<CheckResult> {
     const startTime = Date.now();
 
     // Test OpenAI API by listing models
-    const response = await fetch('https://api.openai.com/v1/models', {
+    const response = await fetchWithTimeout('https://api.openai.com/v1/models', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
       },
-    });
+    }, 5000);
 
     const latency = Date.now() - startTime;
 
@@ -190,6 +207,17 @@ async function checkOpenAI(): Promise<CheckResult> {
  */
 export async function GET(req: Request): Promise<Response> {
   try {
+    const now = Date.now();
+    if (healthCache && now - healthCache.timestamp < HEALTH_CACHE_TTL_MS) {
+      return new Response(healthCache.body, {
+        status: healthCache.status,
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 's-maxage=30, stale-while-revalidate=30',
+        },
+      });
+    }
+
     // Run all checks in parallel
     const [envCheck, whatsappCheck, supabaseCheck, openaiCheck] = await Promise.all([
       Promise.resolve(checkEnvironmentVariables()),
@@ -228,11 +256,14 @@ export async function GET(req: Request): Promise<Response> {
 
     const statusCode = overallStatus === 'healthy' ? 200 : 503;
 
-    return new Response(JSON.stringify(health, null, 2), {
+    const body = JSON.stringify(health, null, 2);
+    healthCache = { timestamp: Date.now(), body, status: statusCode };
+
+    return new Response(body, {
       status: statusCode,
       headers: {
         'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-cache, no-store, must-revalidate',
+        'cache-control': 's-maxage=30, stale-while-revalidate=30',
       },
     });
   } catch (error: any) {

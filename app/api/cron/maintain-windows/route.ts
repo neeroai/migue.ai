@@ -16,6 +16,8 @@ import {
   BUSINESS_HOURS,
 } from '../../../../lib/messaging-windows';
 
+const proactiveAgent = createProactiveAgent();
+
 /**
  * Cron job: Maintain WhatsApp messaging windows
  *
@@ -35,48 +37,45 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-async function getUserPhone(userId: string): Promise<string | null> {
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('users')
-    .select('phone_number')
-    .eq('id', userId)
-    .single();
+type SupabaseClient = ReturnType<typeof getSupabaseServerClient>;
 
-  if (error || !data) {
-    logger.error('[maintain-windows] Failed to get user phone', error);
-    return null;
-  }
+async function getActiveConversationMap(
+  userIds: string[],
+  supabase: SupabaseClient
+): Promise<Map<string, string>> {
+  if (userIds.length === 0) return new Map()
 
-  return data.phone_number;
-}
-
-async function getActiveConversation(userId: string): Promise<string | null> {
-  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('conversations')
-    .select('id')
-    .eq('user_id', userId)
+    .select('id, user_id')
+    .in('user_id', userIds)
     .eq('status', 'active')
-    .limit(1)
-    .single();
 
-  if (error || !data) return null;
-  return data.id;
+  if (error || !data) {
+    logger.error('[maintain-windows] Failed to fetch active conversations', error)
+    return new Map()
+  }
+
+  const map = new Map<string, string>()
+  for (const row of data) {
+    if (!map.has(row.user_id)) {
+      map.set(row.user_id, row.id)
+    }
+  }
+
+  return map
 }
 
 async function generateContextualMessage(
   userId: string,
   conversationId: string,
   phoneNumber: string,
-  hoursRemaining: number
+  hoursRemaining: number,
+  supabase: SupabaseClient
 ): Promise<string> {
   // Load recent conversation history for context
-  const history = await getConversationHistory(conversationId, 5);
+  const history = await getConversationHistory(conversationId, 5, supabase);
   const modelHistory = historyToModelMessages(history);
-
-  // Use ProactiveAgent to generate natural, contextual message
-  const agent = createProactiveAgent();
 
   const prompt = `Genera un mensaje muy breve y natural para mantener la conversación activa (ventana WhatsApp expira en ${Math.round(hoursRemaining)}h).
 
@@ -96,7 +95,7 @@ Ejemplos:
 - "¿Te sirvió la información sobre [tema]? Cualquier duda, escríbeme"`;
 
   try {
-    const aiResponse = await agent.respond(prompt, userId, modelHistory);
+    const aiResponse = await proactiveAgent.respond(prompt, userId, modelHistory);
     return aiResponse.text;
   } catch (err: any) {
     logger.error('[maintain-windows] Failed to generate contextual message', err);
@@ -104,6 +103,65 @@ Ejemplos:
     // Fallback to generic message
     return 'Hola! ¿Cómo va todo? Estoy aquí si necesitas ayuda con algo 😊';
   }
+}
+
+type WindowProcessResult = {
+  sent: boolean
+  skipped: boolean
+  error?: string
+}
+
+type MessagingWindowSnapshot = {
+  phone_number: string
+  proactive_messages_sent_today: number
+  last_proactive_sent_at: string | null
+  window_expires_at: string
+  free_entry_point_expires_at: string | null
+}
+
+async function getMessagingWindowSnapshotMap(
+  phoneNumbers: string[],
+  supabase: SupabaseClient
+): Promise<Map<string, MessagingWindowSnapshot>> {
+  if (phoneNumbers.length === 0) return new Map()
+
+  const { data, error } = await supabase
+    .from('messaging_windows')
+    .select('phone_number, proactive_messages_sent_today, last_proactive_sent_at, window_expires_at, free_entry_point_expires_at')
+    .in('phone_number', phoneNumbers)
+
+  if (error || !data) {
+    logger.error('[maintain-windows] Failed to fetch messaging windows', error)
+    return new Map()
+  }
+
+  const map = new Map<string, MessagingWindowSnapshot>()
+  for (const row of data) {
+    map.set(row.phone_number, row as MessagingWindowSnapshot)
+  }
+  return map
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  handler: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  if (items.length === 0) return []
+  const results: R[] = new Array(items.length)
+  let nextIndex = 0
+  const workerCount = Math.min(limit, items.length)
+
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const current = nextIndex++
+      if (current >= items.length) return
+      results[current] = await handler(items[current]!, current)
+    }
+  })
+
+  await Promise.all(workers)
+  return results
 }
 
 export async function GET(req: Request): Promise<Response> {
@@ -182,79 +240,91 @@ export async function GET(req: Request): Promise<Response> {
       metadata: { count: windows.length },
     });
 
-    let sent = 0;
-    let skipped = 0;
-    const errors: string[] = [];
+    const concurrencyLimit = 4
 
-    for (const window of windows) {
-      try {
-        const phone = await getUserPhone(window.user_id);
-        if (!phone) {
-          skipped++;
-          errors.push(`No phone for user ${window.user_id}`);
-          continue;
-        }
+    const supabase = getSupabaseServerClient();
 
-        const conversationId = await getActiveConversation(window.user_id);
-        if (!conversationId) {
-          skipped++;
-          logger.debug('[maintain-windows] No active conversation', {
-            metadata: { userId: window.user_id },
-          });
-          continue;
-        }
+    const userIds = Array.from(new Set(windows.map((w) => w.user_id)))
+    const activeConversationMap = await getActiveConversationMap(userIds, supabase)
+    const phoneNumbers = Array.from(new Set(windows.map((w) => w.phone_number).filter(Boolean))) as string[]
+    const messagingWindowMap = await getMessagingWindowSnapshotMap(phoneNumbers, supabase)
 
-        // Check if we should send proactive message
-        const decision = await shouldSendProactiveMessage(
-          window.user_id,
-          window.phone_number,
-          conversationId
-        );
+    const results = await mapWithConcurrency(
+      windows,
+      concurrencyLimit,
+      async (window): Promise<WindowProcessResult> => {
+        try {
+          const phone = window.phone_number
+          if (!phone) {
+            return { sent: false, skipped: true, error: `No phone for user ${window.user_id}` }
+          }
 
-        if (!decision.allowed) {
-          skipped++;
-          logger.debug('[maintain-windows] Skipped proactive message', {
+          const conversationId = activeConversationMap.get(window.user_id) ?? null
+          if (!conversationId) {
+            logger.debug('[maintain-windows] No active conversation', {
+              metadata: { userId: window.user_id },
+            })
+            return { sent: false, skipped: true }
+          }
+
+          const decision = await shouldSendProactiveMessage(
+            window.user_id,
+            window.phone_number,
+            conversationId,
+            supabase,
+            messagingWindowMap.get(window.phone_number) ?? null
+          )
+
+          if (!decision.allowed) {
+            logger.debug('[maintain-windows] Skipped proactive message', {
+              metadata: {
+                userId: window.user_id,
+                reason: decision.reason,
+                nextAvailable: decision.nextAvailableTime?.toISOString(),
+              },
+            })
+            return { sent: false, skipped: true }
+          }
+
+          const message = await generateContextualMessage(
+            window.user_id,
+            conversationId,
+            window.phone_number,
+            window.hours_remaining,
+            supabase
+          )
+
+          await sendWhatsAppText(phone, message)
+          await incrementProactiveCounter(window.phone_number, supabase)
+
+          logger.info('[maintain-windows] Maintenance message sent', {
             metadata: {
               userId: window.user_id,
-              reason: decision.reason,
-              nextAvailable: decision.nextAvailableTime?.toISOString(),
+              phoneNumber: phone.slice(0, 8) + '***',
+              hoursRemaining: window.hours_remaining,
+              messagesRemaining: window.proactive_messages_sent_today,
             },
-          });
-          continue;
+          })
+
+          return { sent: true, skipped: false }
+        } catch (err: any) {
+          logger.error('[maintain-windows] Error processing window', err, {
+            metadata: { userId: window.user_id },
+          })
+          return {
+            sent: false,
+            skipped: true,
+            error: `User ${window.user_id}: ${err?.message ?? 'unknown error'}`,
+          }
         }
-
-        // Generate contextual message
-        const message = await generateContextualMessage(
-          window.user_id,
-          conversationId,
-          window.phone_number,
-          window.hours_remaining
-        );
-
-        // Send message
-        await sendWhatsAppText(phone, message);
-
-        // Increment proactive counter
-        await incrementProactiveCounter(window.phone_number);
-
-        sent++;
-
-        logger.info('[maintain-windows] Maintenance message sent', {
-          metadata: {
-            userId: window.user_id,
-            phoneNumber: phone.slice(0, 8) + '***',
-            hoursRemaining: window.hours_remaining,
-            messagesRemaining: window.proactive_messages_sent_today,
-          },
-        });
-      } catch (err: any) {
-        logger.error('[maintain-windows] Error processing window', err, {
-          metadata: { userId: window.user_id },
-        });
-        errors.push(`User ${window.user_id}: ${err.message}`);
-        skipped++;
       }
-    }
+    )
+
+    const sent = results.filter((r) => r.sent).length
+    const skipped = results.filter((r) => r.skipped).length
+    const errors = results
+      .map((r) => r.error)
+      .filter((e): e is string => !!e)
 
     const duration = Date.now() - startTime;
 
