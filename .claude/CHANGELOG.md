@@ -15,6 +15,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-02-03 06:30
+
+#### Repository Optimization for Vercel Deployment
+
+**Removed documentation from git tracking**
+- REMOVED docs/ directory (1.6M, 95 files) - documentation kept local only
+- REMOVED AGENTS.md (28K) - internal agent documentation
+- REMOVED URGENT-FIX-DEPLOYMENT.md (5.5K) - obsolete deployment note
+- REMOVED plan.md (2.2K) - development planning file
+- UPDATED .gitignore to exclude docs/ from future commits
+
+**Impact**
+- Repository size reduced by ~1.64MB
+- Vercel deployment faster (fewer files to clone)
+- Documentation remains available locally
+- Tests, scripts, and CI/CD files correctly maintained
+
+**Rationale**
+- Vercel already ignores docs/ via .vercelignore
+- Uploading docs/ to git wastes bandwidth and storage
+- Development files (tests/, scripts/, .husky/, .github/) kept for CI/CD
+- Only production-necessary files remain in git tracking
+
 ### Fixed - 2026-02-03 06:00
 
 #### Next.js 16 Compliance Updates

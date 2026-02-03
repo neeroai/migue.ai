@@ -225,5 +225,8 @@ out/
 .backup/
 docs-global
 
+# Documentation (keep local only)
+docs/
+
 .npm-cache/
 .vercel
