@@ -5,8 +5,7 @@ import { logger } from '../../../../lib/logger';
 import { sendWhatsAppText } from '../../../../lib/whatsapp';
 import { getSupabaseServerClient } from '../../../../lib/supabase';
 import { createProactiveAgent } from '../../../../lib/ai/proactive-agent';
-import { getConversationHistory, type ConversationMessage } from '../../../../lib/conversation-utils';
-import { historyToModelMessages } from '../../../../lib/ai-processing-v2';
+import { getConversationHistory, historyToModelMessages, type ConversationMessage } from '../../../../lib/conversation-utils';
 import {
   findWindowsNearExpiration,
   shouldSendProactiveMessage,
@@ -97,8 +96,7 @@ Ejemplos:
 
   try {
     const aiResponse = await agent.respond(prompt, userId, modelHistory);
-    const response = aiResponse.text;
-    return response;
+    return aiResponse.text;
   } catch (err: any) {
     logger.error('[maintain-windows] Failed to generate contextual message', err);
 

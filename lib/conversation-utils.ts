@@ -4,7 +4,10 @@
  */
 
 import { getSupabaseServerClient } from './supabase'
-import type { ChatMessage } from './openai'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import type { ModelMessage } from 'ai'
+
+export type ChatMessage = ChatCompletionMessageParam
 
 // ============================================================================
 // Types
@@ -62,12 +65,27 @@ export async function getConversationHistory(
 }
 
 /**
- * Convert conversation history to ChatMessage format for AI models.
+ * Convert conversation history to ChatMessage format for AI models (OpenAI SDK).
  * Maps inbound messages to 'user' and outbound to 'assistant'.
  */
 export function historyToChatMessages(
   history: ConversationMessage[]
 ): ChatMessage[] {
+  return history
+    .filter((msg) => msg.content) // only messages with text content
+    .map((msg) => ({
+      role: msg.direction === 'inbound' ? ('user' as const) : ('assistant' as const),
+      content: msg.content!,
+    }))
+}
+
+/**
+ * Convert conversation history to ModelMessage format for Vercel AI SDK.
+ * Maps inbound messages to 'user' and outbound to 'assistant'.
+ */
+export function historyToModelMessages(
+  history: ConversationMessage[]
+): ModelMessage[] {
   return history
     .filter((msg) => msg.content) // only messages with text content
     .map((msg) => ({

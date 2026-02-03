@@ -10,7 +10,7 @@
  */
 
 import { logger } from './logger'
-import { getConversationHistory, historyToChatMessages } from './conversation-utils'
+import { getConversationHistory, historyToModelMessages } from './conversation-utils'
 import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
 // PROVIDER_COSTS removed - cost now comes from AI response
 import { transcribeAudio } from './openai'
@@ -30,19 +30,6 @@ import {
 } from './whatsapp'
 import type { NormalizedMessage } from './message-normalization'
 
-/**
- * Convert conversation history to Vercel AI SDK ModelMessage format
- */
-export function historyToModelMessages(
-  history: Array<{ direction: 'inbound' | 'outbound'; content: string | null }>
-): ModelMessage[] {
-  return history
-    .filter((msg) => msg.content !== null)
-    .map((msg) => ({
-      role: msg.direction === 'outbound' ? ('assistant' as const) : ('user' as const),
-      content: msg.content!,
-    }))
-}
 
 /**
  * Send text message and persist to database
@@ -545,10 +532,9 @@ export async function processDocumentMessage(
         messageId: normalized.waMessageId,
       }
     )
-    const comprehension = aiResponse.text
 
     // Send response
-    await sendTextAndPersist(conversationId, normalized.from, comprehension)
+    await sendTextAndPersist(conversationId, normalized.from, aiResponse.text)
     await reactWithCheck(normalized.from, normalized.waMessageId)
 
     // Update message

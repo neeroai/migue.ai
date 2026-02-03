@@ -1,5 +1,9 @@
-import { chatCompletion, type ChatMessage } from './openai'
+import { generateText, type ModelMessage } from 'ai'
+import { models } from './ai/providers'
 import { logger } from './logger'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+
+type ChatMessage = ChatCompletionMessageParam
 
 // Default timezone changed to Bogotá, Colombia (UTC-5)
 // Business hours: 7am-8pm Bogotá time
@@ -52,13 +56,19 @@ async function extractSchedulingDetails(
   message: string,
   history?: ChatMessage[]
 ): Promise<Extraction> {
-  const messages: ChatMessage[] = [{ role: 'system', content: EXTRACTION_PROMPT }]
+  const messages: ModelMessage[] = [{ role: 'system', content: EXTRACTION_PROMPT }]
   if (history && history.length > 0) {
-    messages.push(...history.slice(-2))
+    messages.push(...(history.slice(-2) as ModelMessage[]))
   }
   messages.push({ role: 'user', content: message })
-  const response = await chatCompletion(messages, { model: 'gpt-4o-mini', temperature: 0 })
-  return JSON.parse(response) as Extraction
+
+  const { text } = await generateText({
+    model: models.openai.primary,
+    messages,
+    temperature: 0,
+  })
+
+  return JSON.parse(text) as Extraction
 }
 
 function ensureTimes(data: Extraction, fallbackTimeZone?: string) {

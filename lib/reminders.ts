@@ -1,6 +1,10 @@
 import { z } from 'zod'
-import { chatCompletion, type ChatMessage } from './openai'
+import { generateText, type ModelMessage } from 'ai'
+import { models } from './ai/providers'
 import { getSupabaseServerClient } from './supabase'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+
+type ChatMessage = ChatCompletionMessageParam
 
 const REMINDER_PROMPT = `Extrae recordatorios de la frase del usuario y responde JSON:
 {
@@ -52,21 +56,22 @@ export async function parseReminderRequest(
   message: string,
   history?: ChatMessage[]
 ): Promise<ReminderParseResult> {
-  const messages: ChatMessage[] = [{ role: 'system', content: REMINDER_PROMPT }]
+  const messages: ModelMessage[] = [{ role: 'system', content: REMINDER_PROMPT }]
   if (history && history.length > 0) {
-    messages.push(...history.slice(-2))
+    messages.push(...(history.slice(-2) as ModelMessage[]))
   }
   messages.push({ role: 'user', content: message })
-  const response = await chatCompletion(messages, {
-    model: 'gpt-4o-mini',
+
+  const { text } = await generateText({
+    model: models.openai.primary,
+    messages,
     temperature: 0,
-    maxTokens: 150,
   })
 
   // Parse and validate with Zod
   let jsonData: unknown
   try {
-    jsonData = JSON.parse(response)
+    jsonData = JSON.parse(text)
   } catch {
     throw new Error('Invalid JSON response from AI')
   }
