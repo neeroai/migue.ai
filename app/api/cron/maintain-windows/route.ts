@@ -1,4 +1,5 @@
 export const runtime = 'edge';
+export const maxDuration = 10; // Edge Functions max timeout (AI generation + multiple messages)
 
 import { getEnv } from '../../../../lib/env';
 import { logger } from '../../../../lib/logger';

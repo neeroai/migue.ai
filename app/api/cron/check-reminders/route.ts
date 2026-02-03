@@ -1,4 +1,5 @@
 export const runtime = 'edge';
+export const maxDuration = 10; // Edge Functions max timeout (cron may need time for multiple messages)
 
 import { getEnv } from '../../../../lib/env';
 import { getSupabaseServerClient } from '../../../../lib/supabase';

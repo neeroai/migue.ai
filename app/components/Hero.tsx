@@ -1,3 +1,5 @@
+'use client'
+
 import { MessageCircle, Sparkles } from 'lucide-react';
 import { CTA } from './CTA';
 
