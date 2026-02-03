@@ -727,29 +727,8 @@ export const reactWithCheck = (to: string, messageId: string) =>
 export const reactWithThinking = (to: string, messageId: string) =>
   sendReaction(to, messageId, '🤔');
 
-export const reactWithLike = (to: string, messageId: string) =>
-  sendReaction(to, messageId, '👍');
-
-export const reactWithLove = (to: string, messageId: string) =>
-  sendReaction(to, messageId, '❤️');
-
-export const reactWithFire = (to: string, messageId: string) =>
-  sendReaction(to, messageId, '🔥');
-
-export const reactWithClap = (to: string, messageId: string) =>
-  sendReaction(to, messageId, '👏');
-
-export const reactWithSad = (to: string, messageId: string) =>
-  sendReaction(to, messageId, '😢');
-
 export const reactWithWarning = (to: string, messageId: string) =>
   sendReaction(to, messageId, '⚠️');
-
-export const reactWithParty = (to: string, messageId: string) =>
-  sendReaction(to, messageId, '🎉');
-
-export const reactWithPray = (to: string, messageId: string) =>
-  sendReaction(to, messageId, '🙏');
 
 // ============================================================================
 // Media Download Functions (consolidated from whatsapp-media.ts)

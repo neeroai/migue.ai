@@ -77,32 +77,6 @@ describe('WhatsApp Reactions', () => {
     expect(callBody.reaction.emoji).toBe('🤔');
   });
 
-  it('should send like reaction', async () => {
-    const { reactWithLike } = await import('../../lib/whatsapp');
-
-    await reactWithLike('1234567890', 'wamid.ABC123');
-
-    const callBody = JSON.parse((global.fetch as jest.MockedFunction<typeof fetch>).mock.calls[0]![1]!.body as string);
-    expect(callBody.reaction.emoji).toBe('👍');
-  });
-
-  it('should send love reaction', async () => {
-    const { reactWithLove } = await import('../../lib/whatsapp');
-
-    await reactWithLove('1234567890', 'wamid.ABC123');
-
-    const callBody = JSON.parse((global.fetch as jest.MockedFunction<typeof fetch>).mock.calls[0]![1]!.body as string);
-    expect(callBody.reaction.emoji).toBe('❤️');
-  });
-
-  it('should send fire reaction', async () => {
-    const { reactWithFire } = await import('../../lib/whatsapp');
-
-    await reactWithFire('1234567890', 'wamid.ABC123');
-
-    const callBody = JSON.parse((global.fetch as jest.MockedFunction<typeof fetch>).mock.calls[0]![1]!.body as string);
-    expect(callBody.reaction.emoji).toBe('🔥');
-  });
 
   it('should handle API errors gracefully', async () => {
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({

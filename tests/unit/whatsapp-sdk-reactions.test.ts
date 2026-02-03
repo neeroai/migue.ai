@@ -27,50 +27,7 @@ describe('WhatsApp Reactions', () => {
     } as Response);
   });
 
-  it('should send like reaction', async () => {
-    const { reactWithLike } = await import('../../lib/whatsapp');
 
-    const result = await reactWithLike('+1234567890', 'wamid.123');
-
-    expect(result).toBe('test-msg-id');
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://graph.facebook.com/v23.0/test-phone-id/messages',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"emoji":"👍"'),
-      })
-    );
-  });
-
-  it('should send love reaction', async () => {
-    const { reactWithLove } = await import('../../lib/whatsapp');
-
-    const result = await reactWithLove('+1234567890', 'wamid.123');
-
-    expect(result).toBe('test-msg-id');
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://graph.facebook.com/v23.0/test-phone-id/messages',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"emoji":"❤️"'),
-      })
-    );
-  });
-
-  it('should send fire reaction', async () => {
-    const { reactWithFire } = await import('../../lib/whatsapp');
-
-    const result = await reactWithFire('+1234567890', 'wamid.123');
-
-    expect(result).toBe('test-msg-id');
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://graph.facebook.com/v23.0/test-phone-id/messages',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"emoji":"🔥"'),
-      })
-    );
-  });
 
   it('should send check reaction', async () => {
     const { reactWithCheck } = await import('../../lib/whatsapp');

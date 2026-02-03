@@ -9,7 +9,7 @@ import {
   trackUsage,
   getBudgetStatus,
   canAffordRequest,
-} from '../../lib/openai-cost-tracker'
+} from '../../lib/ai-cost-tracker'
 import type { UsageMetrics, CostMetrics } from '../../lib/openai-response-handler'
 
 describe('openai-cost-tracker', () => {
@@ -233,6 +233,7 @@ describe('openai-cost-tracker', () => {
 
       // Spend almost all budget ($2.99 out of $3.00 daily limit)
       trackUsage(
+        'openai',
         'gpt-4o-mini',
         { promptTokens: 100000, completionTokens: 50000, totalTokens: 150000 },
         { inputCost: 0.015, outputCost: 0.03, totalCost: 2.99, model: 'gpt-4o-mini' },
