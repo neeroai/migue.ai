@@ -20,7 +20,7 @@ interface HealthCheck {
     environment: CheckResult;
     whatsapp: CheckResult;
     supabase: CheckResult;
-    openai: CheckResult;
+    ai: CheckResult;
   };
 }
 
@@ -134,7 +134,7 @@ async function checkSupabase(): Promise<CheckResult> {
       `${env.SUPABASE_URL}/auth/v1/health`,
       {
         headers: {
-          'apikey': env.SUPABASE_KEY,
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_KEY ?? '',
         },
       },
       5000
@@ -164,40 +164,33 @@ async function checkSupabase(): Promise<CheckResult> {
 }
 
 /**
- * Check OpenAI API connectivity
+ * Check AI providers configuration
+ * Note: Does not test actual connectivity, only validates env vars are set
  */
-async function checkOpenAI(): Promise<CheckResult> {
+function checkAIProviders(): CheckResult {
   try {
     const env = getEnv();
-    const startTime = Date.now();
 
-    // Test OpenAI API by listing models
-    const response = await fetchWithTimeout('https://api.openai.com/v1/models', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-      },
-    }, 5000);
+    const providers = [];
+    if (env.OPENAI_API_KEY) providers.push('OpenAI');
+    if (env.ANTHROPIC_API_KEY) providers.push('Claude');
+    if (env.GOOGLE_AI_API_KEY) providers.push('Gemini');
 
-    const latency = Date.now() - startTime;
-
-    if (!response.ok) {
+    if (providers.length === 0) {
       return {
         status: 'error',
-        message: `OpenAI API error: ${response.status}`,
-        latency,
+        message: 'No AI providers configured',
       };
     }
 
     return {
       status: 'ok',
-      message: 'OpenAI connected',
-      latency,
+      message: `Providers configured: ${providers.join(', ')}`,
     };
   } catch (error: any) {
     return {
       status: 'error',
-      message: error.message || 'OpenAI check failed',
+      message: error.message || 'AI provider check failed',
     };
   }
 }
@@ -219,18 +212,18 @@ export async function GET(req: Request): Promise<Response> {
     }
 
     // Run all checks in parallel
-    const [envCheck, whatsappCheck, supabaseCheck, openaiCheck] = await Promise.all([
+    const [envCheck, whatsappCheck, supabaseCheck, aiCheck] = await Promise.all([
       Promise.resolve(checkEnvironmentVariables()),
       checkWhatsAppAPI(),
       checkSupabase(),
-      checkOpenAI(),
+      Promise.resolve(checkAIProviders()),
     ]);
 
     const checks = {
       environment: envCheck,
       whatsapp: whatsappCheck,
       supabase: supabaseCheck,
-      openai: openaiCheck,
+      ai: aiCheck,
     };
 
     // Determine overall status

@@ -9,7 +9,8 @@ import { z } from 'zod';
  * Environment variable schema
  * Validates required and optional env vars on startup
  */
-const envSchema = z.object({
+const envSchema = z
+  .object({
   // WhatsApp Configuration
   WHATSAPP_TOKEN: z.string().min(1, 'WHATSAPP_TOKEN is required'),
   WHATSAPP_PHONE_ID: z.string().min(1, 'WHATSAPP_PHONE_ID is required'),
@@ -20,7 +21,12 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
   SUPABASE_KEY: z
     .string()
-    .startsWith('eyJ', 'SUPABASE_KEY must be a valid JWT token'),
+    .startsWith('eyJ', 'SUPABASE_KEY must be a valid JWT token')
+    .optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .startsWith('eyJ', 'SUPABASE_SERVICE_ROLE_KEY must be a valid JWT token')
+    .optional(),
 
   // AI Provider Configuration
   ANTHROPIC_API_KEY: z.string().min(1).optional(), // Emergency fallback (Claude)
@@ -42,7 +48,14 @@ const envSchema = z.object({
 
   // Cron Authentication
   CRON_SECRET: z.string().min(16).optional(),
-});
+})
+  .refine(
+    (env) => !!env.SUPABASE_KEY || !!env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      message: 'Missing SUPABASE_KEY or SUPABASE_SERVICE_ROLE_KEY',
+      path: ['SUPABASE_KEY'],
+    }
+  );
 
 /**
  * Validated environment variables type

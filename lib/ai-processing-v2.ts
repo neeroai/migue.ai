@@ -14,7 +14,7 @@ import { getConversationHistory, historyToModelMessages } from './conversation-u
 import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
 import { getSupabaseServerClient } from './supabase'
 // PROVIDER_COSTS removed - cost now comes from AI response
-import { transcribeAudio } from './openai'
+import { transcribeAudio } from './audio-transcription'
 import { createProactiveAgent } from './ai/proactive-agent'
 import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from './ai-cost-tracker'
