@@ -322,17 +322,17 @@ export async function respond(
   const fallbackModel = getModel(fallbackSelection)
 
   // AI SDK 6.0: Tool definitions with tool() helper
-  // @ts-expect-error - AI SDK tool() type inference issues, runtime works correctly (tests pass)
   const toolsDefinition = {
-      // @ts-expect-error - AI SDK tool() type inference issue
       create_reminder: tool({
         description: 'Crea recordatorio cuando usuario dice: recuérdame, no olvides, tengo que, avísame',
+        // @ts-expect-error - AI SDK tool() type inference issue: ZodObject not assignable to FlexibleSchema<never>
         inputSchema: z.object({
           userId: z.string().describe('ID del usuario'),
           title: z.string().describe('Qué recordar'),
           description: z.string().optional().describe('Detalles'),
           datetimeIso: z.string().describe('ISO format: YYYY-MM-DDTHH:MM:SS-05:00'),
         }),
+        // @ts-expect-error - AI SDK tool() type inference issue: execute function signature incompatible
         execute: async ({ userId: _userId, title, description, datetimeIso }: {
           userId: string
           title: string
@@ -343,9 +343,9 @@ export async function respond(
           return `Recordatorio creado: "${title}"`
         },
       }),
-      // @ts-expect-error - AI SDK tool() type inference issue
       schedule_meeting: tool({
         description: 'Agenda reunión cuando usuario dice: agenda, reserva cita, programa',
+        // @ts-expect-error - AI SDK tool() type inference issue: ZodObject not assignable to FlexibleSchema<never>
         inputSchema: z.object({
           userId: z.string(),
           title: z.string(),
@@ -353,6 +353,7 @@ export async function respond(
           endTime: z.string().describe('ISO format'),
           description: z.string().optional(),
         }),
+        // @ts-expect-error - AI SDK tool() type inference issue: execute function signature incompatible
         execute: async ({ userId: _userId, title, startTime, endTime, description }: {
           userId: string
           title: string
@@ -368,7 +369,6 @@ export async function respond(
           return result.reply
         },
       }),
-      // @ts-expect-error - AI SDK tool() type inference issue
       track_expense: tool({
         description: 'Registra gasto cuando usuario dice: gasté, pagué, compré, costó',
         inputSchema: z.object({
