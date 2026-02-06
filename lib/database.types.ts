@@ -153,6 +153,62 @@ export type Database = {
           },
         ]
       }
+      conversation_actions: {
+        Row: {
+          action_type: string
+          conversation_id: string
+          created_at: string
+          id: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_actions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_activity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_actions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -400,32 +456,70 @@ export type Database = {
           },
         ]
       }
-      gemini_usage: {
+      follow_up_jobs: {
         Row: {
-          cost: number | null
-          created_at: string | null
-          date: string
-          requests: number | null
-          tokens: number | null
-          updated_at: string | null
+          category: string
+          conversation_id: string
+          created_at: string
+          id: string
+          payload: Json | null
+          scheduled_for: string
+          status: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          cost?: number | null
-          created_at?: string | null
-          date: string
-          requests?: number | null
-          tokens?: number | null
-          updated_at?: string | null
+          category: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          scheduled_for: string
+          status?: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          cost?: number | null
-          created_at?: string | null
-          date?: string
-          requests?: number | null
-          tokens?: number | null
-          updated_at?: string | null
+          category?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          scheduled_for?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_jobs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_up_jobs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_up_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_activity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_up_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -562,6 +656,89 @@ export type Database = {
             foreignKeyName: "messaging_windows_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openai_usage: {
+        Row: {
+          completion_tokens: number
+          conversation_id: string | null
+          created_at: string
+          id: string
+          input_cost: number
+          message_id: string | null
+          model: string
+          output_cost: number
+          prompt_tokens: number
+          provider: string
+          timestamp: string
+          total_cost: number
+          total_tokens: number
+          usage_date_utc: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completion_tokens: number
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          input_cost: number
+          message_id?: string | null
+          model: string
+          output_cost: number
+          prompt_tokens: number
+          provider?: string
+          timestamp?: string
+          total_cost: number
+          total_tokens: number
+          usage_date_utc?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completion_tokens?: number
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          input_cost?: number
+          message_id?: string | null
+          model?: string
+          output_cost?: number
+          prompt_tokens?: number
+          provider?: string
+          timestamp?: string
+          total_cost?: number
+          total_tokens?: number
+          usage_date_utc?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openai_usage_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "openai_usage_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "openai_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_activity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "openai_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1061,10 +1238,6 @@ export type Database = {
       }
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
       find_windows_near_expiration: {
         Args: { hours_threshold?: number }
         Returns: {
@@ -1112,58 +1285,12 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }[]
-      }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
+        SetofOptions: {
+          from: "*"
+          to: "scheduled_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       increment_gemini_usage: {
         Args: { token_count: number; usage_date: string }
@@ -1176,38 +1303,12 @@ export type Database = {
         Args: { p_phone_number: string }
         Returns: boolean
       }
-      is_window_open: {
-        Args: { p_phone_number: string }
-        Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
-      }
+      is_window_open: { Args: { p_phone_number: string }; Returns: boolean }
       mark_message_failed: {
         Args: { error: string; message_id: string }
         Returns: undefined
       }
-      mark_message_sent: {
-        Args: { message_id: string }
-        Returns: undefined
-      }
+      mark_message_sent: { Args: { message_id: string }; Returns: undefined }
       search_user_memory: {
         Args: {
           match_count?: number
@@ -1224,54 +1325,8 @@ export type Database = {
           type: string
         }[]
       }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       conv_status: "active" | "archived" | "closed"

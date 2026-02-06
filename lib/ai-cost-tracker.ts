@@ -91,11 +91,123 @@ export class CostTracker {
   private lastMonthResetDate: string
   private userSpending: Map<string, UserSpending> = new Map()
   private usageHistory: UsageRecord[] = []
+  private hydrationPromise: Promise<void> | null = null
+  private isHydrated: boolean = false
+  private budgetStatusCache: { status: BudgetStatus; timestamp: number } | null = null
+  private readonly BUDGET_CACHE_TTL_MS = 30_000 // 30 seconds
 
   constructor() {
     const now = new Date()
     this.lastResetDate = now.toISOString().split('T')[0]! // YYYY-MM-DD
     this.lastMonthResetDate = now.toISOString().slice(0, 7) // YYYY-MM
+  }
+
+  /**
+   * Hydrate from database (call once at startup)
+   * Uses module-level promise pattern: sync getter, async backfill
+   */
+  async hydrateFromDatabase(): Promise<void> {
+    if (this.isHydrated) return
+    if (this.hydrationPromise) return this.hydrationPromise
+
+    this.hydrationPromise = (async () => {
+      if (process.env.NODE_ENV === 'test') {
+        this.isHydrated = true
+        return
+      }
+
+      try {
+        const supabase = getSupabaseServerClient()
+        const now = new Date()
+        const todayUtc = now.toISOString().split('T')[0]!
+        const currentMonthUtc = now.toISOString().slice(0, 7)
+
+        // Query today's spending (using generated usage_date_utc column)
+        const { data: dailyData, error: dailyError } = await supabase
+          .from('openai_usage')
+          .select('total_cost, user_id')
+          .eq('usage_date_utc', todayUtc)
+
+        if (dailyError) {
+          logger.error('[CostTracker] Failed to hydrate daily spending', dailyError)
+        } else if (dailyData) {
+          this.dailySpent = dailyData.reduce((sum, row) => sum + Number(row.total_cost), 0)
+
+          // Rebuild user daily spending
+          dailyData.forEach((row) => {
+            if (row.user_id) {
+              const existing = this.userSpending.get(row.user_id)
+              const cost = Number(row.total_cost)
+              if (existing) {
+                existing.dailySpent += cost
+              } else {
+                this.userSpending.set(row.user_id, {
+                  userId: row.user_id,
+                  dailySpent: cost,
+                  monthlySpent: 0, // Will be filled below
+                  requestCount: 1,
+                  lastRequest: new Date(),
+                })
+              }
+            }
+          })
+        }
+
+        // Query this month's spending
+        const { data: monthlyData, error: monthlyError } = await supabase
+          .from('openai_usage')
+          .select('total_cost, user_id')
+          .gte('timestamp', `${currentMonthUtc}-01T00:00:00Z`)
+
+        if (monthlyError) {
+          logger.error('[CostTracker] Failed to hydrate monthly spending', monthlyError)
+        } else if (monthlyData) {
+          this.monthlySpent = monthlyData.reduce((sum, row) => sum + Number(row.total_cost), 0)
+
+          // Update user monthly spending
+          monthlyData.forEach((row) => {
+            if (row.user_id) {
+              const existing = this.userSpending.get(row.user_id)
+              const cost = Number(row.total_cost)
+              if (existing) {
+                existing.monthlySpent += cost
+              } else {
+                this.userSpending.set(row.user_id, {
+                  userId: row.user_id,
+                  dailySpent: 0, // Only monthly data
+                  monthlySpent: cost,
+                  requestCount: 1,
+                  lastRequest: new Date(),
+                })
+              }
+            }
+          })
+        }
+
+        this.isHydrated = true
+        logger.info('[CostTracker] Hydrated from database', {
+          metadata: {
+            dailySpent: `$${this.dailySpent.toFixed(4)}`,
+            monthlySpent: `$${this.monthlySpent.toFixed(4)}`,
+            userCount: this.userSpending.size,
+          },
+        })
+      } catch (error: any) {
+        logger.error('[CostTracker] Hydration error', error)
+        // Don't throw - allow tracker to continue with zero values
+        this.isHydrated = true
+      }
+    })()
+
+    return this.hydrationPromise
+  }
+
+  /**
+   * Ensure hydrated before returning budget status
+   * Call this once at the start of request processing
+   */
+  async ensureHydrated(): Promise<void> {
+    await this.hydrateFromDatabase()
   }
 
   /**
@@ -110,6 +222,9 @@ export class CostTracker {
     // Update global spending
     this.dailySpent += record.cost.totalCost
     this.monthlySpent += record.cost.totalCost
+
+    // Invalidate budget status cache
+    this.budgetStatusCache = null
 
     // Update user spending
     if (record.userId) {
@@ -134,8 +249,16 @@ export class CostTracker {
 
   /**
    * Get current budget status
+   * Cached for 30s to reduce computation overhead
    */
   getBudgetStatus(): BudgetStatus {
+    // Check cache first
+    const now = Date.now()
+    if (this.budgetStatusCache && (now - this.budgetStatusCache.timestamp) < this.BUDGET_CACHE_TTL_MS) {
+      return this.budgetStatusCache.status
+    }
+
+    // Cache miss or expired - recompute
     this.checkAndResetDaily()
     this.checkAndResetMonthly()
 
@@ -147,7 +270,7 @@ export class CostTracker {
     const isEmergencyMode = dailyRemaining < BUDGET_LIMITS.emergencyThreshold
     const percentUsed = (this.dailySpent / BUDGET_LIMITS.dailyMax) * 100
 
-    return {
+    const status: BudgetStatus = {
       dailySpent: this.dailySpent,
       dailyRemaining,
       dailyLimit: BUDGET_LIMITS.dailyMax,
@@ -157,6 +280,11 @@ export class CostTracker {
       isEmergencyMode,
       percentUsed,
     }
+
+    // Store in cache
+    this.budgetStatusCache = { status, timestamp: now }
+
+    return status
   }
 
   /**
@@ -346,7 +474,6 @@ export class CostTracker {
     try {
       const supabase = getSupabaseServerClient()
 
-      // @ts-expect-error - openai_usage table exists (migration 016) but types not regenerated yet
       const { error } = await supabase.from('openai_usage').insert({
         provider: record.provider,
         model: record.model,

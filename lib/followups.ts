@@ -60,7 +60,6 @@ export async function scheduleFollowUp(params: {
   }
 
   // Delete existing pending follow-ups for same conversation/category (prevent duplicates)
-  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
   const { error: deleteError } = await supabase.from('follow_up_jobs')
     .delete()
     .eq('conversation_id', params.conversationId)
@@ -77,7 +76,6 @@ export async function scheduleFollowUp(params: {
     // Don't throw - continue with insert even if delete fails
   }
 
-  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
   const { error } = await supabase.from('follow_up_jobs').insert({
     user_id: params.userId,
     conversation_id: params.conversationId,
@@ -98,7 +96,6 @@ export async function fetchDueFollowUps(limit = 10): Promise<Array<{
   const supabase = getSupabaseServerClient()
   const nowIso = new Date().toISOString()
 
-  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
   const { data, error } = await supabase.from('follow_up_jobs')
     .select('id, user_id, conversation_id, category, payload')
     .eq('status', 'pending')
@@ -111,7 +108,6 @@ export async function fetchDueFollowUps(limit = 10): Promise<Array<{
 export async function markFollowUpStatus(id: string, status: 'sent' | 'failed' | 'cancelled') {
   const supabase = getSupabaseServerClient()
 
-  // @ts-expect-error - follow_up_jobs table not yet in production (migration pending)
   const { error } = await supabase.from('follow_up_jobs')
     .update({ status })
     .eq('id', id)

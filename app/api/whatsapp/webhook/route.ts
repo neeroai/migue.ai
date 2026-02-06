@@ -1,4 +1,5 @@
 export const runtime = 'edge';
+export const maxDuration = 10;
 
 import { waitUntil } from '@vercel/functions';
 import { logger } from '../../../../lib/logger';

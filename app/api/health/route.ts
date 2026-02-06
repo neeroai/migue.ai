@@ -7,6 +7,7 @@
  */
 
 export const runtime = 'edge';
+export const maxDuration = 5;
 
 import { getEnv } from '../../../lib/env';
 import { GRAPH_BASE_URL } from '../../../lib/whatsapp';

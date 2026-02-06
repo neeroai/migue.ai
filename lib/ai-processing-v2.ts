@@ -78,6 +78,10 @@ export async function processMessageWithAI(
   const shouldShowTyping = userMessage.length >= 80
 
   try {
+    // Hydrate cost tracker from database (once per cold start)
+    const { getCostTracker } = await import('./ai-cost-tracker')
+    await getCostTracker().ensureHydrated()
+
     // Mark message as read
     await markAsRead(messageId)
 

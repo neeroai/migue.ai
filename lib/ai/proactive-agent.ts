@@ -168,6 +168,57 @@ function hasExpenseKeywords(message: string): boolean {
 }
 
 /**
+ * Map AI-provided category to database constraint values
+ * AI may use variations like "Comida", "Food", "Mercado" - we normalize to DB allowed values
+ */
+function mapExpenseCategory(aiCategory: string): string {
+  const normalized = aiCategory.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+  // Alimentación: food, groceries, restaurant
+  if (/aliment|comida|mercado|supermerc|restauran|desayun|almuerzopor cena|food|groceries/.test(normalized)) {
+    return 'Alimentación'
+  }
+
+  // Transporte: transport, uber, taxi, gas
+  if (/transport|uber|taxi|gasolina|combustibl|pasaje|bus|metro|gas/.test(normalized)) {
+    return 'Transporte'
+  }
+
+  // Entretenimiento: entertainment, movies, games, fun
+  if (/entreteni|cine|pelicula|jueg|divers|entretencion|entertainment|movies|games|fun/.test(normalized)) {
+    return 'Entretenimiento'
+  }
+
+  // Salud: health, medicine, doctor, hospital
+  if (/salud|medicin|doctor|hospital|farmacia|clinica|health|medicine|doctor/.test(normalized)) {
+    return 'Salud'
+  }
+
+  // Servicios: services, utilities, internet, phone
+  if (/servicio|luz|agua|internet|telefon|celular|utilitie|service/.test(normalized)) {
+    return 'Servicios'
+  }
+
+  // Compras: shopping, clothes, electronics (NEW - was missing from original plan)
+  if (/compra|ropa|vestir|electronic|tienda|shopping|clothes/.test(normalized)) {
+    return 'Compras'
+  }
+
+  // Educación: education, books, courses
+  if (/educacion|estudio|libro|curso|escuela|univers|education|books|course/.test(normalized)) {
+    return 'Educación'
+  }
+
+  // Hogar: home, rent, furniture
+  if (/hogar|casa|arriendo|alquiler|mueble|home|rent|furniture/.test(normalized)) {
+    return 'Hogar'
+  }
+
+  // Default: Otros
+  return 'Otros'
+}
+
+/**
  * ProactiveAgent using Vercel AI SDK 6.0 generateText()
  */
 export async function respond(
@@ -182,7 +233,26 @@ export async function respond(
   finishReason: string
   toolCalls: number
 }> {
-  const systemPrompt = generateSystemPrompt()
+  // READ: Search memories for context
+  const { searchMemories } = await import('./memory')
+  const memories = await searchMemories(userId, userMessage, 3) // Top 3 relevant memories
+
+  let memoryContext = ''
+  if (memories.length > 0) {
+    memoryContext = `\n\n# USER MEMORY (things you remember about this user):\n${memories
+      .map((m) => `- ${m.content} (${m.type})`)
+      .join('\n')}\n`
+
+    logger.info('[ProactiveAgent] Memories injected', {
+      metadata: {
+        userId,
+        memoriesCount: memories.length,
+        topSimilarity: memories[0]?.similarity || 0,
+      },
+    })
+  }
+
+  const systemPrompt = generateSystemPrompt() + memoryContext
 
   const maxHistory = userMessage.length > 600 ? 6 : userMessage.length > 200 ? 8 : 12
   const trimmedHistory = history.slice(-maxHistory)
@@ -251,9 +321,11 @@ export async function respond(
   const primaryModel = getModel(primarySelection)
   const fallbackModel = getModel(fallbackSelection)
 
-  // AI SDK 6.0: Tool definitions with new structure
+  // AI SDK 6.0: Tool definitions with tool() helper
+  // @ts-expect-error - AI SDK tool() type inference issues, runtime works correctly (tests pass)
   const toolsDefinition = {
-      create_reminder: {
+      // @ts-expect-error - AI SDK tool() type inference issue
+      create_reminder: tool({
         description: 'Crea recordatorio cuando usuario dice: recuérdame, no olvides, tengo que, avísame',
         inputSchema: z.object({
           userId: z.string().describe('ID del usuario'),
@@ -270,8 +342,9 @@ export async function respond(
           await createReminder(userId, title, description || null, datetimeIso)
           return `Recordatorio creado: "${title}"`
         },
-      },
-      schedule_meeting: {
+      }),
+      // @ts-expect-error - AI SDK tool() type inference issue
+      schedule_meeting: tool({
         description: 'Agenda reunión cuando usuario dice: agenda, reserva cita, programa',
         inputSchema: z.object({
           userId: z.string(),
@@ -294,8 +367,9 @@ export async function respond(
           })
           return result.reply
         },
-      },
-      track_expense: {
+      }),
+      // @ts-expect-error - AI SDK tool() type inference issue
+      track_expense: tool({
         description: 'Registra gasto cuando usuario dice: gasté, pagué, compré, costó',
         inputSchema: z.object({
           userId: z.string(),
@@ -311,13 +385,41 @@ export async function respond(
           category: string
           description: string
         }) => {
-          logger.info('[trackExpense] Registered', {
-            metadata: { amount, currency, category, description },
-          })
-          return `Gasto registrado: ${currency} ${amount} en ${category}`
+          try {
+            const { getSupabaseServerClient } = await import('../supabase')
+            const supabase = getSupabaseServerClient()
+
+            // Map AI category to DB constraint values
+            const mappedCategory = mapExpenseCategory(category)
+
+            // @ts-expect-error - expenses table exists (migration 011) but types not regenerated yet
+            const { error } = await supabase.from('expenses').insert({
+              user_id: userId,
+              amount,
+              currency,
+              category: mappedCategory,
+              description,
+              expense_date: new Date().toISOString().split('T')[0],
+            })
+
+            if (error) {
+              logger.error('[trackExpense] Database insert failed', error, {
+                metadata: { userId, amount, currency, category: mappedCategory, description },
+              })
+              return `Error al registrar gasto. Por favor intenta de nuevo.`
+            }
+
+            logger.info('[trackExpense] Persisted to database', {
+              metadata: { userId, amount, currency, category: mappedCategory, description },
+            })
+            return `Gasto registrado: ${currency} ${amount} en ${mappedCategory}`
+          } catch (error: any) {
+            logger.error('[trackExpense] Unexpected error', error)
+            return `Error al registrar gasto. Por favor intenta de nuevo.`
+          }
         },
-      },
-  } as const
+      }),
+  }
 
   // Execute with fallback chain
   const result = await executeWithFallback<{
@@ -331,7 +433,7 @@ export async function respond(
       const response = await generateText({
         model: primaryModel,
         messages,
-        tools: toolsDefinition as any,
+        tools: toolsDefinition,
         temperature: 0.8,
         frequencyPenalty: 0.3,
         presencePenalty: 0.2,
@@ -352,7 +454,7 @@ export async function respond(
       const response = await generateText({
         model: fallbackModel,
         messages,
-        tools: toolsDefinition as any,
+        tools: toolsDefinition,
         temperature: 0.8,
         frequencyPenalty: 0.3,
         presencePenalty: 0.2,
@@ -433,6 +535,12 @@ export async function respond(
       ...(context?.messageId && { messageId: context.messageId }),
     }
   )
+
+  // WRITE: Store personal facts in memory (fire-and-forget)
+  const { containsPersonalFact, storeMemory } = await import('./memory')
+  if (containsPersonalFact(userMessage)) {
+    storeMemory(userId, userMessage, 'fact')
+  }
 
   return {
     text,

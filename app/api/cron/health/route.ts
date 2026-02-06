@@ -1,4 +1,5 @@
 export const runtime = 'edge';
+export const maxDuration = 10;
 
 import { getSupabaseServerClient } from '../../../../lib/supabase';
 import { COLOMBIA_TZ, BUSINESS_HOURS, getCurrentHour } from '../../../../lib/messaging-windows';
