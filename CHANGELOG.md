@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **lib/ai/memory.ts** - In-memory cache for memory search results (5min TTL)
 - **lib/ai-cost-tracker.ts** - In-memory cache for budget status (30s TTL)
 - **supabase/migrations/020_add_conversations_index.sql** - Index on conversations(user_id, created_at DESC)
+- **supabase/migrations/021_fix_wa_message_id_length.sql** - Increase wa_message_id from VARCHAR(64) to VARCHAR(255)
 - **app/api/health/route.ts** - maxDuration = 5 export
 - **app/api/cron/health/route.ts** - maxDuration = 10 export
 - **app/api/whatsapp/flows/route.ts** - maxDuration = 10 export
@@ -23,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **package.json** - Updated ai package from 6.0.42 to 6.0.73 (latest)
 
 ### Fixed
+- **CRITICAL** Production error - wa_message_id VARCHAR(64) too short for actual WhatsApp message IDs (68 chars)
 - Performance bottleneck - Conversation history cache reduces DB queries by 50-70%
 - Performance bottleneck - Memory search cache reduces vector search overhead by 80%
 - Performance bottleneck - Budget status cache reduces computation overhead
@@ -39,6 +41,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - TypeScript: AI SDK tool() type errors persist (documented with @ts-ignore, runtime works)
 
 ### Rationale
+- WhatsApp message IDs (wamid format) are base64-encoded and can exceed 64 characters (observed: 68 chars)
+- Production error (22001): "value too long for type character varying(64)" blocked message persistence
+- VARCHAR(255) provides safe margin for current and future WhatsApp message ID formats
 - Repeated conversation history fetches caused unnecessary DB load
 - Memory vector search on every message added embedding + search overhead
 - Budget status called frequently but rarely changes between requests
