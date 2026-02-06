@@ -546,8 +546,14 @@ export async function processDocumentMessage(
     // Budget OK, proceed with API call
     // Use Vercel AI SDK for comprehension
     const modelHistory = historyToModelMessages(history)
+
+    // Include caption in prompt if available (prevents double responses)
+    const captionContext = normalized.content
+      ? `\n\nCONTEXTO del usuario: "${normalized.content}"\n\n`
+      : '\n\n'
+
     const aiResponse = await proactiveAgent.respond(
-      `El usuario envió una imagen. Aquí está el contenido extraído:\n\n${extractedText}\n\nAnaliza y responde de forma útil.`,
+      `El usuario envió una imagen. Aquí está el contenido extraído:${captionContext}${extractedText}\n\nAnaliza y responde de forma útil.`,
       userId,
       modelHistory,
       {

@@ -4,9 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-06 21:15
+## [Unreleased] - 2026-02-06 22:00
 
 ### Fixed - CRITICAL
+- **Media double responses**: Images/documents with captions triggered 2 separate AI responses (app/api/whatsapp/webhook/route.ts + lib/ai-processing-v2.ts)
+- Root cause: Caption processed as text message AND media processed separately (processMessageWithAI + processDocumentMessage)
+- Solution: Skip text processing for image/document types, include caption in OCR prompt
+- Impact: Single unified response combining caption context + OCR results, better UX, reduced costs
+
+### Fixed - Race Conditions
 - **Reminder duplicates**: Race condition causing reminders to send 3 times (app/api/cron/check-reminders/route.ts + migration 022)
 - Root cause: Multiple cron executions (every 5min) fetched same pending reminder before marking as sent
 - Solution: PostgreSQL FOR UPDATE SKIP LOCKED prevents concurrent processing of same reminder

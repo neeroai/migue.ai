@@ -402,7 +402,10 @@ async function processWebhookInBackground(
     }
 
     // Process text message with AI
-    if (normalized.content && normalized.from) {
+    // CRITICAL FIX: Skip text processing if type is image/document (will be handled by processDocumentMessage)
+    // Prevents double responses when media has caption (caption + OCR result)
+    if (normalized.content && normalized.from &&
+        normalized.type !== 'document' && normalized.type !== 'image') {
       logger.decision('Message processing', 'AI text processing', {
         requestId,
         conversationId,
