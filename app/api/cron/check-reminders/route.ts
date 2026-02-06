@@ -54,6 +54,19 @@ type DueReminder = Tables<'reminders'> & {
 
 type SupabaseClient = ReturnType<typeof getSupabaseServerClient>;
 
+// Type for RPC function return (matches migration 022 SQL function)
+type RpcReminderRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  scheduled_time: string;
+  status: 'pending' | 'failed' | 'sent' | 'cancelled';
+  send_token: string | null;
+  created_at: string;
+  phone_number: string | null;
+};
+
 async function getDueReminders(supabase: SupabaseClient): Promise<DueReminder[]> {
   const nowIso = new Date().toISOString();
 
@@ -66,7 +79,10 @@ async function getDueReminders(supabase: SupabaseClient): Promise<DueReminder[]>
 
   if (error) throw error;
 
-  return (data || []).map((row: any): DueReminder => ({
+  // Type assertion: We know the RPC returns an array of reminder rows
+  const rows = (data || []) as unknown as RpcReminderRow[];
+
+  return rows.map((row): DueReminder => ({
     id: row.id,
     user_id: row.user_id,
     title: row.title,
@@ -84,7 +100,7 @@ async function markReminderStatus(
   id: string,
   status: 'sent' | 'failed' | 'pending'
 ) {
-  const patch: Record<string, unknown> = { status };
+  const patch: Partial<Tables<'reminders'>> = { status };
   if (status === 'sent') {
     patch.send_token = crypto.randomUUID();
   }

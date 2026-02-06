@@ -17,6 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Root cause: Multiple cron executions (every 5min) fetched same pending reminder before marking as sent
 - Solution: PostgreSQL FOR UPDATE SKIP LOCKED prevents concurrent processing of same reminder
 
+### Fixed - Type Safety
+- **TypeScript errors**: RPC function types missing from generated database types (app/api/cron/check-reminders/route.ts)
+- Root cause: Migration 022 added get_due_reminders_locked RPC function, types not regenerated
+- Solution: Added explicit RpcReminderRow type with proper status literals, type assertion via unknown
+- Impact: Clean TypeScript compilation, restored type safety for reminder processing
+
 ### Changed - LATENCY OPTIMIZATION
 - **CRITICAL P0.1**: lib/ai-processing-v2.ts:82-83 - Cost tracker hydration now fire-and-forget (reduces cold start by 300-800ms)
 - **CRITICAL P0.2**: lib/ai/proactive-agent.ts:236-268 - Memory search now lazy (skips for tool messages, reduces cache miss by 200-600ms)
