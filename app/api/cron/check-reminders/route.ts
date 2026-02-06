@@ -56,14 +56,17 @@ type SupabaseClient = ReturnType<typeof getSupabaseServerClient>;
 
 async function getDueReminders(supabase: SupabaseClient): Promise<DueReminder[]> {
   const nowIso = new Date().toISOString();
-  const { data, error } = await supabase
-    .from('reminders')
-    .select('*, users ( phone_number )')
-    .eq('status', 'pending')
-    .lte('scheduled_time', nowIso);
+
+  // CRITICAL FIX: Use RPC with FOR UPDATE SKIP LOCKED to prevent race conditions
+  // Multiple cron executions will get different reminders (locked rows are skipped)
+  // @ts-expect-error - RPC function type not yet in generated types (migration 022)
+  const { data, error } = await supabase.rpc('get_due_reminders_locked', {
+    now_iso: nowIso
+  });
+
   if (error) throw error;
 
-  return (data || []).map((row: ReminderRow): DueReminder => ({
+  return (data || []).map((row: any): DueReminder => ({
     id: row.id,
     user_id: row.user_id,
     title: row.title,
@@ -72,7 +75,7 @@ async function getDueReminders(supabase: SupabaseClient): Promise<DueReminder[]>
     status: row.status,
     send_token: row.send_token,
     created_at: row.created_at,
-    phone_number: row.users?.phone_number ?? null,
+    phone_number: row.phone_number,
   }));
 }
 

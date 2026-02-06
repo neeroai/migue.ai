@@ -27,18 +27,14 @@ jest.mock('../../lib/whatsapp', () => ({
 }))
 
 describe('check-reminders cron', () => {
-  const reminderSelectBuilder = {
-    eq: jest.fn(),
-    lte: jest.fn(),
-  }
   const reminderUpdateBuilder = {
     eq: jest.fn(),
   }
   const supabaseMock = {
+    rpc: jest.fn(),
     from: jest.fn((table: string) => {
       if (table === 'reminders') {
         return {
-          select: jest.fn(() => reminderSelectBuilder),
           update: jest.fn(() => reminderUpdateBuilder),
         }
       }
@@ -48,17 +44,8 @@ describe('check-reminders cron', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    supabaseMock.from.mockImplementation((table: string) => {
-      if (table === 'reminders') {
-        return {
-          select: jest.fn(() => reminderSelectBuilder),
-          update: jest.fn(() => reminderUpdateBuilder),
-        }
-      }
-      throw new Error(`Unexpected table ${table}`)
-    })
-    reminderSelectBuilder.eq.mockReturnValue(reminderSelectBuilder)
-    reminderSelectBuilder.lte.mockResolvedValue({
+    // Mock RPC call for get_due_reminders_locked
+    supabaseMock.rpc.mockResolvedValue({
       data: [
         {
           id: 'rem-1',
@@ -68,10 +55,19 @@ describe('check-reminders cron', () => {
           scheduled_time: '2025-10-01T10:00:00Z',
           status: 'pending',
           send_token: null,
-          users: { phone_number: '+521234567890' },
+          created_at: '2025-10-01T09:00:00Z',
+          phone_number: '+521234567890',
         },
       ],
       error: null,
+    })
+    supabaseMock.from.mockImplementation((table: string) => {
+      if (table === 'reminders') {
+        return {
+          update: jest.fn(() => reminderUpdateBuilder),
+        }
+      }
+      throw new Error(`Unexpected table ${table}`)
     })
     reminderUpdateBuilder.eq.mockResolvedValue({ error: null })
     ;(getSupabaseServerClient as unknown as jest.Mock).mockReturnValue(supabaseMock as any)

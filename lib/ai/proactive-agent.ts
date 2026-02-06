@@ -233,22 +233,37 @@ export async function respond(
   finishReason: string
   toolCalls: number
 }> {
-  // READ: Search memories for context
-  const { searchMemories } = await import('./memory')
-  const memories = await searchMemories(userId, userMessage, 3) // Top 3 relevant memories
+  // OPTIMIZATION P0.2: Lazy memory search (only for conversational queries)
+  // Skip memory search for tool-heavy messages (reminders, expenses, scheduling)
+  // Reduces latency by 200-600ms on cache miss
+  const hasReminder = hasReminderKeywords(userMessage)
+  const hasMeeting = hasMeetingKeywords(userMessage)
+  const hasExpense = hasExpenseKeywords(userMessage)
+  const isToolMessage = hasReminder || hasMeeting || hasExpense
 
   let memoryContext = ''
-  if (memories.length > 0) {
-    memoryContext = `\n\n# USER MEMORY (things you remember about this user):\n${memories
-      .map((m) => `- ${m.content} (${m.type})`)
-      .join('\n')}\n`
 
-    logger.info('[ProactiveAgent] Memories injected', {
-      metadata: {
-        userId,
-        memoriesCount: memories.length,
-        topSimilarity: memories[0]?.similarity || 0,
-      },
+  // Only search memories for conversational messages (not tool invocations)
+  if (!isToolMessage) {
+    const { searchMemories } = await import('./memory')
+    const memories = await searchMemories(userId, userMessage, 3) // Top 3 relevant memories
+
+    if (memories.length > 0) {
+      memoryContext = `\n\n# USER MEMORY (things you remember about this user):\n${memories
+        .map((m) => `- ${m.content} (${m.type})`)
+        .join('\n')}\n`
+
+      logger.info('[ProactiveAgent] Memories injected', {
+        metadata: {
+          userId,
+          memoriesCount: memories.length,
+          topSimilarity: memories[0]?.similarity || 0,
+        },
+      })
+    }
+  } else {
+    logger.info('[ProactiveAgent] Memory search skipped for tool message', {
+      metadata: { userId, hasReminder, hasMeeting, hasExpense },
     })
   }
 
@@ -263,12 +278,7 @@ export async function respond(
     { role: 'user', content: userMessage },
   ]
 
-  // Detect keywords to determine tool forcing strategy
-  const hasReminder = hasReminderKeywords(userMessage)
-  const hasMeeting = hasMeetingKeywords(userMessage)
-  const hasExpense = hasExpenseKeywords(userMessage)
-
-  // Log keyword detection
+  // Log keyword detection (variables already declared at top for memory optimization)
   if (hasReminder || hasMeeting || hasExpense) {
     logger.decision(
       '[ProactiveAgent] Keywords detected',
@@ -280,7 +290,7 @@ export async function respond(
   }
 
   // Intelligent model selection
-  const hasTools = hasReminder || hasMeeting || hasExpense
+  const hasTools = isToolMessage
   const complexity = analyzeComplexity(userMessage, trimmedHistory.length, hasTools)
   const estimatedTokenCount = estimateTokens(userMessage, trimmedHistory.length)
   const budgetStatus = getBudgetStatus()
