@@ -24,8 +24,6 @@ import { hasToolIntent } from '../domain/intent'
 import {
   sendWhatsAppText,
   createTypingManager,
-  sendInteractiveButtons,
-  sendInteractiveList,
   markAsRead,
   reactWithWarning,
   downloadWhatsAppMedia,
@@ -241,7 +239,12 @@ export async function processMessageWithAI(
       conversationId,
       messageId,
     })
-    response = aiResponse.text
+    response = (aiResponse.text ?? '').trim()
+    if (!response) {
+      response = aiResponse.toolCalls > 0
+        ? 'Listo. Ya ejecuté tu solicitud.'
+        : 'Listo.'
+    }
     agentName = 'ProactiveAgent'
 
     await sendTextAndPersist(conversationId, userPhone, response)

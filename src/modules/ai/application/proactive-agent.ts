@@ -477,6 +477,16 @@ export async function respond(
 
   // Count tool calls
   const toolCallCount = steps.filter((s) => s.toolCalls && s.toolCalls.length > 0).length
+  const toolResults = steps
+    .flatMap((s: any) => Array.isArray(s?.toolResults) ? s.toolResults : [])
+    .map((r: any) => r?.result)
+    .filter((r: unknown): r is string => typeof r === 'string' && r.trim().length > 0)
+
+  // Some providers/flows finish with tool-calls and empty assistant text.
+  // Ensure we always return a non-empty user-facing confirmation.
+  if (text.trim().length === 0 && toolCallCount > 0) {
+    text = (toolResults[toolResults.length - 1] ?? 'Listo. Ya ejecuté tu solicitud.').trim()
+  }
 
   logger.info('[ProactiveAgent] Response generated', {
     metadata: {
@@ -493,6 +503,7 @@ export async function respond(
       finishReason,
       toolCalls: toolCallCount,
       textLength: text.length,
+      toolResultCount: toolResults.length,
     },
   })
 
