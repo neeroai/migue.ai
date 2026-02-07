@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-02-06 21:15
+
+#### Typing Indicator Threshold
+
+**lib/ai-processing-v2.ts**
+- CHANGED typing indicator threshold from 80 to 10 characters (line 78)
+- Fixes: Typing indicator not appearing for short messages
+- Impact: Users now see typing indicator for almost all messages (10+ chars)
+- Before: Only messages 80+ chars triggered typing indicator
+- After: Messages 10+ chars trigger typing indicator
+
 ### Changed - 2026-02-03 06:30
 
 #### Repository Optimization for Vercel Deployment

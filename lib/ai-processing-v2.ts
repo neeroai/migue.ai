@@ -75,7 +75,7 @@ export async function processMessageWithAI(
 
   let typingManager
 
-  const shouldShowTyping = userMessage.length >= 80
+  const shouldShowTyping = userMessage.length >= 10
 
   try {
     // Hydrate cost tracker from database (fire-and-forget to reduce blocking)
