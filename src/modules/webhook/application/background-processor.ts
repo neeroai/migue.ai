@@ -11,10 +11,10 @@ import {
   persistNormalizedMessage,
   type NormalizedMessage,
 } from '../domain/message-normalization';
-import { processMessageWithAI, processAudioMessage, processDocumentMessage } from '../../ai/application/processing';
 import { sendWhatsAppText, reactWithWarning } from '../../../shared/infra/whatsapp';
 import { retryWithBackoff, isDuplicateError, isTransientError } from '../../../shared/resilience/error-recovery';
 import { updateMessagingWindow } from '../../messaging-window/application/service';
+import { processInputByClass } from './input-orchestrator';
 
 /**
  * Background webhook processing (fire-and-forget)
@@ -157,62 +157,28 @@ export async function processWebhookInBackground(
       normalized.type = 'text';
     }
 
-    if (normalized.content && normalized.from && normalized.type !== 'document' && normalized.type !== 'image') {
-      logger.decision('Message processing', 'AI text processing', {
+    try {
+      await processInputByClass({
         requestId,
         conversationId,
         userId,
-        metadata: { contentLength: normalized.content.length },
+        normalized,
+      });
+    } catch (err: any) {
+      logger.error('[background] Input orchestration failed', err, {
+        requestId,
+        conversationId,
+        userId,
       });
 
       try {
-        await processMessageWithAI(
-          conversationId,
-          userId,
+        await sendWhatsAppText(
           normalized.from,
-          normalized.content,
-          normalized.waMessageId
+          'Disculpa, tuve un problema procesando tu mensaje. ¿Puedes intentar de nuevo?'
         );
-      } catch (err: any) {
-        logger.error('[background] AI processing failed', err, {
-          requestId,
-          conversationId,
-          userId,
-        });
-
-        try {
-          await sendWhatsAppText(
-            normalized.from,
-            'Disculpa, tuve un problema procesando tu mensaje. ¿Puedes intentar de nuevo?'
-          );
-          await reactWithWarning(normalized.from, normalized.waMessageId);
-        } catch (fallbackErr: any) {
-          logger.error('[background] Failed to send error message to user', fallbackErr, {
-            requestId,
-            conversationId,
-            userId,
-          });
-        }
-      }
-    }
-
-    if (normalized.type === 'audio' && normalized.mediaUrl && normalized.from) {
-      try {
-        await processAudioMessage(conversationId, userId, normalized);
-      } catch (err: any) {
-        logger.error('[background] Audio processing failed', err, {
-          requestId,
-          conversationId,
-          userId,
-        });
-      }
-    }
-
-    if ((normalized.type === 'document' || normalized.type === 'image') && normalized.mediaUrl && normalized.from) {
-      try {
-        await processDocumentMessage(conversationId, userId, normalized);
-      } catch (err: any) {
-        logger.error('[background] Document processing failed', err, {
+        await reactWithWarning(normalized.from, normalized.waMessageId);
+      } catch (fallbackErr: any) {
+        logger.error('[background] Failed to send error message to user', fallbackErr, {
           requestId,
           conversationId,
           userId,

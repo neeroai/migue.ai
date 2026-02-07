@@ -36,34 +36,92 @@ export async function markAsReadWithTyping(to: string, messageId: string) {
 export function createTypingManager(to: string, messageId: string) {
   let active = false;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+  let inFlight = false;
+
+  function clearDurationTimeout() {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  }
+
+  function clearRefreshInterval() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  }
+
+  async function sendTypingSignal() {
+    if (inFlight || !active) return;
+    inFlight = true;
+    try {
+      await markAsReadWithTyping(to, messageId);
+    } catch (err: any) {
+      logger.error('[WhatsApp Typing] Indicator error', err instanceof Error ? err : new Error(String(err)), {
+        metadata: { to, messageId },
+      });
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  function startRefreshLoop(refreshIntervalSeconds: number) {
+    clearRefreshInterval();
+
+    const refreshMs = Math.max(5, refreshIntervalSeconds) * 1000;
+    intervalId = setInterval(() => {
+      void sendTypingSignal();
+    }, refreshMs);
+
+    if (typeof (intervalId as NodeJS.Timeout).unref === 'function') {
+      (intervalId as NodeJS.Timeout).unref();
+    }
+  }
 
   return {
     async start() {
       if (active) return;
+      active = true;
       try {
         await markAsReadWithTyping(to, messageId);
-        active = true;
+        startRefreshLoop(20);
       } catch (err: any) {
+        active = false;
         logger.error('[WhatsApp Typing] Indicator error', err instanceof Error ? err : new Error(String(err)), {
           metadata: { to, messageId },
         });
       }
     },
+    async startPersistent(refreshIntervalSeconds = 20) {
+      if (active) return;
+      active = true;
+      try {
+        await markAsReadWithTyping(to, messageId);
+        startRefreshLoop(refreshIntervalSeconds);
+      } catch (err: any) {
+        active = false;
+        logger.error('[WhatsApp Typing] Indicator error', err instanceof Error ? err : new Error(String(err)), {
+          metadata: { to, messageId, refreshIntervalSeconds },
+        });
+      }
+    },
     async stop() {
       active = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
+      clearDurationTimeout();
+      clearRefreshInterval();
     },
     async startWithDuration(durationSeconds: number) {
       const duration = Math.min(durationSeconds, 25);
 
       if (!active) {
+        active = true;
         try {
           await markAsReadWithTyping(to, messageId);
-          active = true;
+          startRefreshLoop(20);
         } catch (err: any) {
+          active = false;
           logger.error('[WhatsApp Typing] Indicator error', err instanceof Error ? err : new Error(String(err)), {
             metadata: { to, messageId, durationSeconds },
           });
@@ -71,11 +129,12 @@ export function createTypingManager(to: string, messageId: string) {
         }
       }
 
-      if (timeoutId) clearTimeout(timeoutId);
+      clearDurationTimeout();
 
       timeoutId = setTimeout(() => {
         active = false;
-        timeoutId = null;
+        clearDurationTimeout();
+        clearRefreshInterval();
       }, duration * 1000);
       if (typeof (timeoutId as NodeJS.Timeout).unref === 'function') {
         (timeoutId as NodeJS.Timeout).unref();

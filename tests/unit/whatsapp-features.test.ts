@@ -175,6 +175,29 @@ describe('Enhanced Typing Manager', () => {
     expect(typing.isActive()).toBe(true);
   });
 
+  it('should refresh typing indicator while active', async () => {
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
+
+    const typing = createTypingManager('1234567890', 'wamid.ABC123');
+    await typing.start();
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(20000);
+    await Promise.resolve();
+    expect((global.fetch as jest.MockedFunction<typeof fetch>).mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    jest.advanceTimersByTime(20000);
+    await Promise.resolve();
+    const callsWhileActive = (global.fetch as jest.MockedFunction<typeof fetch>).mock.calls.length;
+    expect(callsWhileActive).toBeGreaterThanOrEqual(2);
+
+    await typing.stop();
+    jest.advanceTimersByTime(40000);
+    await Promise.resolve();
+    expect((global.fetch as jest.MockedFunction<typeof fetch>).mock.calls.length).toBe(callsWhileActive);
+  });
+
   it('should stop typing indicator', async () => {
     const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 

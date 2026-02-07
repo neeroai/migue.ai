@@ -10,6 +10,7 @@
  */
 
 import { logger } from '../../../shared/observability/logger'
+import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
 import { getConversationHistory, historyToModelMessages, trimHistoryByChars } from '../../conversation/application/utils'
 import { insertOutboundMessage, updateInboundMessageByWaId } from '../../../shared/infra/db/persist'
 import { getSupabaseServerClient } from '../../../shared/infra/db/supabase'
@@ -18,6 +19,7 @@ import { transcribeAudio } from '../../../shared/infra/openai/audio-transcriptio
 import { createProactiveAgent } from './proactive-agent'
 import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from '../domain/cost-tracker'
+import { hasToolIntent } from '../domain/intent'
 // Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
 import {
   sendWhatsAppText,
@@ -25,8 +27,6 @@ import {
   sendInteractiveButtons,
   sendInteractiveList,
   markAsRead,
-  reactWithThinking,
-  reactWithCheck,
   reactWithWarning,
   downloadWhatsAppMedia,
 } from '../../../shared/infra/whatsapp'
@@ -36,6 +36,12 @@ const proactiveAgent = createProactiveAgent()
 const supabaseClient = getSupabaseServerClient()
 
 const HISTORY_CHAR_BUDGET = 4000
+
+type TextPathway = 'default' | 'fast_text' | 'tool_intent' | 'rich_input'
+
+type ProcessMessageOptions = {
+  pathway?: TextPathway
+}
 
 function getTrivialResponse(message: string): string | null {
   const normalized = message.trim().toLowerCase()
@@ -104,15 +110,18 @@ export async function processMessageWithAI(
   userId: string,
   userPhone: string,
   userMessage: string,
-  messageId: string
+  messageId: string,
+  options: ProcessMessageOptions = {}
 ) {
   const startTime = Date.now()
+  const pathway = options.pathway ?? 'default'
 
   logger.functionEntry('processMessageWithAI', {
     conversationId,
     userId,
     userMessage: userMessage.slice(0, 100), // First 100 chars
     messageId,
+    pathway,
   })
 
   let typingManager
@@ -124,20 +133,21 @@ export async function processMessageWithAI(
     // OPTIMIZATION P0.1: Non-blocking hydration reduces cold start by 300-800ms
     const { getCostTracker } = await import('../domain/cost-tracker')
     const tracker = getCostTracker()
-    if (!tracker.isHydratedState()) {
+    if (!tracker.isHydratedState() && pathway !== 'fast_text') {
       await tracker.ensureHydrated()
     } else {
       void tracker.ensureHydrated() // Fire-and-forget
     }
 
-    // Mark message as read
-    await markAsRead(messageId)
+    // Mark message as read early for short messages (typing path already marks as read)
+    if (!shouldShowTyping) {
+      await markAsRead(messageId)
+    }
 
     // Early-exit for trivial messages (no AI call)
     const trivialResponse = getTrivialResponse(userMessage)
     if (trivialResponse) {
       await sendTextAndPersist(conversationId, userPhone, trivialResponse)
-      await reactWithCheck(userPhone, messageId)
       return
     }
 
@@ -150,8 +160,16 @@ export async function processMessageWithAI(
         userId,
       })
 
-      await reactWithThinking(userPhone, messageId)
-      await typingManager.start()
+      const typingStartAt = Date.now()
+      await typingManager.startPersistent(20)
+      emitSlaMetric(SLA_METRICS.TYPING_START_MS, {
+        conversationId,
+        userId,
+        value: Date.now() - typingStartAt,
+        messageType: 'text',
+        pathway,
+        extra: { message_length: userMessage.length },
+      })
     }
 
     // Check budget limits BEFORE making API call
@@ -197,7 +215,9 @@ export async function processMessageWithAI(
       conversationId,
       userId,
     })
-    const historyLimit = userMessage.length > 600 ? 8 : userMessage.length > 200 ? 12 : 15
+    const historyLimit = pathway === 'fast_text'
+      ? (userMessage.length > 300 ? 6 : 8)
+      : userMessage.length > 600 ? 8 : userMessage.length > 200 ? 12 : 15
     const history = await getConversationHistory(conversationId, historyLimit, supabaseClient)
     const trimmedHistory = trimHistoryByChars(history, HISTORY_CHAR_BUDGET)
 
@@ -225,12 +245,12 @@ export async function processMessageWithAI(
     agentName = 'ProactiveAgent'
 
     await sendTextAndPersist(conversationId, userPhone, response)
-    await reactWithCheck(userPhone, messageId)
 
     logger.functionExit('processMessageWithAI', Date.now() - startTime, {
       agent: agentName,
       responseLength: response.length,
       cost: `$${aiResponse.cost.total.toFixed(4)}`,
+      pathway,
     }, { conversationId, userId })
   } catch (error: any) {
     logger.error('AI processing error', error, {
@@ -349,8 +369,7 @@ export async function processAudioMessage(
       normalized.from,
       normalized.waMessageId
     )
-    await reactWithThinking(normalized.from, normalized.waMessageId)
-    await typingManager.start()
+    await typingManager.startPersistent(20)
 
     // Check per-user daily limit
     if (isUserOverBudget(userId)) {
@@ -421,7 +440,8 @@ export async function processAudioMessage(
       userId,
       normalized.from,
       transcript,
-      normalized.waMessageId
+      normalized.waMessageId,
+      { pathway: hasToolIntent(transcript) ? 'tool_intent' : 'rich_input' }
     )
 
     logger.info('Audio processed with OpenAI Whisper', {
@@ -553,8 +573,7 @@ export async function processDocumentMessage(
       normalized.from,
       normalized.waMessageId
     )
-    await reactWithThinking(normalized.from, normalized.waMessageId)
-    await typingManager.start()
+    await typingManager.startPersistent(20)
 
     // Download image/document
     logger.debug('[Document] Downloading document', {
@@ -658,7 +677,6 @@ export async function processDocumentMessage(
 
     // Send response
     await sendTextAndPersist(conversationId, normalized.from, aiResponse.text)
-    await reactWithCheck(normalized.from, normalized.waMessageId)
 
     // Update message
     await updateInboundMessageByWaId(normalized.waMessageId, {
@@ -672,6 +690,7 @@ export async function processDocumentMessage(
         method: 'Tesseract OCR',
         textLength: extractedText.length,
         cost: '$0.00 (free)',
+        toolIntent: hasToolIntent(extractedText),
       },
     })
 
