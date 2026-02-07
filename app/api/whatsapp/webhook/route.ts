@@ -67,9 +67,11 @@ export async function POST(req: Request): Promise<Response> {
 
     if (ingress.kind === 'rate_limited') {
       waitUntil(
-        sendWhatsAppText(
-          ingress.phoneNumber,
-          `⚠️ Estás enviando mensajes muy rápido. Por favor espera ${ingress.waitSeconds} segundo${ingress.waitSeconds > 1 ? 's' : ''} e intenta de nuevo.`
+        Promise.resolve(
+          sendWhatsAppText(
+            ingress.phoneNumber,
+            `⚠️ Estás enviando mensajes muy rápido. Por favor espera ${ingress.waitSeconds} segundo${ingress.waitSeconds > 1 ? 's' : ''} e intenta de nuevo.`
+          )
         ).catch((err: unknown) => {
           const errorObj = err instanceof Error ? err : new Error(String(err));
           logger.error('[webhook] Failed to send rate limit message', errorObj, { requestId });
@@ -89,7 +91,7 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     waitUntil(
-      processWebhookInBackground(requestId, normalized).catch((err: unknown) => {
+      Promise.resolve(processWebhookInBackground(requestId, normalized)).catch((err: unknown) => {
         const errorObj = err instanceof Error ? err : new Error(String(err));
         logger.error('[webhook] Background processing failed', errorObj, { requestId });
       })

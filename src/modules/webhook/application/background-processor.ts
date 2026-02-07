@@ -108,7 +108,7 @@ export async function processWebhookInBackground(
     });
 
     waitUntil(
-      updateMessagingWindow(normalized.from, normalized.waMessageId ?? `gen-${Date.now()}`, true).catch((err) =>
+      Promise.resolve(updateMessagingWindow(normalized.from, normalized.waMessageId ?? `gen-${Date.now()}`, true)).catch((err) =>
         logger.error('[background] Failed to update messaging window', err, {
           requestId,
           ...(conversationId && { conversationId }),

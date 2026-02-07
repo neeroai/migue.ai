@@ -14,6 +14,7 @@
     "test:gemini:load": "npx tsx scripts/load-test-gemini.ts",
     "test:gemini:load:quick": "npx tsx scripts/load-test-gemini.ts --quick",
     "test:integration": "TEST_TYPE=integration jest",
+    "test:e2e": "TEST_TYPE=integration jest tests/integration",
     "test:all": "npm run test:unit && npm run test:gemini",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
