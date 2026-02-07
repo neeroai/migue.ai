@@ -1,6 +1,6 @@
 /**
  * @file AI Processing Pipeline V2
- * @description Multi-provider AI orchestration (OpenAI GPT-4o-mini PRIMARY, Gemini 2.5 Flash Lite fallback) with audio transcription (Whisper) and OCR (Tesseract) for cost optimization
+ * @description Multi-provider AI orchestration (OpenAI GPT-4o-mini PRIMARY, Gemini 2.5 Flash Lite fallback) with audio transcription (Whisper) and multimodal vision processing
  * @module lib/ai-processing-v2
  * @exports processMessageWithAI, processAudioMessage, processDocumentMessage
  * @runtime edge
@@ -20,7 +20,7 @@ import { createProactiveAgent } from './proactive-agent'
 import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from '../domain/cost-tracker'
 import { hasToolIntent } from '../domain/intent'
-// Note: tesseract-ocr is lazy loaded to reduce bundle size (2MB saved)
+import { analyzeVisualInput } from './vision-pipeline'
 import {
   sendWhatsAppText,
   createTypingManager,
@@ -479,12 +479,10 @@ export async function processAudioMessage(
 }
 
 /**
- * Process document/image with Tesseract OCR
- *
- * Uses Tesseract for free text extraction from images/documents
+ * Process document/image with multimodal vision pipeline
  */
 /**
- * Processes document/image message with Tesseract OCR + AI response pipeline
+ * Processes document/image message with multimodal analysis + AI/tool routing
  * Requires mediaUrl, waMessageId, from fields (returns early if missing)
  *
  * @param conversationId - Conversation UUID for history context
@@ -499,7 +497,7 @@ export async function processAudioMessage(
  *   'user-uuid',
  *   { type: 'image', mediaUrl: '...', waMessageId: 'wamid.xxx', from: '+57...' }
  * );
- * // OCR text + AI response sent
+ * // Visual analysis + AI response sent
  * ```
  */
 export async function processDocumentMessage(
@@ -579,121 +577,68 @@ export async function processDocumentMessage(
     await typingManager.startPersistent(20)
 
     // Download image/document
-    logger.debug('[Document] Downloading document', {
+    logger.debug('[Document] Downloading media for multimodal processing', {
       conversationId,
       userId,
     })
     const { bytes: imageBuffer, mimeType } = await downloadWhatsAppMedia(normalized.mediaUrl)
-    logger.debug('[Document] Document downloaded', {
+    logger.debug('[Document] Media downloaded', {
       conversationId,
       userId,
       metadata: { bufferSize: imageBuffer.length, mimeType },
     })
 
-    let extractedText = ''
-
-    // Use Tesseract OCR (free, text-only extraction)
-    try {
-      logger.debug('[Document] Using Tesseract OCR', { conversationId, userId })
-
-      // Lazy load tesseract to reduce bundle size
-      const Tesseract = await import('tesseract.js')
-
-      const result = await Tesseract.recognize(
-        Buffer.from(imageBuffer),
-        'spa', // Spanish language
-        {
-          logger: (m) => {
-            if (m.status === 'recognizing text') {
-              logger.debug(`[Tesseract] Progress: ${Math.round(m.progress * 100)}%`, {
-                conversationId,
-                userId,
-              })
-            }
-          },
-        }
-      )
-
-      extractedText = result.data.text.trim()
-
-      logger.performance('Tesseract OCR', Date.now() - startTime, {
-        conversationId,
-        userId,
-        metadata: { textLength: extractedText.length },
-      })
-
-      if (!extractedText || extractedText.length < 10) {
-        logger.warn('[Document] No text extracted from image', {
-          conversationId,
-          userId,
-          metadata: { extractedLength: extractedText.length },
-        })
-
-        await reactWithWarning(normalized.from, normalized.waMessageId)
-        await sendTextAndPersist(
-          conversationId,
-          normalized.from,
-          'No pude extraer texto de esta imagen. Asegúrate de que la imagen contenga texto claro y legible.'
-        )
-
-        return // Exit early
-      }
-
-    } catch (ocrError: any) {
-      logger.error('[Document] Tesseract OCR failed', ocrError, {
-        conversationId,
-        userId,
-        metadata: { error: ocrError.message },
-      })
-
-      await reactWithWarning(normalized.from, normalized.waMessageId)
-      await sendTextAndPersist(
-        conversationId,
-        normalized.from,
-        'Disculpa, tuve un problema procesando la imagen. ¿Puedes intentar de nuevo con una imagen más clara?'
-      )
-
-      return // Exit early
-    }
-
-    // Process extracted text with AI for comprehension
-    const history = await getConversationHistory(conversationId, 5, supabaseClient)
-
-    // Budget OK, proceed with API call
-    // Use Vercel AI SDK for comprehension
-    const modelHistory = historyToModelMessages(history)
-
-    // Include caption in prompt if available (prevents double responses)
-    const captionContext = normalized.content
-      ? `\n\nCONTEXTO del usuario: "${normalized.content}"\n\n`
-      : '\n\n'
-
-    const aiResponse = await proactiveAgent.respond(
-      `El usuario envió una imagen. Aquí está el contenido extraído:${captionContext}${extractedText}\n\nAnaliza y responde de forma útil.`,
+    const visualResult = await analyzeVisualInput({
+      bytes: imageBuffer,
+      mimeType,
+      caption: normalized.content,
       userId,
-      modelHistory,
-      {
-        conversationId,
-        messageId: normalized.waMessageId,
-      }
-    )
-
-    // Send response
-    await sendTextAndPersist(conversationId, normalized.from, aiResponse.text)
-
-    // Update message
-    await updateInboundMessageByWaId(normalized.waMessageId, {
-      content: extractedText.slice(0, 5000),
+      conversationId,
+      messageId: normalized.waMessageId,
     })
 
-    logger.info('Document processed successfully with Tesseract OCR', {
+    // Persist extracted text if available for future context/search.
+    if (visualResult.extractedText) {
+      await updateInboundMessageByWaId(normalized.waMessageId, {
+        content: visualResult.extractedText,
+      })
+    }
+
+    if (visualResult.toolIntentDetected && visualResult.extractedText) {
+      // Avoid duplicate typing managers: stop current one before delegating to tool pathway.
+      if (typingManager) {
+        await typingManager.stop()
+        typingManager = undefined
+      }
+
+      const synthesizedMessage = [
+        normalized.content ? `Solicitud del usuario: ${normalized.content}` : null,
+        `Contexto extraido de imagen/documento:\n${visualResult.extractedText.slice(0, 2000)}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
+      await processMessageWithAI(
+        conversationId,
+        userId,
+        normalized.from,
+        synthesizedMessage,
+        normalized.waMessageId,
+        { pathway: 'rich_input' }
+      )
+      return
+    }
+
+    await sendTextAndPersist(conversationId, normalized.from, visualResult.responseText)
+
+    logger.info('Document/image processed successfully with multimodal pipeline', {
       conversationId,
       userId,
       metadata: {
-        method: 'Tesseract OCR',
-        textLength: extractedText.length,
-        cost: '$0.00 (free)',
-        toolIntent: hasToolIntent(extractedText),
+        method: 'multimodal',
+        inputClass: visualResult.inputClass,
+        extractedTextLength: visualResult.extractedText.length,
+        toolIntent: visualResult.toolIntentDetected,
       },
     })
 
