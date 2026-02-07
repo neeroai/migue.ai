@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { scheduleFollowUp, fetchDueFollowUps, markFollowUpStatus } from '../../lib/followups'
-import { getSupabaseServerClient } from '../../lib/supabase'
+import { scheduleFollowUp, fetchDueFollowUps, markFollowUpStatus } from '../../src/modules/followups/application/service'
+import { getSupabaseServerClient } from '../../src/shared/infra/db/supabase'
 
-jest.mock('../../lib/supabase', () => ({
+jest.mock('../../src/shared/infra/db/supabase', () => ({
   getSupabaseServerClient: jest.fn(),
 }))
 

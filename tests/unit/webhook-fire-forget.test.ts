@@ -13,8 +13,8 @@ jest.mock('@vercel/functions', () => ({
   waitUntil: jest.fn((promise) => promise.catch(() => {})), // Execute immediately but swallow errors
 }));
 
-jest.mock('../../lib/message-normalization', () => ({
-  ...jest.requireActual('../../lib/message-normalization'),
+jest.mock('../../src/modules/webhook/domain/message-normalization', () => ({
+  ...jest.requireActual('../../src/modules/webhook/domain/message-normalization'),
   persistNormalizedMessage: jest.fn().mockResolvedValue({
     conversationId: 'test-conv-id',
     userId: 'test-user-id',
@@ -22,17 +22,17 @@ jest.mock('../../lib/message-normalization', () => ({
   }),
 }));
 
-jest.mock('../../lib/ai-processing-v2', () => ({
+jest.mock('../../src/modules/ai/application/processing', () => ({
   processMessageWithAI: jest.fn().mockResolvedValue(undefined),
   processAudioMessage: jest.fn().mockResolvedValue(undefined),
   processDocumentMessage: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/messaging-windows', () => ({
+jest.mock('../../src/modules/messaging-window/application/service', () => ({
   updateMessagingWindow: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/simple-rate-limiter', () => ({
+jest.mock('../../src/modules/webhook/domain/rate-limiter', () => ({
   checkRateLimit: jest.fn().mockReturnValue(true), // Always allow (not rate limited)
   getRateLimitWaitTime: jest.fn().mockReturnValue(0),
 }));
@@ -133,7 +133,7 @@ describe('Webhook Fire-and-Forget Pattern', () => {
 
     it.skip('should return 200 OK on processing errors', async () => {
       const { persistNormalizedMessage } = jest.requireMock(
-        '../../lib/message-normalization'
+        '../../src/modules/webhook/domain/message-normalization'
       );
 
       // Mock DB error

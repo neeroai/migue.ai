@@ -17,7 +17,7 @@ describe('WhatsApp Reactions', () => {
     jest.clearAllMocks();
 
     // Clear WhatsApp module caches
-    const { _clearCaches } = await import('../../lib/whatsapp');
+    const { _clearCaches } = await import('../../src/shared/infra/whatsapp');
     _clearCaches();
 
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
@@ -28,7 +28,7 @@ describe('WhatsApp Reactions', () => {
   });
 
   it('should send emoji reaction', async () => {
-    const { sendReaction } = await import('../../lib/whatsapp');
+    const { sendReaction } = await import('../../src/shared/infra/whatsapp');
 
     const result = await sendReaction('1234567890', 'wamid.ABC123', '🔥');
 
@@ -51,7 +51,7 @@ describe('WhatsApp Reactions', () => {
   });
 
   it('should remove reaction with empty emoji', async () => {
-    const { removeReaction } = await import('../../lib/whatsapp');
+    const { removeReaction } = await import('../../src/shared/infra/whatsapp');
 
     await removeReaction('1234567890', 'wamid.ABC123');
 
@@ -60,7 +60,7 @@ describe('WhatsApp Reactions', () => {
   });
 
   it('should send check reaction', async () => {
-    const { reactWithCheck } = await import('../../lib/whatsapp');
+    const { reactWithCheck } = await import('../../src/shared/infra/whatsapp');
 
     await reactWithCheck('1234567890', 'wamid.ABC123');
 
@@ -69,7 +69,7 @@ describe('WhatsApp Reactions', () => {
   });
 
   it('should send thinking reaction', async () => {
-    const { reactWithThinking } = await import('../../lib/whatsapp');
+    const { reactWithThinking } = await import('../../src/shared/infra/whatsapp');
 
     await reactWithThinking('1234567890', 'wamid.ABC123');
 
@@ -85,8 +85,8 @@ describe('WhatsApp Reactions', () => {
       text: async () => 'Invalid message ID',
     } as Response);
 
-    const { sendReaction } = await import('../../lib/whatsapp');
-    const { WhatsAppAPIError } = await import('../../lib/whatsapp-errors');
+    const { sendReaction } = await import('../../src/shared/infra/whatsapp');
+    const { WhatsAppAPIError } = await import('../../src/shared/infra/whatsapp/errors');
 
     await expect(sendReaction('1234567890', 'invalid', '🔥')).rejects.toThrow(
       WhatsAppAPIError
@@ -99,7 +99,7 @@ describe('WhatsApp Read Receipts', () => {
     jest.clearAllMocks();
 
     // Clear WhatsApp module caches
-    const { _clearCaches } = await import('../../lib/whatsapp');
+    const { _clearCaches } = await import('../../src/shared/infra/whatsapp');
     _clearCaches();
 
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
@@ -110,7 +110,7 @@ describe('WhatsApp Read Receipts', () => {
   });
 
   it('should mark message as read', async () => {
-    const { markAsRead } = await import('../../lib/whatsapp');
+    const { markAsRead } = await import('../../src/shared/infra/whatsapp');
 
     await markAsRead('wamid.ABC123');
 
@@ -135,7 +135,7 @@ describe('WhatsApp Read Receipts', () => {
     const originalToken = process.env.WHATSAPP_TOKEN;
     delete process.env.WHATSAPP_TOKEN;
 
-    const { markAsRead } = await import('../../lib/whatsapp');
+    const { markAsRead } = await import('../../src/shared/infra/whatsapp');
 
     await expect(markAsRead('wamid.ABC123')).rejects.toThrow(
       'Missing WhatsApp credentials'
@@ -151,7 +151,7 @@ describe('Enhanced Typing Manager', () => {
     jest.useFakeTimers();
 
     // Clear WhatsApp module caches
-    const { _clearCaches } = await import('../../lib/whatsapp');
+    const { _clearCaches } = await import('../../src/shared/infra/whatsapp');
     _clearCaches();
 
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
@@ -166,7 +166,7 @@ describe('Enhanced Typing Manager', () => {
   });
 
   it('should start typing indicator', async () => {
-    const { createTypingManager } = await import('../../lib/whatsapp');
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 
     const typing = createTypingManager('1234567890', 'wamid.ABC123');
     await typing.start();
@@ -176,7 +176,7 @@ describe('Enhanced Typing Manager', () => {
   });
 
   it('should stop typing indicator', async () => {
-    const { createTypingManager } = await import('../../lib/whatsapp');
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 
     const typing = createTypingManager('1234567890', 'wamid.ABC123');
     await typing.start();
@@ -186,7 +186,7 @@ describe('Enhanced Typing Manager', () => {
   });
 
   it('should not start typing if already active', async () => {
-    const { createTypingManager } = await import('../../lib/whatsapp');
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 
     const typing = createTypingManager('1234567890', 'wamid.ABC123');
     await typing.start();
@@ -198,7 +198,7 @@ describe('Enhanced Typing Manager', () => {
   });
 
   it('should start typing with duration and auto-stop', async () => {
-    const { createTypingManager } = await import('../../lib/whatsapp');
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 
     const typing = createTypingManager('1234567890', 'wamid.ABC123');
     await typing.startWithDuration(5);
@@ -212,7 +212,7 @@ describe('Enhanced Typing Manager', () => {
   });
 
   it('should limit duration to 25 seconds max', async () => {
-    const { createTypingManager } = await import('../../lib/whatsapp');
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 
     const typing = createTypingManager('1234567890', 'wamid.ABC123');
     await typing.startWithDuration(30); // Request 30 seconds
@@ -231,7 +231,7 @@ describe('Enhanced Typing Manager', () => {
   });
 
   it('should clear previous timeout when calling startWithDuration again', async () => {
-    const { createTypingManager } = await import('../../lib/whatsapp');
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 
     const typing = createTypingManager('1234567890', 'wamid.ABC123');
 
@@ -255,7 +255,7 @@ describe('Enhanced Typing Manager', () => {
       new Error('Network error')
     );
 
-    const { createTypingManager } = await import('../../lib/whatsapp');
+    const { createTypingManager } = await import('../../src/shared/infra/whatsapp');
 
     const typing = createTypingManager('1234567890', 'wamid.ABC123');
 

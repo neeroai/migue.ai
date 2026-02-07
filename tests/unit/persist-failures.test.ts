@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
-import { retryWithBackoff, isTransientError, isDuplicateError } from '../../lib/error-recovery';
+import { retryWithBackoff, isTransientError, isDuplicateError } from '../../src/shared/resilience/error-recovery';
 
 describe('Error Recovery', () => {
   beforeEach(() => {

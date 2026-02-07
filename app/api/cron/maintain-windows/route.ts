@@ -11,12 +11,16 @@
 export const runtime = 'edge';
 export const maxDuration = 10; // Edge Functions max timeout (AI generation + multiple messages)
 
-import { getEnv } from '../../../../lib/env';
-import { logger } from '../../../../lib/logger';
-import { sendWhatsAppText } from '../../../../lib/whatsapp';
-import { getSupabaseServerClient } from '../../../../lib/supabase';
-import { createProactiveAgent } from '../../../../lib/ai/proactive-agent';
-import { getConversationHistory, historyToModelMessages, type ConversationMessage } from '../../../../lib/conversation-utils';
+import { getEnv } from '../../../../src/shared/config/env';
+import { logger } from '../../../../src/shared/observability/logger';
+import { sendWhatsAppText } from '../../../../src/shared/infra/whatsapp';
+import { getSupabaseServerClient } from '../../../../src/shared/infra/db/supabase';
+import { createProactiveAgent } from '../../../../src/modules/ai/application/proactive-agent';
+import {
+  getConversationHistory,
+  historyToModelMessages,
+  type ConversationMessage,
+} from '../../../../src/modules/conversation/application/utils';
 import {
   findWindowsNearExpiration,
   shouldSendProactiveMessage,
@@ -24,7 +28,7 @@ import {
   isWithinBusinessHours,
   COLOMBIA_TZ,
   BUSINESS_HOURS,
-} from '../../../../lib/messaging-windows';
+} from '../../../../src/modules/messaging-window/application/service';
 
 const proactiveAgent = createProactiveAgent();
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
-import { getWhatsAppErrorHint, WhatsAppAPIError } from '@/lib/whatsapp-errors';
+import { getWhatsAppErrorHint, WhatsAppAPIError } from '@/src/shared/infra/whatsapp/errors';
 
 describe('getWhatsAppErrorHint', () => {
   describe('Meta Graph API error codes', () => {

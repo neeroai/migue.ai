@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '../lib/database.types'
+import type { Database } from '../src/shared/infra/db/database.types'
 import { writeFileSync } from 'fs'
 
 type UserMetrics = {

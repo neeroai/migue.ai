@@ -1,0 +1,196 @@
+/**
+ * @file followups.ts
+ * @description Follow-up job scheduling system with business hours adjustment (7am-8pm Bogotá), duplicate prevention, and status tracking
+ * @module lib/followups
+ * @exports FollowUpCategory, scheduleFollowUp, fetchDueFollowUps, markFollowUpStatus
+ * @runtime edge
+ * @date 2026-02-07 19:17
+ * @updated 2026-02-07 19:17
+ */
+
+import { getSupabaseServerClient } from '../../../shared/infra/db/supabase'
+import { COLOMBIA_TZ, BUSINESS_HOURS } from '../../messaging-window/application/service'
+import { logger } from '../../../shared/observability/logger'
+
+export type FollowUpCategory = 'schedule_confirm' | 'document_status' | 'reminder_check' | 'window_maintenance' | 'custom'
+
+const DEFAULT_DELAY_MINUTES = 60
+
+/**
+ * Adjust scheduled time to fall within business hours (7am-8pm Bogotá)
+ * If scheduled time is outside business hours, move to next available time
+ */
+function adjustToBusinessHours(scheduledFor: Date): Date {
+  const hour = parseInt(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: COLOMBIA_TZ,
+      hour: 'numeric',
+      hour12: false,
+    }).format(scheduledFor)
+  )
+
+  // If within business hours, return as-is
+  if (hour >= BUSINESS_HOURS.start && hour < BUSINESS_HOURS.end) {
+    return scheduledFor
+  }
+
+  // If too early (before 7am), move to 7am same day
+  if (hour < BUSINESS_HOURS.start) {
+    const adjusted = new Date(scheduledFor)
+    // Set to 12pm UTC (7am Bogotá)
+    adjusted.setUTCHours(12, 0, 0, 0)
+    return adjusted
+  }
+
+  // If too late (8pm or later), move to 7am next day
+  const adjusted = new Date(scheduledFor)
+  adjusted.setUTCDate(adjusted.getUTCDate() + 1)
+  adjusted.setUTCHours(12, 0, 0, 0) // 12pm UTC = 7am Bogotá
+  return adjusted
+}
+
+/**
+ * Schedule follow-up message job with automatic business hours adjustment and duplicate prevention
+ *
+ * Business hours behavior:
+ * - Default hours: 7am-8pm Bogotá time (COLOMBIA_TZ)
+ * - Before 7am: Moves to 7am same day
+ * - After 8pm: Moves to 7am next day
+ * - Enabled by default for 'window_maintenance' and 'custom' categories
+ *
+ * Duplicate prevention:
+ * - Deletes existing pending jobs for same conversation + category before inserting
+ * - Continues even if delete fails (logs error but doesn't throw)
+ *
+ * @param params - Follow-up configuration object
+ * @param params.userId - User ID for tracking
+ * @param params.conversationId - Conversation ID (used for duplicate detection)
+ * @param params.category - Follow-up type (schedule_confirm, document_status, reminder_check, window_maintenance, custom)
+ * @param params.payload - Optional custom data to pass to follow-up handler
+ * @param params.delayMinutes - Delay before sending (default: 60 minutes)
+ * @param params.respectBusinessHours - Force business hours adjustment (default: true for proactive categories)
+ * @throws {Error} If database insert fails
+ * @example
+ * await scheduleFollowUp({
+ *   userId: user.id,
+ *   conversationId: conv.id,
+ *   category: 'reminder_check',
+ *   delayMinutes: 30,
+ *   payload: { reminderType: 'medication' }
+ * });
+ */
+export async function scheduleFollowUp(params: {
+  userId: string
+  conversationId: string
+  category: FollowUpCategory
+  payload?: Record<string, unknown>
+  delayMinutes?: number
+  respectBusinessHours?: boolean // Default: true for proactive categories
+}) {
+  const supabase = getSupabaseServerClient()
+  const delay = params.delayMinutes ?? DEFAULT_DELAY_MINUTES
+  let scheduledFor = new Date(Date.now() + delay * 60_000)
+
+  // Respect business hours for proactive messages (default true)
+  const shouldRespectHours = params.respectBusinessHours ??
+    (params.category === 'window_maintenance' || params.category === 'custom')
+
+  if (shouldRespectHours) {
+    scheduledFor = adjustToBusinessHours(scheduledFor)
+  }
+
+  // Delete existing pending follow-ups for same conversation/category (prevent duplicates)
+  const { error: deleteError } = await supabase.from('follow_up_jobs')
+    .delete()
+    .eq('conversation_id', params.conversationId)
+    .eq('category', params.category)
+    .eq('status', 'pending')
+
+  if (deleteError) {
+    logger.error('[Followups] Failed to delete existing pending jobs', deleteError, {
+      metadata: {
+        conversationId: params.conversationId,
+        category: params.category,
+      },
+    })
+    // Don't throw - continue with insert even if delete fails
+  }
+
+  const { error } = await supabase.from('follow_up_jobs').insert({
+    user_id: params.userId,
+    conversation_id: params.conversationId,
+    category: params.category,
+    scheduled_for: scheduledFor.toISOString(),
+    payload: (params.payload ?? null) as never,
+  })
+  if (error) throw error
+}
+
+/**
+ * Fetch pending follow-up jobs that are due for processing
+ *
+ * Query criteria:
+ * - status = 'pending'
+ * - scheduled_for <= current time (UTC)
+ * - Limited to N results (default: 10)
+ *
+ * Use this in cron job or background worker to process scheduled follow-ups
+ *
+ * @param limit - Maximum number of jobs to fetch (default: 10)
+ * @returns Array of due follow-up jobs with id, user_id, conversation_id, category, payload
+ * @throws {Error} If database query fails
+ * @example
+ * const dueJobs = await fetchDueFollowUps(20);
+ * for (const job of dueJobs) {
+ *   await processFollowUp(job);
+ *   await markFollowUpStatus(job.id, 'sent');
+ * }
+ */
+export async function fetchDueFollowUps(limit = 10): Promise<Array<{
+  id: string;
+  user_id: string;
+  conversation_id: string;
+  category: string;
+  payload: Record<string, unknown> | null;
+}>> {
+  const supabase = getSupabaseServerClient()
+  const nowIso = new Date().toISOString()
+
+  const { data, error } = await supabase.from('follow_up_jobs')
+    .select('id, user_id, conversation_id, category, payload')
+    .eq('status', 'pending')
+    .lte('scheduled_for', nowIso)
+    .limit(limit)
+  if (error) throw error
+  return (data as any) ?? []
+}
+
+/**
+ * Update follow-up job status after processing
+ *
+ * Status meanings:
+ * - sent: Successfully sent to user
+ * - failed: Error during processing (e.g., WhatsApp API error)
+ * - cancelled: Job cancelled before execution (e.g., user opted out)
+ *
+ * Call this after processing job from fetchDueFollowUps()
+ *
+ * @param id - Follow-up job ID (from follow_up_jobs table)
+ * @param status - New status (sent, failed, cancelled)
+ * @throws {Error} If database update fails
+ * @example
+ * try {
+ *   await sendFollowUpMessage(job);
+ *   await markFollowUpStatus(job.id, 'sent');
+ * } catch (error) {
+ *   await markFollowUpStatus(job.id, 'failed');
+ * }
+ */
+export async function markFollowUpStatus(id: string, status: 'sent' | 'failed' | 'cancelled') {
+  const supabase = getSupabaseServerClient()
+
+  const { error } = await supabase.from('follow_up_jobs')
+    .update({ status })
+    .eq('id', id)
+  if (error) throw error
+}

@@ -9,8 +9,8 @@ import {
   trackUsage,
   getBudgetStatus,
   canAffordRequest,
-} from '../../lib/ai-cost-tracker'
-import type { UsageMetrics, CostMetrics } from '../../lib/openai-response-handler'
+} from '../../src/modules/ai/domain/cost-tracker'
+import type { UsageMetrics, CostMetrics } from '../../src/shared/infra/openai/response-handler'
 
 describe('openai-cost-tracker', () => {
   let tracker: CostTracker

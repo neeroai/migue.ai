@@ -12,8 +12,12 @@
 export const runtime = 'edge';
 export const maxDuration = 10;
 
-import { handleFlowDataExchange, completeFlowSession, validateFlowSignature } from '../../../../lib/whatsapp-flows';
-import { logger } from '../../../../lib/logger';
+import {
+  handleFlowDataExchange,
+  completeFlowSession,
+  validateFlowSignature,
+} from '../../../../src/shared/infra/whatsapp/flows';
+import { logger } from '../../../../src/shared/observability/logger';
 import type { FlowDataExchangeRequest } from '../../../../types/whatsapp';
 
 /**

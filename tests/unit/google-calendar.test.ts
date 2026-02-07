@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { createCalendarEventForUser } from '../../lib/google-calendar'
+import { createCalendarEventForUser } from '../../src/shared/infra/google/calendar'
 import {
   fetchCalendarCredential,
   updateAccessToken,
   recordCalendarEvent,
-} from '../../lib/calendar-store'
+} from '../../src/shared/infra/calendar/store'
 
-jest.mock('../../lib/calendar-store', () => ({
+jest.mock('../../src/shared/infra/calendar/store', () => ({
   fetchCalendarCredential: jest.fn(),
   updateAccessToken: jest.fn(),
   recordCalendarEvent: jest.fn(),

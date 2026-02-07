@@ -12,7 +12,7 @@ import {
   formatCost,
   formatUsage,
   getModelPricing,
-} from '../../lib/openai-response-handler'
+} from '../../src/shared/infra/openai/response-handler'
 
 describe('openai-response-handler', () => {
   describe('validateChatResponse', () => {

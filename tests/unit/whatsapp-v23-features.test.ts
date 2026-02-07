@@ -6,8 +6,8 @@ import {
   requestCallPermission,
   blockPhoneNumber,
   unblockPhoneNumber,
-} from '../../lib/whatsapp';
-import { sendFlow, generateFlowToken } from '../../lib/whatsapp-flows';
+} from '../../src/shared/infra/whatsapp';
+import { sendFlow, generateFlowToken } from '../../src/shared/infra/whatsapp/flows';
 import { extractFirstCallEvent } from '../../types/schemas';
 
 // Mock environment variables

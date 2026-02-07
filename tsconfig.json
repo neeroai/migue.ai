@@ -40,7 +40,7 @@
   "include": [
     "api/**/*",
     "app/**/*",
-    "lib/**/*",
+    "src/**/*",
     "next-env.d.ts",
     "types/**/*",
     ".next/types/**/*.ts",
