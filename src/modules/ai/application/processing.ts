@@ -351,9 +351,20 @@ export async function processAudioMessage(
   }
 
   let typingManager
+  let typingStarted = false
 
   try {
-    await markAsRead(normalized.waMessageId)
+    try {
+      await markAsRead(normalized.waMessageId)
+    } catch (readErr: any) {
+      logger.warn('[Audio] markAsRead failed, continuing', {
+        conversationId,
+        userId,
+        metadata: {
+          errorMessage: readErr?.message,
+        },
+      })
+    }
 
     // ✅ Check budget limits BEFORE download/processing
     const budgetStatus = getBudgetStatus()
@@ -378,11 +389,22 @@ export async function processAudioMessage(
     }
 
     // Initialize typing manager inside try-catch to prevent synchronous errors
-    typingManager = createTypingManager(
-      normalized.from,
-      normalized.waMessageId
-    )
-    await typingManager.startPersistent(20)
+    try {
+      typingManager = createTypingManager(
+        normalized.from,
+        normalized.waMessageId
+      )
+      await typingManager.startPersistent(20)
+      typingStarted = true
+    } catch (typingErr: any) {
+      logger.warn('[Audio] Typing indicator failed to start, continuing', {
+        conversationId,
+        userId,
+        metadata: {
+          errorMessage: typingErr?.message,
+        },
+      })
+    }
 
     // Check per-user daily limit
     if (isUserOverBudget(userId)) {
@@ -405,11 +427,17 @@ export async function processAudioMessage(
       conversationId,
       userId,
     })
-    const { bytes: audioBuffer } = await downloadWhatsAppMedia(normalized.mediaUrl)
+    const { bytes: audioBuffer, mimeType: downloadedMimeType } = await downloadWhatsAppMedia(normalized.mediaUrl)
+    const transcriptionMimeType = downloadedMimeType?.split(';')[0]?.trim() || 'audio/ogg'
+    const transcriptionExtension = transcriptionMimeType.split('/')[1] || 'ogg'
     logger.debug('[Audio] Audio downloaded', {
       conversationId,
       userId,
-      metadata: { bufferSize: audioBuffer.length },
+      metadata: {
+        bufferSize: audioBuffer.length,
+        downloadedMimeType,
+        transcriptionMimeType,
+      },
     })
 
     // ✅ Budget OK, proceed with API call
@@ -420,8 +448,8 @@ export async function processAudioMessage(
     })
     const transcript = await transcribeAudio(audioBuffer, {
       language: 'es',
-      mimeType: 'audio/ogg',
-      fileName: 'audio.ogg'
+      mimeType: transcriptionMimeType,
+      fileName: `audio.${transcriptionExtension}`,
     })
     logger.performance('OpenAI Whisper transcription', Date.now() - startTime, {
       conversationId,
@@ -482,7 +510,7 @@ export async function processAudioMessage(
       )
     }
   } finally {
-    if (typingManager) {
+    if (typingManager && typingStarted) {
       await typingManager.stop()
     }
   }

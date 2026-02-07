@@ -71,7 +71,8 @@ export async function transcribeAudio(
   options?: TranscriptionOptions
 ): Promise<string> {
   const client = getOpenAIClient()
-  const mimeType = options?.mimeType ?? 'audio/ogg'
+  const rawMimeType = options?.mimeType ?? 'audio/ogg'
+  const mimeType = rawMimeType.split(';')[0]?.trim() || 'audio/ogg'
 
   const parts = mimeType.split('/')
   const extension = parts[1] ?? 'ogg'
