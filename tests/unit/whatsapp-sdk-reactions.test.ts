@@ -17,7 +17,7 @@ describe('WhatsApp Reactions', () => {
     jest.clearAllMocks();
 
     // Clear WhatsApp module caches
-    const { _clearCaches } = await import('../../lib/whatsapp');
+    const { _clearCaches } = await import('../../src/shared/infra/whatsapp');
     _clearCaches();
 
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
@@ -30,7 +30,7 @@ describe('WhatsApp Reactions', () => {
 
 
   it('should send check reaction', async () => {
-    const { reactWithCheck } = await import('../../lib/whatsapp');
+    const { reactWithCheck } = await import('../../src/shared/infra/whatsapp');
 
     const result = await reactWithCheck('+1234567890', 'wamid.123');
 
@@ -45,7 +45,7 @@ describe('WhatsApp Reactions', () => {
   });
 
   it('should send custom emoji reaction', async () => {
-    const { sendReaction } = await import('../../lib/whatsapp');
+    const { sendReaction } = await import('../../src/shared/infra/whatsapp');
 
     const result = await sendReaction('+1234567890', 'wamid.123', '🎉');
 
@@ -59,7 +59,7 @@ describe('WhatsApp Reactions', () => {
   });
 
   it('should remove reaction', async () => {
-    const { removeReaction } = await import('../../lib/whatsapp');
+    const { removeReaction } = await import('../../src/shared/infra/whatsapp');
 
     const result = await removeReaction('+1234567890', 'wamid.123');
 
@@ -73,7 +73,7 @@ describe('WhatsApp Reactions', () => {
   });
 
   it('should mark message as read', async () => {
-    const { markAsRead } = await import('../../lib/whatsapp');
+    const { markAsRead } = await import('../../src/shared/infra/whatsapp');
 
     await markAsRead('wamid.123');
 

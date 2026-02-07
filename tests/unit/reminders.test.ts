@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { parseReminderRequest, createReminder } from '../../lib/reminders'
+import { parseReminderRequest, createReminder } from '../../src/modules/reminders/application/service'
 import { generateText } from 'ai'
-import { getSupabaseServerClient } from '../../lib/supabase'
+import { getSupabaseServerClient } from '../../src/shared/infra/db/supabase'
 
 jest.mock('ai', () => ({
   generateText: jest.fn(),
 }))
 
-jest.mock('../../lib/supabase', () => ({
+jest.mock('../../src/shared/infra/db/supabase', () => ({
   getSupabaseServerClient: jest.fn(),
 }))
 

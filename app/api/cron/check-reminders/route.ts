@@ -11,11 +11,11 @@
 export const runtime = 'edge';
 export const maxDuration = 10; // Edge Functions max timeout (cron may need time for multiple messages)
 
-import { getEnv } from '../../../../lib/env';
-import { getSupabaseServerClient } from '../../../../lib/supabase';
+import { getEnv } from '../../../../src/shared/config/env';
+import { getSupabaseServerClient } from '../../../../src/shared/infra/db/supabase';
 import type { Tables } from '../../../../types/supabase-helpers';
-import { recordCalendarEvent } from '../../../../lib/calendar-store';
-import { sendWhatsAppText } from '../../../../lib/whatsapp';
+import { recordCalendarEvent } from '../../../../src/shared/infra/calendar/store';
+import { sendWhatsAppText } from '../../../../src/shared/infra/whatsapp';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

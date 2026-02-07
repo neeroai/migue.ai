@@ -4,8 +4,7 @@
   "description": "> Un asistente personal de inteligencia artificial que opera a través de WhatsApp Business API, proporcionando funcionalidades avanzadas de productividad, gestión de citas, análisis de contenido y automatización de tareas diarias.",
   "main": "index.js",
   "directories": {
-    "doc": "docs",
-    "lib": "lib"
+    "doc": "docs"
   },
   "scripts": {
     "test": "jest",
@@ -25,11 +24,12 @@
     "build:api": "tsc -p tsconfig.json",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:no-lib-imports": "sh scripts/check-no-lib-imports.sh",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist .vercel coverage test-results out .next",
     "setup": "npm install && npm run typecheck",
     "postinstall": "playwright install",
-    "pre-deploy": "npm run typecheck && npm run build && npm run test:unit",
+    "pre-deploy": "npm run check:no-lib-imports && npm run typecheck && npm run build && npm run test:unit",
     "verify-deploy": "node scripts/verify-deploy.js",
     "prepare": "husky",
     "db:verify": "npx tsx scripts/verify-supabase.ts",

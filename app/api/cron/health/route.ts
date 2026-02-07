@@ -11,8 +11,12 @@
 export const runtime = 'edge';
 export const maxDuration = 10;
 
-import { getSupabaseServerClient } from '../../../../lib/supabase';
-import { COLOMBIA_TZ, BUSINESS_HOURS, getCurrentHour } from '../../../../lib/messaging-windows';
+import { getSupabaseServerClient } from '../../../../src/shared/infra/db/supabase';
+import {
+  COLOMBIA_TZ,
+  BUSINESS_HOURS,
+  getCurrentHour,
+} from '../../../../src/modules/messaging-window/application/service';
 
 /**
  * Health check endpoint for cron jobs

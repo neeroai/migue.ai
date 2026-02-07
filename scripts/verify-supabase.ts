@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '../lib/database.types'
+import type { Database } from '../src/shared/infra/db/database.types'
 
 async function main() {
   const url = process.env.SUPABASE_URL

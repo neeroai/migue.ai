@@ -11,8 +11,8 @@
 export const runtime = 'edge';
 export const maxDuration = 5;
 
-import { getEnv } from '../../../lib/env';
-import { GRAPH_BASE_URL } from '../../../lib/whatsapp';
+import { getEnv } from '../../../src/shared/config/env';
+import { GRAPH_BASE_URL } from '../../../src/shared/infra/whatsapp/http';
 
 interface HealthCheck {
   status: 'healthy' | 'unhealthy' | 'degraded';

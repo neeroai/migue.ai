@@ -4,7 +4,7 @@
  * @see https://supabase.com/docs/guides/api/rest/generating-types
  */
 
-import type { Database } from '../lib/database.types'
+import type { Database } from '../src/shared/infra/db/database.types'
 
 /**
  * Helper type to access table row types

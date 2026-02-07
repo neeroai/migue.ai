@@ -10,7 +10,7 @@ import { resolve } from 'path'
 // Load .env.local explicitly
 config({ path: resolve(process.cwd(), '.env.local') })
 
-import { createProactiveAgent } from '../lib/ai/proactive-agent'
+import { createProactiveAgent } from '../src/modules/ai/application/proactive-agent'
 
 async function testAIResponse() {
   console.log('Testing AI Response...\n')

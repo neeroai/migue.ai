@@ -8,7 +8,7 @@ import {
   FREE_ENTRY_DURATION_HOURS,
   getCurrentHour,
   isWithinBusinessHours,
-} from '../../lib/messaging-windows';
+} from '../../src/modules/messaging-window/application/service';
 
 describe('Messaging Windows', () => {
   describe('Constants', () => {

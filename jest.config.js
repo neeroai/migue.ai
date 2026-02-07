@@ -33,7 +33,8 @@ export default {
 
   // Coverage
   collectCoverageFrom: [
-    'lib/**/*.ts',
+    'src/**/*.ts',
+    'app/**/*.ts',
     'api/**/*.ts',
     '!**/*.d.ts',
     '!**/node_modules/**',

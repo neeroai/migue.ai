@@ -89,7 +89,7 @@
   /* ============================================ */
   /* Font Families */
   /* ============================================ */
-  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   /* ============================================ */
   /* Animations */
@@ -144,6 +144,7 @@
   body {
     background-color: #f8fafc;
     color: #1e293b;
+    font-family: var(--font-family-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

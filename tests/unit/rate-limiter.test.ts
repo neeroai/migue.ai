@@ -13,7 +13,7 @@ import {
   getRateLimitWaitTime,
   resetRateLimit,
   getRateLimiterStats,
-} from '../../lib/simple-rate-limiter'
+} from '../../src/modules/webhook/domain/rate-limiter'
 
 describe('Rate Limiter - Critical Fix #3', () => {
   const testPhone = '+573001234567'

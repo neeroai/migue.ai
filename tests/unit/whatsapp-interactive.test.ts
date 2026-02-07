@@ -22,11 +22,11 @@ describe('WhatsApp Interactive Buttons', () => {
     jest.clearAllMocks();
 
     // Reset environment cache to pick up test values
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
 
     // Clear WhatsApp module caches
-    const { _clearCaches } = await import('../../lib/whatsapp');
+    const { _clearCaches } = await import('../../src/shared/infra/whatsapp');
     _clearCaches();
 
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
@@ -37,7 +37,7 @@ describe('WhatsApp Interactive Buttons', () => {
   });
 
   it('should send interactive buttons', async () => {
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [
       { id: 'btn_1', title: 'Option 1' },
@@ -80,7 +80,7 @@ describe('WhatsApp Interactive Buttons', () => {
   });
 
   it('should send interactive buttons with 1 button', async () => {
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [{ id: 'btn_single', title: 'Single Button' }];
 
@@ -104,7 +104,7 @@ describe('WhatsApp Interactive Buttons', () => {
   });
 
   it('should send interactive buttons with 2 buttons', async () => {
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [
       { id: 'btn_yes', title: 'Yes' },
@@ -134,7 +134,7 @@ describe('WhatsApp Interactive Buttons', () => {
       text: async () => '',
     } as Response);
 
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [{ id: 'btn_1', title: 'Option 1' }];
 
@@ -159,10 +159,10 @@ describe('WhatsApp Interactive Buttons', () => {
     jest.resetModules();
 
     // Reset env cache
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
 
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [{ id: 'btn_1', title: 'Option 1' }];
 
@@ -182,9 +182,9 @@ describe('WhatsApp Interactive Buttons', () => {
   });
 
   it('should send buttons with header option', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [
       { id: 'btn_1', title: 'Option 1' },
@@ -211,9 +211,9 @@ describe('WhatsApp Interactive Buttons', () => {
   });
 
   it('should send buttons with footer option', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [{ id: 'btn_1', title: 'Confirm' }];
 
@@ -236,9 +236,9 @@ describe('WhatsApp Interactive Buttons', () => {
   });
 
   it('should send buttons with reply-to message ID', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [{ id: 'btn_yes', title: 'Yes' }];
 
@@ -261,9 +261,9 @@ describe('WhatsApp Interactive Buttons', () => {
   });
 
   it('should send buttons with all options (header, footer, reply-to)', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveButtons } = await import('../../lib/whatsapp');
+    const { sendInteractiveButtons } = await import('../../src/shared/infra/whatsapp');
 
     const buttons = [
       { id: 'btn_accept', title: 'Accept' },
@@ -299,11 +299,11 @@ describe('WhatsApp Interactive Lists', () => {
     jest.clearAllMocks();
 
     // Reset environment cache to pick up test values
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
 
     // Clear WhatsApp module caches
-    const { _clearCaches } = await import('../../lib/whatsapp');
+    const { _clearCaches } = await import('../../src/shared/infra/whatsapp');
     _clearCaches();
 
     (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
@@ -314,9 +314,9 @@ describe('WhatsApp Interactive Lists', () => {
   });
 
   it('should send interactive list', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveList } = await import('../../lib/whatsapp');
+    const { sendInteractiveList } = await import('../../src/shared/infra/whatsapp');
 
     const rows = [
       { id: 'row_1', title: 'Option 1', description: 'First option' },
@@ -369,9 +369,9 @@ describe('WhatsApp Interactive Lists', () => {
   });
 
   it('should send interactive list with default section title', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveList } = await import('../../lib/whatsapp');
+    const { sendInteractiveList } = await import('../../src/shared/infra/whatsapp');
 
     const rows = [
       { id: 'row_1', title: 'Option 1' },
@@ -396,9 +396,9 @@ describe('WhatsApp Interactive Lists', () => {
   });
 
   it('should send interactive list without descriptions', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveList } = await import('../../lib/whatsapp');
+    const { sendInteractiveList } = await import('../../src/shared/infra/whatsapp');
 
     const rows = [
       { id: 'row_1', title: 'Option 1' },
@@ -431,9 +431,9 @@ describe('WhatsApp Interactive Lists', () => {
       text: async () => '',
     } as Response);
 
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveList } = await import('../../lib/whatsapp');
+    const { sendInteractiveList } = await import('../../src/shared/infra/whatsapp');
 
     const rows = [{ id: 'row_1', title: 'Option 1' }];
 
@@ -459,10 +459,10 @@ describe('WhatsApp Interactive Lists', () => {
     jest.resetModules();
 
     // Reset env cache
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
 
-    const { sendInteractiveList } = await import('../../lib/whatsapp');
+    const { sendInteractiveList } = await import('../../src/shared/infra/whatsapp');
 
     const rows = [{ id: 'row_1', title: 'Option 1' }];
 
@@ -483,9 +483,9 @@ describe('WhatsApp Interactive Lists', () => {
   });
 
   it('should handle lists with many rows', async () => {
-    const { resetEnv } = await import('../../lib/env');
+    const { resetEnv } = await import('../../src/shared/config/env');
     resetEnv();
-    const { sendInteractiveList } = await import('../../lib/whatsapp');
+    const { sendInteractiveList } = await import('../../src/shared/infra/whatsapp');
 
     const rows = Array.from({ length: 10 }, (_, i) => ({
       id: `row_${i + 1}`,

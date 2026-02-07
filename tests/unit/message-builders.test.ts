@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
-import { ButtonMessage, ListMessage } from '@/lib/message-builders';
+import { ButtonMessage, ListMessage } from '@/src/shared/infra/whatsapp/message-builders';
 
 describe('ButtonMessage', () => {
   test('creates valid button message payload', () => {

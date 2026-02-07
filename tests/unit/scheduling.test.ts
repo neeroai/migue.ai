@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { scheduleMeetingFromIntent } from '../../lib/scheduling'
+import { scheduleMeetingFromIntent } from '../../src/modules/scheduling/application/service'
 import { generateText } from 'ai'
 
 jest.mock('ai', () => ({

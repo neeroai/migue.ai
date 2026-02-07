@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 
-jest.mock('../../lib/env', () => ({
+jest.mock('../../src/shared/config/env', () => ({
   getEnv: () => ({
     CRON_SECRET: undefined,
     NODE_ENV: 'test',
@@ -10,19 +10,19 @@ jest.mock('../../lib/env', () => ({
 }))
 
 import { GET as handler } from '../../app/api/cron/check-reminders/route'
-import { getSupabaseServerClient } from '../../lib/supabase'
-import { recordCalendarEvent } from '../../lib/calendar-store'
-import { sendWhatsAppText } from '../../lib/whatsapp'
+import { getSupabaseServerClient } from '../../src/shared/infra/db/supabase'
+import { recordCalendarEvent } from '../../src/shared/infra/calendar/store'
+import { sendWhatsAppText } from '../../src/shared/infra/whatsapp'
 
-jest.mock('../../lib/supabase', () => ({
+jest.mock('../../src/shared/infra/db/supabase', () => ({
   getSupabaseServerClient: jest.fn(),
 }))
 
-jest.mock('../../lib/calendar-store', () => ({
+jest.mock('../../src/shared/infra/calendar/store', () => ({
   recordCalendarEvent: jest.fn(),
 }))
 
-jest.mock('../../lib/whatsapp', () => ({
+jest.mock('../../src/shared/infra/whatsapp', () => ({
   sendWhatsAppText: jest.fn(),
 }))
 

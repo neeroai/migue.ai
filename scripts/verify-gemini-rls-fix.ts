@@ -10,8 +10,25 @@
  * ✅ Free tier check working: true
  */
 
-import { getSupabaseServerClient } from '../lib/supabase';
-import { canUseFreeTier } from '../lib/gemini-client';
+import { getSupabaseServerClient } from '../src/shared/infra/db/supabase';
+
+async function canUseFreeTier(): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const today = new Date().toISOString().split('T')[0]!;
+
+  const { data, error } = await supabase
+    .from('gemini_usage')
+    .select('requests')
+    .eq('date', today)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw new Error(error.message);
+  }
+
+  const requests = data?.requests ?? 0;
+  return requests < 1400;
+}
 
 async function verifyGeminiRLSFix() {
   console.log('🔍 Verifying Gemini RLS Policy Fix...\n');
