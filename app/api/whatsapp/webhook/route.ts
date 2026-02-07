@@ -1,3 +1,14 @@
+/**
+ * @file WhatsApp Webhook Handler
+ * @description Main webhook endpoint for WhatsApp Business API events with fire-and-forget pattern, signature validation, and rate limiting
+ * @module app/api/whatsapp/webhook
+ * @exports runtime, maxDuration, GET, POST, jsonResponse, getRequestId, processWebhookInBackground
+ * @runtime edge
+ * @see https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
+ */
+
 export const runtime = 'edge';
 export const maxDuration = 10;
 

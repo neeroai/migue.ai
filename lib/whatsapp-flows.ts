@@ -1,9 +1,12 @@
 /**
- * WhatsApp Flows - v23.0 Implementation
- * Handles interactive flow messages and data exchange
- *
- * ✅ Edge Runtime Compatible - Uses Web Crypto API
- * @vercel-force-rebuild 2025-10-05
+ * @file whatsapp-flows.ts
+ * @description WhatsApp Cloud API v23.0 Flows implementation with Edge Runtime support, secure token generation, signature validation, and data exchange handling
+ * @module lib/whatsapp-flows
+ * @exports generateFlowToken, validateFlowSignature, sendFlow, handleFlowDataExchange, completeFlowSession, FLOW_TEMPLATES
+ * @runtime edge
+ * @see https://developers.facebook.com/docs/whatsapp/flows
+ * @date 2026-02-07 19:15
+ * @updated 2026-02-07 19:15
  */
 
 import { sendWhatsAppRequest } from './whatsapp';
@@ -17,7 +20,12 @@ import type {
 } from '../types/whatsapp';
 
 /**
- * Generate a secure flow token using Web Crypto API (Edge Runtime compatible)
+ * Generate cryptographically secure 64-character hex token for WhatsApp Flow session tracking
+ * Uses Web Crypto API for Edge Runtime compatibility (no Node.js crypto module)
+ * @returns 64-character hexadecimal string (256-bit entropy)
+ * @example
+ * const token = generateFlowToken();
+ * // token: "a3f5b8c9d2e1f4a7b6c5d8e9f2a1b4c7d0e3f6a9b2c5d8e1f4a7b0c3d6e9f2a5"
  */
 export function generateFlowToken(): string {
   // Use Web Crypto API available in Edge Runtime
@@ -68,12 +76,21 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
 }
 
 /**
- * Validate WhatsApp Flow signature
- * Uses the same HMAC-SHA256 validation as webhooks
+ * Validate WhatsApp Flow data exchange signature using HMAC-SHA256 constant-time comparison
+ * Prevents timing attacks and ensures request authenticity from Meta servers
  *
- * @param req - Request with x-hub-signature-256 header
- * @param rawBody - Raw request body as string
- * @returns true if signature is valid
+ * Security behavior:
+ * - Production: Fails closed if WHATSAPP_APP_SECRET missing (returns false)
+ * - Development: Passes if secret missing (returns true) for local testing
+ * - Uses XOR-based constant-time comparison to prevent timing attacks
+ * - Escapes Unicode characters before signature calculation (WhatsApp requirement)
+ *
+ * @param req - HTTP request with x-hub-signature-256 header (case-insensitive)
+ * @param rawBody - Unparsed request body string (must be raw, not JSON.parse'd)
+ * @returns true if signature valid or dev mode with missing secret, false otherwise
+ * @example
+ * const isValid = await validateFlowSignature(request, await request.text());
+ * if (!isValid) return new Response('Forbidden', { status: 403 });
  */
 export async function validateFlowSignature(req: Request, rawBody: string): Promise<boolean> {
   const header = req.headers.get('x-hub-signature-256') || req.headers.get('X-Hub-Signature-256');
@@ -142,12 +159,29 @@ export async function validateFlowSignature(req: Request, rawBody: string): Prom
 }
 
 /**
- * Send a WhatsApp Flow message
- * @param to - Phone number in WhatsApp format
- * @param flowId - Flow ID from Meta Business Manager
- * @param flowCta - Call to action text for the button
- * @param bodyText - Main message text
- * @param options - Optional header, footer, and flow configuration
+ * Send interactive WhatsApp Flow message and create tracked session in database
+ * Automatically generates secure token, stores session with expiration, and handles user lookup
+ *
+ * Flow behavior:
+ * - Creates flow_sessions record if user exists in database
+ * - Default token expiration: 60 minutes (customizable via options.expiresInMinutes)
+ * - Supports both navigate (multi-screen) and data_exchange (form) flow types
+ * - Returns null on error (logs error internally, does not throw)
+ *
+ * @param to - Recipient phone number in E.164 format (e.g., +573001234567)
+ * @param flowId - Flow ID from Meta Business Manager (must be published flow)
+ * @param flowCta - Button label shown to user (e.g., "Book Appointment")
+ * @param bodyText - Message text above the flow button
+ * @param options - Optional configuration for header, footer, flow type, initial screen/data, and token expiration
+ * @returns WhatsApp message ID if sent successfully, null if error occurs
+ * @example
+ * const msgId = await sendFlow(
+ *   '+573001234567',
+ *   'lead_generation_flow',
+ *   'Get Started',
+ *   'Please provide your contact information',
+ *   { flowType: 'data_exchange', expiresInMinutes: 30 }
+ * );
  */
 export async function sendFlow(
   to: string,
@@ -236,9 +270,29 @@ export async function sendFlow(
 }
 
 /**
- * Handle data exchange request from WhatsApp Flow
- * @param request - Encrypted data exchange request
- * @returns Data exchange response or null on error
+ * Process WhatsApp Flow data exchange request and route to appropriate handler
+ * Validates token expiration, updates session status, and handles ping/INIT/data_exchange actions
+ *
+ * Action routing:
+ * - ping: Health check response (returns pong)
+ * - INIT: Initialize flow with first screen data
+ * - data_exchange: Process screen submission and return next screen
+ *
+ * Security:
+ * - Validates flow_token exists and is not expired
+ * - Updates session status to in_progress on first valid request
+ * - Merges incoming data into session_data for state persistence
+ *
+ * @param request - Flow data exchange request with flow_token, action, screen, and data fields
+ * @returns Flow response with next screen and data, or null if token invalid/expired
+ * @example
+ * const response = await handleFlowDataExchange({
+ *   flow_token: 'abc123...',
+ *   action: 'data_exchange',
+ *   screen: 'LEAD_FORM',
+ *   data: { name: 'John', email: 'john@example.com' }
+ * });
+ * // response: { version: '3.0', screen: 'CONFIRMATION', data: {...} }
  */
 export async function handleFlowDataExchange(
   request: FlowDataExchangeRequest
@@ -432,7 +486,13 @@ async function handleDataExchange(
 }
 
 /**
- * Complete a flow session
+ * Mark flow session as completed and record completion timestamp
+ * Call this after flow reaches final screen or user exits flow
+ *
+ * @param flowToken - Flow session token (generated by generateFlowToken)
+ * @example
+ * await completeFlowSession(session.flow_token);
+ * // Session status updated to 'completed' with completed_at timestamp
  */
 export async function completeFlowSession(flowToken: string): Promise<void> {
   const supabase = getSupabaseServerClient();

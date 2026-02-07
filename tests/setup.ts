@@ -11,7 +11,7 @@ config({ path: envPath });
 
 console.log('✅ Test environment setup:', {
   testType: process.env.TEST_TYPE || 'unit',
-  geminiConfigured: !!process.env.GOOGLE_AI_API_KEY,
+  gatewayConfigured: !!process.env.AI_GATEWAY_API_KEY,
   supabaseConfigured: !!process.env.SUPABASE_URL,
   upstashConfigured: !!process.env.UPSTASH_REDIS_REST_URL
 });
@@ -21,7 +21,7 @@ console.log('✅ Test environment setup:', {
 // ============================================================================
 
 const requiredEnvVars = [
-  'GOOGLE_AI_API_KEY',         // Gemini API
+  'AI_GATEWAY_API_KEY',        // AI Gateway
   'SUPABASE_URL',              // Database
   'SUPABASE_KEY',              // Database auth
   'UPSTASH_REDIS_REST_URL',    // Context caching
@@ -53,8 +53,7 @@ if (process.env.TEST_TYPE !== 'integration') {
   process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'sk-test-key';
   process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'test-google-client-id';
   process.env.GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'test-google-client-secret';
-  process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'sk-ant-test-key';
-  process.env.GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIza-test-key';
+  process.env.AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY || 'gateway-test-key';
 
   // Keep Supabase/Upstash mocks for unit tests
   if (!process.env.SUPABASE_URL) {

@@ -10,7 +10,7 @@
 import { generateText, tool } from 'ai'
 import type { ModelMessage } from 'ai'
 import { z } from 'zod'
-import { models } from './providers'
+import { MODEL_CATALOG, models } from './providers'
 import { logger } from '../logger'
 import { createReminder } from '../reminders'
 import { scheduleMeetingFromIntent } from '../scheduling'
@@ -21,8 +21,7 @@ import {
   estimateTokens,
   type ModelSelection,
 } from './model-router'
-import { getModel } from './gateway'
-import { executeWithFallback, canAffordFallback, type FallbackResult } from './fallback'
+import { canAffordFallback } from './fallback'
 import { getBudgetStatus } from '../ai-cost-tracker'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
@@ -115,11 +114,17 @@ YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses 
 
 You are an agent - continue the conversation naturally until the user's need is completely resolved.`
 
+const SYSTEM_PROMPT_SHORT = `Eres Migue, asistente personal en WhatsApp. Responde en español colombiano, cálido y conciso (1-2 frases, max 280 caracteres). Evita repetir saludos. Usa herramientas SOLO cuando el usuario lo necesite claramente:
+- create_reminder: recuérdame / no olvides / avísame
+- schedule_meeting: agenda / programa / cita
+- track_expense: gasté / pagué / compré / costó
+Si usas una herramienta, confirma con "Listo!".`
+
 /**
  * Generate system prompt with current time context
  * CRITICAL: Time context enables GPT to calculate "en 5 minutos", "mañana", etc.
  */
-function generateSystemPrompt(): string {
+function generateSystemPrompt(isShort: boolean): string {
   const now = new Date()
   const nowISO = now.toISOString()
   const nowBogota = BOGOTA_FORMATTER.format(now)
@@ -137,7 +142,7 @@ When user says:
 ALWAYS use Colombia timezone (America/Bogota, UTC-5) for datetimeIso.
 Format: YYYY-MM-DDTHH:MM:SS-05:00`
 
-  return `${timeContext}\n\n${SYSTEM_PROMPT_BASE}`
+  return `${timeContext}\n\n${isShort ? SYSTEM_PROMPT_SHORT : SYSTEM_PROMPT_BASE}`
 }
 
 /**
@@ -267,7 +272,8 @@ export async function respond(
     })
   }
 
-  const systemPrompt = generateSystemPrompt() + memoryContext
+  const useShortPrompt = userMessage.length < 120
+  const systemPrompt = generateSystemPrompt(useShortPrompt) + memoryContext
 
   const maxHistory = userMessage.length > 600 ? 6 : userMessage.length > 200 ? 8 : 12
   const trimmedHistory = history.slice(-maxHistory)
@@ -327,24 +333,20 @@ export async function respond(
     fallbackSelection.estimatedCost
   )
 
-  // Get model instance
-  const primaryModel = getModel(primarySelection)
-  const fallbackModel = getModel(fallbackSelection)
+  const primaryModel = primarySelection.modelName
+  const fallbackModel = fallbackSelection.modelName
 
-  // AI SDK 6.0: Tool definitions with tool() helper
-  const toolsDefinition = {
+  const toolsDefinition = isToolMessage ? {
       create_reminder: tool({
         description: 'Crea recordatorio cuando usuario dice: recuérdame, no olvides, tengo que, avísame',
         // @ts-expect-error - AI SDK tool() type inference issue: ZodObject not assignable to FlexibleSchema<never>
         inputSchema: z.object({
-          userId: z.string().describe('ID del usuario'),
           title: z.string().describe('Qué recordar'),
           description: z.string().optional().describe('Detalles'),
           datetimeIso: z.string().describe('ISO format: YYYY-MM-DDTHH:MM:SS-05:00'),
         }),
         // @ts-expect-error - AI SDK tool() type inference issue: execute function signature incompatible
-        execute: async ({ userId: _userId, title, description, datetimeIso }: {
-          userId: string
+        execute: async ({ title, description, datetimeIso }: {
           title: string
           description?: string
           datetimeIso: string
@@ -357,15 +359,13 @@ export async function respond(
         description: 'Agenda reunión cuando usuario dice: agenda, reserva cita, programa',
         // @ts-expect-error - AI SDK tool() type inference issue: ZodObject not assignable to FlexibleSchema<never>
         inputSchema: z.object({
-          userId: z.string(),
           title: z.string(),
           startTime: z.string().describe('ISO format'),
           endTime: z.string().describe('ISO format'),
           description: z.string().optional(),
         }),
         // @ts-expect-error - AI SDK tool() type inference issue: execute function signature incompatible
-        execute: async ({ userId: _userId, title, startTime, endTime, description }: {
-          userId: string
+        execute: async ({ title, startTime, endTime, description }: {
           title: string
           startTime: string
           endTime: string
@@ -382,14 +382,12 @@ export async function respond(
       track_expense: tool({
         description: 'Registra gasto cuando usuario dice: gasté, pagué, compré, costó',
         inputSchema: z.object({
-          userId: z.string(),
           amount: z.number(),
           currency: z.string(),
           category: z.string(),
           description: z.string(),
         }),
-        execute: async ({ userId: _userId, amount, currency, category, description }: {
-          userId: string
+        execute: async ({ amount, currency, category, description }: {
           amount: number
           currency: string
           category: string
@@ -429,78 +427,53 @@ export async function respond(
           }
         },
       }),
+  } : undefined
+
+  const response = await generateText({
+    model: primaryModel,
+    messages,
+    ...(toolsDefinition ? { tools: toolsDefinition } : {}),
+    temperature: isToolMessage ? 0.8 : 0.6,
+    ...(budgetCheck.canAffordFallback
+      ? {
+          providerOptions: {
+            gateway: {
+              models: [fallbackModel],
+            },
+          },
+        }
+      : {}),
+  })
+
+  let { text } = response
+  const usage = {
+    inputTokens: response.usage.inputTokens ?? 0,
+    outputTokens: response.usage.outputTokens ?? 0,
+    totalTokens: response.usage.totalTokens ?? 0,
   }
+  const finishReason = response.finishReason
+  const steps = response.steps
 
-  // Execute with fallback chain
-  const result = await executeWithFallback<{
-    text: string
-    usage: { inputTokens: number; outputTokens: number; totalTokens: number }
-    finishReason: string
-    steps: any[]
-  }>(
-    // Primary provider
-    async () => {
-      const response = await generateText({
-        model: primaryModel,
-        messages,
-        tools: toolsDefinition,
-        temperature: 0.8,
-        frequencyPenalty: 0.3,
-        presencePenalty: 0.2,
-      })
-      return {
-        text: response.text,
-        usage: {
-          inputTokens: response.usage.inputTokens ?? 0,
-          outputTokens: response.usage.outputTokens ?? 0,
-          totalTokens: response.usage.totalTokens ?? 0,
-        },
-        finishReason: response.finishReason,
-        steps: response.steps,
-      }
-    },
-    // Fallback provider
-    async () => {
-      const response = await generateText({
-        model: fallbackModel,
-        messages,
-        tools: toolsDefinition,
-        temperature: 0.8,
-        frequencyPenalty: 0.3,
-        presencePenalty: 0.2,
-      })
-      return {
-        text: response.text,
-        usage: {
-          inputTokens: response.usage.inputTokens ?? 0,
-          outputTokens: response.usage.outputTokens ?? 0,
-          totalTokens: response.usage.totalTokens ?? 0,
-        },
-        finishReason: response.finishReason,
-        steps: response.steps,
-      }
-    },
-    {
-      primarySelection,
-      fallbackSelection,
-      userId,
-      conversationId: context?.conversationId || 'unknown',
-    },
-    budgetCheck
-  )
-
-  const { text, usage, finishReason, steps } = result.result
-  const usedProvider = result.provider
+  const gatewayMeta = (response as any)?.providerMetadata?.gateway
+  const gatewayModel = gatewayMeta?.model || primaryModel
+  const modelConfig = MODEL_CATALOG[gatewayModel] || MODEL_CATALOG[primaryModel]
+  const usedProvider = modelConfig?.provider ?? primarySelection.provider
 
   // Calculate cost based on actual provider used
   const inputTokens = usage.inputTokens ?? 0
   const outputTokens = usage.outputTokens ?? 0
   const totalTokens = usage.totalTokens ?? (inputTokens + outputTokens)
 
-  const providerConfig = models[usedProvider]
+  const providerConfig =
+    usedProvider === 'openai' ? models.openai : models.gemini
   const inputCost = (inputTokens / 1_000_000) * providerConfig.costPer1MTokens.input
   const outputCost = (outputTokens / 1_000_000) * providerConfig.costPer1MTokens.output
   const totalCost = inputCost + outputCost
+
+  // Enforce WhatsApp-friendly length
+  if (text.length > 280) {
+    text = text.slice(0, 277).trimEnd() + '...'
+  }
 
   // Count tool calls
   const toolCallCount = steps.filter((s) => s.toolCalls && s.toolCalls.length > 0).length
@@ -509,7 +482,8 @@ export async function respond(
     metadata: {
       ...context,
       provider: usedProvider,
-      fallbackUsed: result.fallbackUsed,
+      gatewayModel,
+      gatewayMeta,
       usage: {
         inputTokens,
         outputTokens,
@@ -524,7 +498,7 @@ export async function respond(
 
   // Track usage for budget monitoring
   const { trackUsage } = await import('../ai-cost-tracker')
-  const modelName = usedProvider === 'openai' ? 'gpt-4o-mini' : 'claude-sonnet-4'
+  const modelName = gatewayModel || primaryModel
   trackUsage(
     usedProvider,
     modelName,

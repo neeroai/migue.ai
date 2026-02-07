@@ -1,6 +1,11 @@
 /**
- * Structured logging system
- * Provides consistent JSON-formatted logs with context and correlation IDs
+ * @file Structured Logging System
+ * @description JSON-formatted logging with context, correlation IDs, and log level filtering for Edge Runtime, includes AppError class and performance tracking
+ * @module lib/logger
+ * @exports LogLevel, LogContext, AppError, logger
+ * @runtime edge
+ * @date 2026-02-07 19:15
+ * @updated 2026-02-07 19:15
  */
 
 import { getEnv } from './env';
@@ -16,7 +21,16 @@ export interface LogContext {
 }
 
 /**
- * Custom error class with additional context
+ * Custom application error with structured context
+ * Extends Error with code, HTTP status code, and arbitrary context for structured logging.
+ * Automatically sets name to 'AppError' for filtering in logs.
+ *
+ * @param {string} message - Human-readable error message
+ * @param {string} code - Machine-readable error code (e.g., 'RATE_LIMIT_EXCEEDED', 'INVALID_PHONE')
+ * @param {number} statusCode - HTTP status code for API responses (defaults to 500)
+ * @param {Record<string, unknown>} context - Additional context data (user ID, request ID, etc.)
+ * @example
+ * throw new AppError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429, { userId: '123', limit: 5 });
  */
 export class AppError extends Error {
   constructor(
@@ -102,24 +116,65 @@ function log(level: LogLevel, message: string, error?: Error, context?: LogConte
  * Logger instance with level methods
  */
 export const logger = {
+  /**
+   * Log debug-level message
+   * Only outputs when LOG_LEVEL is 'debug'. Use for detailed troubleshooting.
+   *
+   * @param {string} message - Log message
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId, metadata)
+   * @returns {void}
+   */
   debug(message: string, context?: LogContext): void {
     log('debug', message, undefined, context);
   },
 
+  /**
+   * Log info-level message
+   * Skipped when LOG_LEVEL is 'warn' or 'error'. Use for general application flow.
+   *
+   * @param {string} message - Log message
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId, metadata)
+   * @returns {void}
+   */
   info(message: string, context?: LogContext): void {
     log('info', message, undefined, context);
   },
 
+  /**
+   * Log warning-level message
+   * Skipped when LOG_LEVEL is 'error'. Use for recoverable issues.
+   *
+   * @param {string} message - Log message
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId, metadata)
+   * @returns {void}
+   */
   warn(message: string, context?: LogContext): void {
     log('warn', message, undefined, context);
   },
 
+  /**
+   * Log error-level message with exception
+   * Always outputs regardless of LOG_LEVEL. Includes stack trace in development.
+   *
+   * @param {string} message - Error description
+   * @param {Error} error - Error object (stack included in development mode)
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId, metadata)
+   * @returns {void}
+   */
   error(message: string, error: Error, context?: LogContext): void {
     log('error', message, error, context);
   },
 
   /**
-   * Log function entry with parameters (debug level)
+   * Log function entry with parameters
+   * Debug-level logging for tracing function calls. Merges params into metadata.
+   *
+   * @param {string} functionName - Name of function being entered
+   * @param {Record<string, unknown>} params - Function parameters to log
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId)
+   * @returns {void}
+   * @example
+   * logger.functionEntry('processMessage', { messageId: '123', userId: 'user456' });
    */
   functionEntry(functionName: string, params?: Record<string, unknown>, context?: LogContext): void {
     log('debug', `[ENTRY] ${functionName}`, undefined, {
@@ -129,7 +184,16 @@ export const logger = {
   },
 
   /**
-   * Log function exit with timing and result (debug level)
+   * Log function exit with timing and result
+   * Debug-level logging for tracing function completion. Includes execution duration.
+   *
+   * @param {string} functionName - Name of function being exited
+   * @param {number} duration - Execution time in milliseconds
+   * @param {unknown} result - Function return value (optional, avoid logging sensitive data)
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId)
+   * @returns {void}
+   * @example
+   * logger.functionExit('processMessage', 245, { success: true });
    */
   functionExit(functionName: string, duration: number, result?: unknown, context?: LogContext): void {
     log('debug', `[EXIT] ${functionName}`, undefined, {
@@ -140,7 +204,15 @@ export const logger = {
   },
 
   /**
-   * Log performance metrics (info level)
+   * Log performance metrics
+   * Info-level logging for tracking operation timing. Use for monitoring slow operations.
+   *
+   * @param {string} operation - Operation name (e.g., 'AI processing', 'Database query')
+   * @param {number} duration - Operation duration in milliseconds
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId)
+   * @returns {void}
+   * @example
+   * logger.performance('OpenAI API call', 1250, { requestId: 'req-123' });
    */
   performance(operation: string, duration: number, context?: LogContext): void {
     log('info', `[PERF] ${operation}`, undefined, {
@@ -150,7 +222,15 @@ export const logger = {
   },
 
   /**
-   * Log decision points in control flow (debug level)
+   * Log decision points in control flow
+   * Debug-level logging for tracking conditional logic execution paths.
+   *
+   * @param {string} decision - Decision point description
+   * @param {string} chosen - Path taken (e.g., 'fallback to Gemini', 'using cached response')
+   * @param {LogContext} context - Optional context (requestId, userId, conversationId)
+   * @returns {void}
+   * @example
+   * logger.decision('AI provider selection', 'fallback to Gemini due to OpenAI timeout');
    */
   decision(decision: string, chosen: string, context?: LogContext): void {
     log('debug', `[DECISION] ${decision}: ${chosen}`, undefined, context);

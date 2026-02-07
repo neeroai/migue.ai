@@ -1,7 +1,11 @@
 /**
- * Error recovery utilities for transient failures
- * Implements exponential backoff for network/timeout errors
- * Edge Runtime compatible (no Node.js dependencies)
+ * @file error-recovery.ts
+ * @description Error recovery utilities for transient failures with exponential backoff for network/timeout errors, Edge Runtime compatible
+ * @module lib/error-recovery
+ * @exports RetryOptions, isTransientError, isDuplicateError, retryWithBackoff
+ * @runtime edge
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
  */
 
 import { logger } from './logger';
@@ -15,6 +19,21 @@ export interface RetryOptions {
 
 /**
  * Check if error is transient (network, timeout) vs permanent (validation, constraint)
+ *
+ * Transient errors are safe to retry (network failures, timeouts, temporary database issues).
+ * Permanent errors should fail fast (validation errors, constraint violations, business logic errors).
+ *
+ * @param error - Error object to classify, checks both error.code and error.message
+ * @returns true if error is transient and safe to retry, false if permanent
+ *
+ * @example
+ * // Network timeout - returns true
+ * const timeoutError = new Error('Connection timeout');
+ * isTransientError(timeoutError); // true
+ *
+ * // Validation error - returns false
+ * const validationError = new Error('Invalid email format');
+ * isTransientError(validationError); // false
  */
 export function isTransientError(error: Error): boolean {
   const errorCode = (error as any).code;
@@ -40,6 +59,24 @@ export function isTransientError(error: Error): boolean {
 
 /**
  * Check if error is duplicate (safe to ignore)
+ *
+ * PostgreSQL unique constraint violations (23505) indicate the record already exists.
+ * These are safe to ignore in idempotent operations (e.g., webhook deduplication).
+ *
+ * @param error - Error object to check for duplicate constraint violation
+ * @returns true if error is PostgreSQL unique constraint violation (code 23505), false otherwise
+ *
+ * @example
+ * // Duplicate message webhook - safe to ignore
+ * try {
+ *   await insertMessage(messageId, content);
+ * } catch (error) {
+ *   if (isDuplicateError(error)) {
+ *     logger.debug('Duplicate message ignored');
+ *     return; // Safe to continue
+ *   }
+ *   throw error;
+ * }
  */
 export function isDuplicateError(error: Error): boolean {
   const errorCode = (error as any).code;
@@ -47,7 +84,43 @@ export function isDuplicateError(error: Error): boolean {
 }
 
 /**
- * Retry function with exponential backoff
+ * Retry function with exponential backoff and jitter
+ *
+ * Implements exponential backoff: delay doubles each attempt (500ms, 1000ms, 2000ms).
+ * Adds random jitter (0-100ms) to prevent thundering herd when multiple clients retry simultaneously.
+ * Only retries transient errors by default (network/timeout), fails fast on permanent errors.
+ *
+ * Edge Runtime compatible: uses setTimeout (no Node.js dependencies).
+ * Logs all retry attempts with context for debugging.
+ *
+ * @param fn - Async function to retry, should be idempotent
+ * @param context - Description of operation for logging (e.g., "sendWhatsAppMessage")
+ * @param options - Retry configuration
+ * @param options.maxRetries - Maximum retry attempts (default: 1, total 2 attempts)
+ * @param options.initialDelayMs - Initial delay in milliseconds (default: 500ms)
+ * @param options.maxDelayMs - Maximum delay cap (default: 2000ms)
+ * @param options.shouldRetry - Custom retry predicate (default: isTransientError)
+ * @returns Result of successful function execution
+ * @throws Original error if all retries exhausted or error is non-retryable
+ *
+ * @example
+ * // Retry Supabase insert with default settings
+ * const user = await retryWithBackoff(
+ *   () => supabase.from('users').insert({ phone }).single(),
+ *   'insertUser'
+ * );
+ *
+ * @example
+ * // Custom retry logic for WhatsApp API (up to 3 retries)
+ * const response = await retryWithBackoff(
+ *   () => fetch(whatsappUrl, { method: 'POST', body }),
+ *   'sendWhatsAppMessage',
+ *   {
+ *     maxRetries: 3,
+ *     initialDelayMs: 1000,
+ *     shouldRetry: (error) => error.message.includes('rate limit')
+ *   }
+ * );
  */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,

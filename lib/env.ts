@@ -1,6 +1,11 @@
 /**
- * Environment variable validation
- * Centralizes and validates all environment variables with Zod
+ * @file Environment Variable Validation
+ * @description Environment variable validation and type-safe access using Zod schema, validates WhatsApp, Supabase, AI provider, and system configuration with caching
+ * @module lib/env
+ * @exports Env, getEnv, resetEnv
+ * @runtime edge
+ * @date 2026-02-07 19:15
+ * @updated 2026-02-07 19:15
  */
 
 import { z } from 'zod';
@@ -28,10 +33,9 @@ const envSchema = z
     .startsWith('eyJ', 'SUPABASE_SERVICE_ROLE_KEY must be a valid JWT token')
     .optional(),
 
-  // AI Provider Configuration
-  ANTHROPIC_API_KEY: z.string().min(1).optional(), // Emergency fallback (Claude)
-  OPENAI_API_KEY: z.string().startsWith('sk-').optional(), // Fallback AI provider + Audio transcription
-  GOOGLE_AI_API_KEY: z.string().min(1).optional(), // Primary AI provider (Gemini)
+  // AI Gateway Configuration (preferred) or OpenAI for Whisper
+  AI_GATEWAY_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().startsWith('sk-').optional(), // Whisper audio transcription
 
   // Google Calendar Configuration (optional)
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
@@ -68,11 +72,15 @@ export type Env = z.infer<typeof envSchema>;
 let validatedEnv: Env | null = null;
 
 /**
- * Get validated environment variables
- * Validates on first call and caches the result
+ * Get validated environment variables with caching
+ * Validates all required env vars (WhatsApp, Supabase, AI providers) on first call using Zod schema,
+ * caches result for subsequent calls. Ensures at least one Supabase key exists (KEY or SERVICE_ROLE_KEY).
  *
- * @throws Error if validation fails
- * @returns Validated environment variables
+ * @returns {Env} Validated and typed environment configuration
+ * @throws {Error} When required env vars are missing or invalid (logs detailed validation errors to console)
+ * @example
+ * const env = getEnv();
+ * const token = env.WHATSAPP_TOKEN; // Type-safe access
  */
 export function getEnv(): Env {
   if (!validatedEnv) {
@@ -92,7 +100,14 @@ export function getEnv(): Env {
 }
 
 /**
- * Reset cached environment (for testing)
+ * Reset cached environment validation
+ * Clears the cached validated environment, forcing next getEnv() call to re-validate.
+ * Used in test suites to reset state between tests.
+ *
+ * @returns {void}
+ * @example
+ * // In test teardown
+ * resetEnv();
  */
 export function resetEnv(): void {
   validatedEnv = null;

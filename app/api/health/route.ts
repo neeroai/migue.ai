@@ -1,9 +1,11 @@
 /**
- * Health Check Endpoint
- * Verifies all system dependencies are properly configured
- *
- * Usage: GET /api/health
- * Returns 200 if healthy, 503 if any check fails
+ * @file route.ts
+ * @description Health check endpoint verifying WhatsApp API, Supabase, and AI provider connectivity with 30s caching
+ * @module app/api/health/route
+ * @exports runtime, maxDuration, GET
+ * @runtime edge
+ * @date 2026-02-07 19:18
+ * @updated 2026-02-07 19:18
  */
 
 export const runtime = 'edge';
@@ -173,14 +175,14 @@ function checkAIProviders(): CheckResult {
     const env = getEnv();
 
     const providers = [];
-    if (env.OPENAI_API_KEY) providers.push('OpenAI');
-    if (env.ANTHROPIC_API_KEY) providers.push('Claude');
-    if (env.GOOGLE_AI_API_KEY) providers.push('Gemini');
+    const hasGateway = !!env.AI_GATEWAY_API_KEY || !!process.env.VERCEL_OIDC_TOKEN;
+    if (hasGateway) providers.push('AI Gateway');
+    if (env.OPENAI_API_KEY) providers.push('Whisper(OpenAI)');
 
-    if (providers.length === 0) {
+    if (!hasGateway) {
       return {
         status: 'error',
-        message: 'No AI providers configured',
+        message: 'AI Gateway not configured',
       };
     }
 
@@ -197,7 +199,34 @@ function checkAIProviders(): CheckResult {
 }
 
 /**
- * GET /api/health
+ * Health check endpoint with comprehensive system validation and 30-second in-memory caching
+ *
+ * Checks performed (parallel execution):
+ * - Environment variables: All required credentials present
+ * - WhatsApp API: Phone number metadata fetch with latency tracking
+ * - Supabase: Auth health endpoint connectivity
+ * - AI providers: AI Gateway configured (API key or OIDC)
+ *
+ * Response status codes:
+ * - 200: All checks passed (status: 'healthy')
+ * - 503: Any check failed (status: 'unhealthy') or warnings present (status: 'degraded')
+ *
+ * Caching behavior:
+ * - In-memory cache TTL: 30 seconds
+ * - CDN cache-control: s-maxage=30, stale-while-revalidate=30
+ * - Reduces load on external APIs (WhatsApp, Supabase)
+ *
+ * Use for:
+ * - Kubernetes liveness/readiness probes
+ * - Uptime monitoring (BetterStack, UptimeRobot)
+ * - Pre-deployment validation
+ *
+ * @param req - HTTP GET request (unused, included for Next.js route handler signature)
+ * @returns JSON response with overall status, timestamp, version, and individual check results
+ * @example
+ * // Kubernetes readiness probe
+ * curl https://app.com/api/health
+ * // { "status": "healthy", "checks": { "whatsapp": { "status": "ok", "latency": 45 }, ... } }
  */
 export async function GET(req: Request): Promise<Response> {
   try {

@@ -99,3 +99,4 @@ pnpm-lock.yaml
 # MCP & Other configs
 # ============================================
 .mcp.json
+scripts/

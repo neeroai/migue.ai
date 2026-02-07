@@ -1,9 +1,11 @@
 /**
- * WhatsApp API Error Hints System
- * Provides actionable error messages with direct links to Meta console
- *
- * Pattern from: Nugi29/whatsapp-ai-chatbot
- * Improves developer experience by providing specific guidance for common errors
+ * @file whatsapp-errors.ts
+ * @description WhatsApp API error hints system with actionable error messages and Meta console links for troubleshooting
+ * @module lib/whatsapp-errors
+ * @exports WhatsAppErrorDetails, getWhatsAppErrorHint, WhatsAppAPIError
+ * @runtime edge
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
  */
 
 export interface WhatsAppErrorDetails {
@@ -15,8 +17,34 @@ export interface WhatsAppErrorDetails {
 
 /**
  * Get user-friendly error hint with actionable guidance
+ *
+ * Converts WhatsApp API error codes into developer-friendly messages with:
+ * - Root cause explanation
+ * - Step-by-step troubleshooting instructions
+ * - Direct links to Meta console for fixing the issue
+ *
+ * Handles Meta Graph API error codes (190, 100, 131026, 131031) and HTTP status codes.
+ * Falls back to generic hint with console links for unknown errors.
+ *
  * @param details - Error details from WhatsApp API response
- * @returns Formatted error message with troubleshooting steps
+ * @param details.status - HTTP status code (400, 401, 403, 404, 429, 500, 503)
+ * @param details.errorCode - Meta Graph API error code (optional, e.g., 190 for token issues)
+ * @param details.errorSubcode - Meta Graph API error subcode (optional, e.g., 33 for invalid phone ID)
+ * @param details.message - Error message from API (optional)
+ * @returns Multi-line formatted error message with troubleshooting steps and console links
+ *
+ * @example
+ * // Handle WhatsApp API error
+ * const response = await fetch(whatsappUrl);
+ * if (!response.ok) {
+ *   const errorBody = await response.json();
+ *   const hint = getWhatsAppErrorHint({
+ *     status: response.status,
+ *     errorCode: errorBody.error?.code,
+ *     errorSubcode: errorBody.error?.error_subcode
+ *   });
+ *   logger.error('WhatsApp API error', new Error(hint));
+ * }
  */
 export function getWhatsAppErrorHint(details: WhatsAppErrorDetails): string {
   const { status, errorCode, errorSubcode } = details;
@@ -134,7 +162,42 @@ export function getWhatsAppErrorHint(details: WhatsAppErrorDetails): string {
 
 /**
  * Custom error class for WhatsApp API errors
- * Includes structured error details and user-friendly hints
+ *
+ * Combines structured error details (status, errorCode, errorSubcode) with
+ * user-friendly hints for troubleshooting. Use this instead of generic Error
+ * when calling WhatsApp API to provide better error messages.
+ *
+ * Error message format: "[hint]\n\nError details: [JSON]"
+ *
+ * @param details - Error details from WhatsApp API response (status, errorCode, errorSubcode, message)
+ * @param hint - User-friendly troubleshooting hint (from getWhatsAppErrorHint)
+ *
+ * @example
+ * // Throw WhatsAppAPIError on API failure
+ * const response = await fetch(whatsappUrl);
+ * if (!response.ok) {
+ *   const errorBody = await response.json();
+ *   const details = {
+ *     status: response.status,
+ *     errorCode: errorBody.error?.code,
+ *     message: errorBody.error?.message
+ *   };
+ *   const hint = getWhatsAppErrorHint(details);
+ *   throw new WhatsAppAPIError(details, hint);
+ * }
+ *
+ * @example
+ * // Catch and log WhatsAppAPIError
+ * try {
+ *   await sendWhatsAppMessage(phone, text);
+ * } catch (error) {
+ *   if (error instanceof WhatsAppAPIError) {
+ *     logger.error('WhatsApp API error', error, {
+ *       metadata: { status: error.details.status, code: error.details.errorCode }
+ *     });
+ *   }
+ *   throw error;
+ * }
  */
 export class WhatsAppAPIError extends Error {
   constructor(

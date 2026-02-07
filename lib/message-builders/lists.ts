@@ -1,29 +1,63 @@
 /**
- * ListMessage Builder
- * Type-safe construction of WhatsApp interactive list messages
- *
- * Pattern from: Secreto31126/whatsapp-api-js
- * WhatsApp API v23.0 limits:
- * - Max 10 rows per section
- * - Button text: ≤20 chars
- * - Row title: ≤24 chars
- * - Row description: ≤72 chars
- * - Body text: ≤1024 chars
+ * @file ListMessage Builder
+ * @description Type-safe WhatsApp interactive list messages with API v23.0 validation (max 10 rows, button ≤20 chars, row title ≤24 chars, body ≤1024 chars)
+ * @module lib/message-builders/lists
+ * @exports ListMessage
+ * @runtime edge
+ * @see https://github.com/Secreto31126/whatsapp-api-js
+ * @date 2026-02-07 19:15
+ * @updated 2026-02-07 19:46
  */
 
 import type { WhatsAppMessagePayload, MessageOptions } from './types';
 
+/**
+ * Single row in a list message
+ */
 interface ListRow {
+  /** Unique identifier (max 200 chars) */
   id: string;
+  /** Row title shown in list (max 24 chars) */
   title: string;
+  /** Optional description under title (max 72 chars) */
   description?: string;
 }
 
+/**
+ * Extended options for list messages
+ */
 interface ListOptions extends MessageOptions {
+  /** Optional section title (max 24 chars) */
   sectionTitle?: string;
 }
 
+/**
+ * Type-safe builder for WhatsApp interactive list messages with automatic validation
+ * @throws {Error} If rows array is empty or exceeds 10 rows
+ * @throws {Error} If button text exceeds 20 chars
+ * @throws {Error} If any row title exceeds 24 chars, description exceeds 72 chars, or id exceeds 200 chars
+ * @throws {Error} If body exceeds 1024 chars, header/footer/sectionTitle exceed limits
+ * @example
+ * const msg = new ListMessage(
+ *   'Choose a category:',
+ *   'View options',
+ *   [
+ *     { id: 'cat1', title: 'Category 1', description: 'First option' },
+ *     { id: 'cat2', title: 'Category 2', description: 'Second option' }
+ *   ],
+ *   { sectionTitle: 'Categories' }
+ * );
+ * await sendWhatsAppRequest(msg.toPayload(phoneNumber));
+ */
 export class ListMessage {
+  /**
+   * Creates a validated list message instance
+   * @param body - Main message text (max 1024 chars)
+   * @param buttonText - Text shown on list button (max 20 chars)
+   * @param rows - 1-10 list rows with id, title, optional description
+   * @param options - Optional header/footer/sectionTitle
+   * @throws {Error} Validation errors thrown immediately at construction time
+   */
   constructor(
     private body: string,
     private buttonText: string,
@@ -70,6 +104,11 @@ export class ListMessage {
     }
   }
 
+  /**
+   * Converts list message to WhatsApp Cloud API v23.0 payload format
+   * @param to - Recipient phone number in international format (e.g., "573001234567")
+   * @returns WhatsApp API payload ready for sendWhatsAppRequest
+   */
   toPayload(to: string): WhatsAppMessagePayload {
     return {
       messaging_product: 'whatsapp',

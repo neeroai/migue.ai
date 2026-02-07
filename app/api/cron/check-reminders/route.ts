@@ -1,3 +1,13 @@
+/**
+ * @file Reminder Processing Cron Job
+ * @description Processes due reminders with concurrency control and FOR UPDATE SKIP LOCKED to prevent race conditions
+ * @module app/api/cron/check-reminders
+ * @exports runtime, maxDuration, GET, jsonResponse, mapWithConcurrency, getDueReminders, markReminderStatus
+ * @runtime edge
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
+ */
+
 export const runtime = 'edge';
 export const maxDuration = 10; // Edge Functions max timeout (cron may need time for multiple messages)
 

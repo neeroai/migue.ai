@@ -1,6 +1,17 @@
+/**
+ * @file Database Persistence Layer
+ * @description Supabase CRUD operations for users, conversations, and messages with error handling and performance logging
+ * @module lib/persist
+ * @exports upsertUserByPhone, getOrCreateConversation, insertInboundMessage, insertOutboundMessage, updateInboundMessageByWaId
+ * @see https://supabase.com/docs/reference/javascript/introduction
+ * @date 2026-02-07 18:30
+ * @updated 2026-02-07 18:30
+ */
+
 import { getSupabaseServerClient } from './supabase'
 import type { NormalizedMessage } from './message-normalization'
 import { logger } from './logger'
+import { invalidateConversationCache } from './conversation-utils'
 
 /**
  * Valid WhatsApp Cloud API v23.0 message types matching PostgreSQL enum
@@ -14,6 +25,19 @@ const VALID_MSG_TYPES = [
 
 type ValidMsgType = typeof VALID_MSG_TYPES[number];
 
+/**
+ * Creates user if not exists or retrieves existing user by phone number (idempotent operation)
+ *
+ * @param phoneNumber - E.164 format required (e.g., +573001234567), logged with truncation for privacy
+ * @returns User ID (UUID)
+ * @throws {Error} Database error if upsert fails
+ *
+ * @example
+ * ```ts
+ * const userId = await upsertUserByPhone('+573001234567');
+ * // userId: '123e4567-e89b-12d3-a456-426614174000'
+ * ```
+ */
 export async function upsertUserByPhone(phoneNumber: string) {
   const startTime = Date.now()
 
@@ -40,6 +64,23 @@ export async function upsertUserByPhone(phoneNumber: string) {
   return data.id as string
 }
 
+/**
+ * Finds existing conversation or creates new one with priority lookup (WA ID → active status → create)
+ *
+ * @param userId - User UUID to associate conversation with
+ * @param waConversationId - Optional WhatsApp conversation ID for deduplication
+ * @returns Conversation ID (UUID)
+ * @throws {Error} Database error if insert fails
+ *
+ * @example
+ * ```ts
+ * // With WA conversation ID (preferred for deduplication)
+ * const convId = await getOrCreateConversation(userId, 'wamid.xxx');
+ *
+ * // Without WA ID (finds active or creates new)
+ * const convId = await getOrCreateConversation(userId);
+ * ```
+ */
 export async function getOrCreateConversation(userId: string, waConversationId?: string | undefined) {
   const supabase = getSupabaseServerClient()
 
@@ -75,6 +116,24 @@ export async function getOrCreateConversation(userId: string, waConversationId?:
   return data.id as string
 }
 
+/**
+ * Inserts WhatsApp inbound message with deduplication, type validation fallback, and enhanced error classification
+ *
+ * @param conversationId - Conversation UUID
+ * @param msg - Normalized WhatsApp message (type validated against enum, fallback to 'unknown')
+ * @returns {inserted: true} if new row created, {inserted: false} if duplicate detected
+ * @throws {Error} Enhanced with isDuplicate, isRLSError flags for upstream handling
+ *
+ * @example
+ * ```ts
+ * const result = await insertInboundMessage(convId, normalizedMsg);
+ * if (result.inserted) {
+ *   console.log('New message stored');
+ * } else {
+ *   console.log('Duplicate message skipped');
+ * }
+ * ```
+ */
 export async function insertInboundMessage(conversationId: string, msg: NormalizedMessage): Promise<{ inserted: boolean }> {
   const startTime = Date.now()
 
@@ -196,9 +255,26 @@ export async function insertInboundMessage(conversationId: string, msg: Normaliz
     metadata: { inserted, waMessageId: msg.waMessageId },
   })
 
+  if (inserted) {
+    invalidateConversationCache(conversationId)
+  }
+
   return { inserted }
 }
 
+/**
+ * Inserts outbound message (always type 'text', no media support yet)
+ *
+ * @param conversationId - Conversation UUID
+ * @param content - Message text content
+ * @param waMessageId - Optional WhatsApp message ID for tracking
+ * @throws {Error} Database error if insert fails
+ *
+ * @example
+ * ```ts
+ * await insertOutboundMessage(convId, 'Hello!', 'wamid.xxx');
+ * ```
+ */
 export async function insertOutboundMessage(
   conversationId: string,
   content: string,
@@ -216,8 +292,25 @@ export async function insertOutboundMessage(
   }
   const { error } = await supabase.from('messages_v2').insert(payload)
   if (error) throw error
+  invalidateConversationCache(conversationId)
 }
 
+/**
+ * Updates existing inbound message by WhatsApp message ID (partial update pattern)
+ *
+ * @param waMessageId - WhatsApp message ID (required, throws if empty)
+ * @param updates - Partial updates (only provided fields updated, null allowed)
+ * @throws {Error} If waMessageId empty or database update fails
+ *
+ * @example
+ * ```ts
+ * // Update only content
+ * await updateInboundMessageByWaId('wamid.xxx', { content: 'Updated text' });
+ *
+ * // Update only media URL
+ * await updateInboundMessageByWaId('wamid.xxx', { mediaUrl: 'https://...' });
+ * ```
+ */
 export async function updateInboundMessageByWaId(
   waMessageId: string,
   updates: { content?: string | null; mediaUrl?: string | null }

@@ -1,6 +1,11 @@
 /**
- * WhatsApp webhook validation utilities
- * Handles signature verification and token validation
+ * @file webhook-validation.ts
+ * @description WhatsApp webhook validation utilities with HMAC-SHA256 signature verification, constant-time comparison, and token validation
+ * @module lib/webhook-validation
+ * @exports validateSignature, isVerifyRequest, verifyToken
+ * @runtime edge
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
  */
 
 import { getEnv } from './env';
@@ -50,14 +55,28 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
 
 /**
  * Validate WhatsApp webhook signature using constant-time comparison
- * Implements timing-attack resistant HMAC-SHA256 validation
  *
- * Security: Uses XOR-based constant-time comparison to prevent timing attacks
- * where attackers could measure execution time to guess the signature
+ * Implements timing-attack resistant HMAC-SHA256 validation per WhatsApp security requirements.
+ * Uses XOR-based constant-time comparison to prevent timing attacks where attackers measure
+ * execution time to guess the signature byte-by-byte.
  *
- * @param req - Request with x-hub-signature-256 header
- * @param rawBody - Raw request body as string
- * @returns true if signature is valid or validation is disabled, false otherwise
+ * Security behavior:
+ * - Production: Fails closed (returns false) if WHATSAPP_APP_SECRET missing
+ * - Development: Logs warning and allows requests through for local testing
+ * - Handles emojis/Unicode via escapeUnicode to match Meta's signature generation
+ *
+ * @param req - Request object containing x-hub-signature-256 header (case-insensitive)
+ * @param rawBody - Raw request body as string (must be unparsed, exact bytes as received)
+ * @returns true if signature valid or dev mode without credentials, false if validation fails
+ *
+ * @example
+ * // Webhook route handler
+ * const rawBody = await req.text();
+ * const isValid = await validateSignature(req, rawBody);
+ * if (!isValid) {
+ *   return new Response('Unauthorized', { status: 401 });
+ * }
+ * const payload = JSON.parse(rawBody);
  */
 export async function validateSignature(req: Request, rawBody: string): Promise<boolean> {
   const header = req.headers.get('x-hub-signature-256') || req.headers.get('X-Hub-Signature-256');
@@ -129,6 +148,19 @@ export async function validateSignature(req: Request, rawBody: string): Promise<
 
 /**
  * Check if request is a webhook verification request
+ *
+ * WhatsApp sends GET request with hub.mode query param during webhook setup.
+ * This happens once when configuring webhook URL in Meta Developer Console.
+ *
+ * @param req - Request object to check
+ * @returns true if GET request with hub.mode parameter (verification request), false otherwise
+ *
+ * @example
+ * // Webhook route handler
+ * if (isVerifyRequest(req)) {
+ *   return verifyToken(req); // One-time setup
+ * }
+ * // Handle normal webhook POST
  */
 export function isVerifyRequest(req: Request): boolean {
   const url = new URL(req.url);
@@ -137,6 +169,25 @@ export function isVerifyRequest(req: Request): boolean {
 
 /**
  * Handle webhook verification request
+ *
+ * WhatsApp webhook setup requires responding with hub.challenge value if hub.verify_token matches.
+ * This is a one-time handshake when configuring webhook URL in Meta Developer Console.
+ *
+ * Expected query params:
+ * - hub.mode: Should be "subscribe"
+ * - hub.verify_token: Must match WHATSAPP_VERIFY_TOKEN env var
+ * - hub.challenge: Random string to echo back
+ *
+ * @param req - GET request with query parameters from WhatsApp
+ * @returns Response with challenge text (200) if token matches, Unauthorized (401) otherwise
+ *
+ * @example
+ * // Webhook setup flow in Meta Console:
+ * // 1. Enter webhook URL: https://app.com/api/whatsapp/webhook
+ * // 2. Enter verify token: "your-secret-token"
+ * // 3. Meta sends: GET /api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=your-secret-token&hub.challenge=12345
+ * // 4. verifyToken responds: 200 "12345"
+ * // 5. Webhook is verified and activated
  */
 export function verifyToken(req: Request): Response {
   const url = new URL(req.url);

@@ -1,14 +1,11 @@
 /**
- * Simple Rate Limiter - In-Memory Throttling
- *
- * CRITICAL FIX (2025-10-11): Prevent burst attacks and spam
- * - Minimum 5 seconds between messages per user
- * - In-memory tracking (resets on cold start, but good enough for MVP)
- *
- * Future improvements:
- * - Persist in Supabase for cross-instance rate limiting
- * - Configurable limits per user type (free vs paid)
- * - Exponential backoff for repeat offenders
+ * @file Simple Rate Limiter
+ * @description In-memory rate limiting with 5-second minimum interval per user, automatic cleanup, and monitoring stats for Edge Runtime spam prevention
+ * @module lib/simple-rate-limiter
+ * @exports checkRateLimit, getRateLimitWaitTime, resetRateLimit, getRateLimiterStats
+ * @runtime edge
+ * @date 2026-02-07 19:15
+ * @updated 2026-02-07 19:15
  */
 
 import { logger } from './logger'
@@ -22,9 +19,16 @@ const CLEANUP_INTERVAL_MS = 300000 // Clean up old entries every 5 minutes
 
 /**
  * Check if user is within rate limit
+ * Enforces 5-second minimum interval between messages per phone number.
+ * First message from user always allowed. In-memory tracking (resets on Edge Function cold start).
+ * Logs warning with masked phone when rate limited.
  *
- * @param phoneNumber User's phone number (unique identifier)
- * @returns true if allowed, false if rate limited
+ * @param {string} phoneNumber - User's phone number (unique identifier, e.g., '1234567890')
+ * @returns {boolean} true if allowed (5+ seconds since last message or first message), false if rate limited
+ * @example
+ * if (!checkRateLimit(phoneNumber)) {
+ *   return new Response('Rate limited', { status: 429 });
+ * }
  */
 export function checkRateLimit(phoneNumber: string): boolean {
   const now = Date.now()
@@ -59,9 +63,16 @@ export function checkRateLimit(phoneNumber: string): boolean {
 
 /**
  * Get remaining wait time for rate limited user
+ * Calculates milliseconds until user can send next message based on 5-second minimum interval.
+ * Returns 0 if user has no history or can send immediately.
  *
- * @param phoneNumber User's phone number
- * @returns milliseconds until next message allowed (0 if allowed now)
+ * @param {string} phoneNumber - User's phone number
+ * @returns {number} Milliseconds until next message allowed (0 if allowed now, positive if rate limited)
+ * @example
+ * const waitMs = getRateLimitWaitTime(phoneNumber);
+ * if (waitMs > 0) {
+ *   await sendWhatsAppText(phoneNumber, `Please wait ${Math.ceil(waitMs / 1000)}s`);
+ * }
  */
 export function getRateLimitWaitTime(phoneNumber: string): number {
   const lastMessageTime = userLastMessage.get(phoneNumber)
@@ -77,9 +88,20 @@ export function getRateLimitWaitTime(phoneNumber: string): number {
 }
 
 /**
- * Reset rate limit for a user (for testing or admin override)
+ * Reset rate limit for a user
+ * Clears rate limit state for phone number, allowing immediate next message.
+ * Use in tests to reset state or for admin override. Logs debug message with masked phone.
  *
- * @param phoneNumber User's phone number
+ * @param {string} phoneNumber - User's phone number to reset
+ * @returns {void}
+ * @example
+ * // In test teardown
+ * resetRateLimit('1234567890');
+ *
+ * // Admin override for VIP user
+ * if (isVipUser(phoneNumber)) {
+ *   resetRateLimit(phoneNumber);
+ * }
  */
 export function resetRateLimit(phoneNumber: string): void {
   userLastMessage.delete(phoneNumber)
@@ -120,7 +142,15 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 /**
- * Get current stats (for monitoring/debugging)
+ * Get current rate limiter statistics
+ * Returns in-memory tracking stats for monitoring and debugging.
+ * Tracked users resets on Edge Function cold start.
+ *
+ * @returns {{ trackedUsers: number, minInterval: number }} Object with number of tracked users and minimum interval in ms
+ * @example
+ * const stats = getRateLimiterStats();
+ * logger.info('Rate limiter stats', { metadata: stats });
+ * // { trackedUsers: 42, minInterval: 5000 }
  */
 export function getRateLimiterStats(): {
   trackedUsers: number

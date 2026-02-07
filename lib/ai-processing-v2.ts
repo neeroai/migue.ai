@@ -1,16 +1,16 @@
 /**
- * AI Processing V2 - Multi-Provider System
- * Integrates OpenAI and Tesseract for cost optimization
- *
- * Provider selection:
- * - Chat: OpenAI GPT-4o-mini (PRIMARY - 96% cheaper than Claude)
- * - Fallback: Claude Sonnet 4.5
- * - Audio: OpenAI Whisper ($0.36/hour)
- * - OCR: Tesseract (100% free)
+ * @file AI Processing Pipeline V2
+ * @description Multi-provider AI orchestration (OpenAI GPT-4o-mini PRIMARY, Gemini 2.5 Flash Lite fallback) with audio transcription (Whisper) and OCR (Tesseract) for cost optimization
+ * @module lib/ai-processing-v2
+ * @exports processMessageWithAI, processAudioMessage, processDocumentMessage
+ * @runtime edge
+ * @see https://platform.openai.com/docs/api-reference
+ * @date 2026-02-07 18:50
+ * @updated 2026-02-07 18:50
  */
 
 import { logger } from './logger'
-import { getConversationHistory, historyToModelMessages } from './conversation-utils'
+import { getConversationHistory, historyToModelMessages, trimHistoryByChars } from './conversation-utils'
 import { insertOutboundMessage, updateInboundMessageByWaId } from './persist'
 import { getSupabaseServerClient } from './supabase'
 // PROVIDER_COSTS removed - cost now comes from AI response
@@ -35,6 +35,25 @@ import type { NormalizedMessage } from './message-normalization'
 const proactiveAgent = createProactiveAgent()
 const supabaseClient = getSupabaseServerClient()
 
+const HISTORY_CHAR_BUDGET = 4000
+
+function getTrivialResponse(message: string): string | null {
+  const normalized = message.trim().toLowerCase()
+  const singleEmoji = /^[\u{1F300}-\u{1FAFF}]$/u.test(normalized)
+
+  if (['ok', 'ok.', 'okay', 'listo', 'dale', 'perfecto', 'vale'].includes(normalized)) {
+    return 'Listo.'
+  }
+  if (['gracias', 'gracias!', 'mil gracias', 'thank you', 'thanks'].includes(normalized)) {
+    return '¡Con gusto!'
+  }
+  if (['👍', '👌', '✅'].includes(normalized) || singleEmoji) {
+    return '¡Entendido!'
+  }
+
+  return null
+}
+
 
 /**
  * Send text message and persist to database
@@ -54,8 +73,31 @@ async function sendTextAndPersist(
 }
 
 /**
- * Process message with AI using Claude Agents
- * 75% cost savings vs GPT-4o
+ * Process message with AI using Vercel AI SDK agent
+ * Cost-optimized with GPT-4o-mini primary
+ */
+/**
+ * Processes text message with AI (OpenAI GPT-4o-mini PRIMARY, Gemini 2.5 Flash Lite fallback) and sends response
+ * Shows typing indicator for messages ≥10 chars
+ *
+ * @param conversationId - Conversation UUID for history context
+ * @param userId - User UUID for budget tracking
+ * @param userPhone - E.164 format phone for sending response
+ * @param userMessage - User's text message content
+ * @param messageId - WhatsApp message ID for reactions
+ * @throws {Error} If AI provider fails or budget exceeded
+ *
+ * @example
+ * ```ts
+ * await processMessageWithAI(
+ *   'conv-uuid',
+ *   'user-uuid',
+ *   '+573001234567',
+ *   'What is the weather?',
+ *   'wamid.xxx'
+ * );
+ * // AI response sent to user
+ * ```
  */
 export async function processMessageWithAI(
   conversationId: string,
@@ -81,10 +123,23 @@ export async function processMessageWithAI(
     // Hydrate cost tracker from database (fire-and-forget to reduce blocking)
     // OPTIMIZATION P0.1: Non-blocking hydration reduces cold start by 300-800ms
     const { getCostTracker } = await import('./ai-cost-tracker')
-    void getCostTracker().ensureHydrated() // Fire-and-forget
+    const tracker = getCostTracker()
+    if (!tracker.isHydratedState()) {
+      await tracker.ensureHydrated()
+    } else {
+      void tracker.ensureHydrated() // Fire-and-forget
+    }
 
     // Mark message as read
     await markAsRead(messageId)
+
+    // Early-exit for trivial messages (no AI call)
+    const trivialResponse = getTrivialResponse(userMessage)
+    if (trivialResponse) {
+      await sendTextAndPersist(conversationId, userPhone, trivialResponse)
+      await reactWithCheck(userPhone, messageId)
+      return
+    }
 
     if (shouldShowTyping) {
       // Initialize typing manager inside try-catch to prevent synchronous errors
@@ -144,12 +199,13 @@ export async function processMessageWithAI(
     })
     const historyLimit = userMessage.length > 600 ? 8 : userMessage.length > 200 ? 12 : 15
     const history = await getConversationHistory(conversationId, historyLimit, supabaseClient)
+    const trimmedHistory = trimHistoryByChars(history, HISTORY_CHAR_BUDGET)
 
     let response: string
     let agentName: string
 
     // Use Vercel AI SDK (primary provider)
-    const modelHistory = historyToModelMessages(history)
+    const modelHistory = historyToModelMessages(trimmedHistory)
     logger.debug('[AI] Using Vercel AI SDK with conversation history', {
       conversationId,
       userId,
@@ -191,7 +247,7 @@ export async function processMessageWithAI(
     await reactWithWarning(userPhone, messageId)
 
     // Determine error type for better user messaging
-    const isAPIKeyError = error?.message?.includes('ANTHROPIC_API_KEY') ||
+    const isAPIKeyError = error?.message?.includes('AI_GATEWAY_API_KEY') ||
                           error?.message?.includes('API key') ||
                           error?.message?.includes('OPENAI_API_KEY')
     const isFallbackExhausted = error?.message?.includes('Primary provider failed and insufficient budget')
@@ -215,6 +271,25 @@ export async function processMessageWithAI(
 
 /**
  * Process audio with OpenAI Whisper
+ */
+/**
+ * Processes audio message with Whisper transcription + AI response pipeline
+ * Requires mediaUrl, waMessageId, from fields (returns early if missing)
+ *
+ * @param conversationId - Conversation UUID for history context
+ * @param userId - User UUID for budget tracking
+ * @param normalized - Normalized WhatsApp message with mediaUrl required
+ * @throws {Error} If audio download, transcription, or AI processing fails
+ *
+ * @example
+ * ```ts
+ * await processAudioMessage(
+ *   'conv-uuid',
+ *   'user-uuid',
+ *   { type: 'audio', mediaUrl: '...', waMessageId: 'wamid.xxx', from: '+57...' }
+ * );
+ * // Transcription + AI response sent
+ * ```
  */
 export async function processAudioMessage(
   conversationId: string,
@@ -384,6 +459,25 @@ export async function processAudioMessage(
  * Process document/image with Tesseract OCR
  *
  * Uses Tesseract for free text extraction from images/documents
+ */
+/**
+ * Processes document/image message with Tesseract OCR + AI response pipeline
+ * Requires mediaUrl, waMessageId, from fields (returns early if missing)
+ *
+ * @param conversationId - Conversation UUID for history context
+ * @param userId - User UUID for budget tracking
+ * @param normalized - Normalized WhatsApp message with mediaUrl required
+ * @throws {Error} If media download, OCR, or AI processing fails
+ *
+ * @example
+ * ```ts
+ * await processDocumentMessage(
+ *   'conv-uuid',
+ *   'user-uuid',
+ *   { type: 'image', mediaUrl: '...', waMessageId: 'wamid.xxx', from: '+57...' }
+ * );
+ * // OCR text + AI response sent
+ * ```
  */
 export async function processDocumentMessage(
   conversationId: string,

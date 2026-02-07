@@ -8,7 +8,6 @@
  */
 
 import { embed } from 'ai'
-import { openai } from '@ai-sdk/openai'
 import { getSupabaseServerClient } from '../supabase'
 import { logger } from '../logger'
 
@@ -35,7 +34,7 @@ const MEMORY_CACHE_TTL_MS = 300_000 // 5 minutes
 export async function embedText(text: string): Promise<number[]> {
   try {
     const { embedding } = await embed({
-      model: openai.embedding('text-embedding-3-small'),
+      model: 'openai/text-embedding-3-small',
       value: text,
     })
 

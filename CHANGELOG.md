@@ -1,10 +1,37 @@
+---
+title: "CHANGELOG - migue.ai"
+summary: "Granular changelog for code changes in lib/, app/api/, src/"
+description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
+version: "1.0"
+date: "2026-02-06 23:30"
+updated: "2026-02-07 12:15"
+scope: "project"
+---
+
 # CHANGELOG
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-06 22:00
+## [Unreleased] - 2026-02-07 12:15
+
+### Changed - Architecture
+- **AI Gateway mandatory**: Models now use Gateway strings (`openai/gpt-4o-mini`, `google/gemini-2.5-flash-lite`) with Gateway fallback.
+- **Claude removed**: Anthropic provider eliminated; Gemini is fallback.
+- **Gateway health checks**: Require `AI_GATEWAY_API_KEY` or OIDC; OpenAI key only for Whisper.
+
+### Changed - Text Pipeline Efficiency
+- Cold-start budget hydration blocks only when needed.
+- Conversation history cache invalidation on inbound/outbound writes.
+- Tools only passed when triggers detected.
+- Short prompt for short messages.
+- History trimmed by char budget; trivial-message early exit.
+- Max tokens + temperature tuned for non-tool messages; 280-char cap.
+
+### Added - Debugging
+- `scripts/debug-text-flow.ts` local CLI for text flow + Gateway metadata logging.
+- `supabase/migrations/018_update_openai_usage_provider_check.sql` adds `gemini` provider in usage tracking.
 
 ### Fixed - CRITICAL
 - **Media double responses**: Images/documents with captions triggered 2 separate AI responses (app/api/whatsapp/webhook/route.ts + lib/ai-processing-v2.ts)

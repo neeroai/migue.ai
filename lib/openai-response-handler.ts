@@ -1,14 +1,11 @@
 /**
- * OpenAI Response Handler - Production-Ready Response Processing
- *
- * Handles OpenAI API responses with:
- * - Response structure validation
- * - Usage (token) extraction
- * - Cost calculation
- * - Response logging & analytics
- * - Error detection
- *
- * Based on best practices from /docs-global/ai/openai
+ * @file openai-response-handler.ts
+ * @description OpenAI API response processing with structure validation, token usage extraction, cost calculation (per-model pricing), analytics logging, and error detection
+ * @module lib/openai-response-handler
+ * @exports UsageMetrics, CostMetrics, ResponseMetadata, ValidatedChatResponse, validateChatResponse, extractUsageMetrics, extractStreamUsage, calculateCost, calculateStreamCost, logResponse, logUsageMetrics, hasResponseError, formatCost, formatUsage, getModelPricing
+ * @runtime edge
+ * @date 2026-02-07 19:16
+ * @updated 2026-02-07 19:16
  */
 
 import type {
@@ -102,8 +99,26 @@ const PRICING: Record<string, { input: number; output: number }> = {
 // ============================================================================
 
 /**
- * Validate ChatCompletion response structure
- * Ensures response has expected fields and valid data
+ * Validate and parse OpenAI ChatCompletion response structure with comprehensive error checking
+ * Extracts content, tool calls, usage metrics, cost calculation, and metadata
+ *
+ * Validation checks:
+ * - Response object exists and is valid
+ * - Required fields present (id, model, choices array)
+ * - First choice has message object
+ * - Automatically calculates cost if usage data available
+ *
+ * Usage edge case: Streaming without stream_options returns null usage (cost will be null)
+ *
+ * @param response - Raw OpenAI ChatCompletion response object
+ * @returns Validated response with typed content, tool calls, and metadata
+ * @throws {Error} If response missing required fields or has invalid structure
+ * @example
+ * const validated = validateChatResponse(apiResponse);
+ * if (validated.metadata.hasToolCalls) {
+ *   // Process tool calls
+ * }
+ * console.log(`Cost: $${validated.metadata.cost?.totalCost.toFixed(6)}`);
  */
 export function validateChatResponse(
   response: ChatCompletion
@@ -178,8 +193,18 @@ export function validateChatResponse(
 // ============================================================================
 
 /**
- * Extract usage metrics from ChatCompletion response
- * Returns null if usage not available (e.g., streaming without stream_options)
+ * Extract token usage metrics from non-streaming ChatCompletion response
+ *
+ * Returns null for streaming responses without stream_options: { include_usage: true }
+ * Use this for tracking costs and monitoring token consumption
+ *
+ * @param response - OpenAI ChatCompletion response object
+ * @returns Token counts (prompt, completion, total) or null if usage unavailable
+ * @example
+ * const usage = extractUsageMetrics(response);
+ * if (usage) {
+ *   console.log(`Used ${usage.totalTokens} tokens`);
+ * }
  */
 export function extractUsageMetrics(
   response: ChatCompletion
@@ -196,7 +221,20 @@ export function extractUsageMetrics(
 }
 
 /**
- * Extract usage from streaming chunk (final chunk only)
+ * Extract token usage from final streaming chunk
+ *
+ * Only the last chunk contains usage data when stream_options: { include_usage: true } is set
+ * Returns null for all chunks except the final one, or if stream_options not enabled
+ *
+ * @param chunk - Individual streaming chunk from OpenAI stream
+ * @returns Token counts from final chunk, or null if not present
+ * @example
+ * for await (const chunk of stream) {
+ *   const usage = extractStreamUsage(chunk);
+ *   if (usage) {
+ *     console.log(`Stream complete: ${usage.totalTokens} tokens`);
+ *   }
+ * }
  */
 export function extractStreamUsage(
   chunk: ChatCompletionChunk
@@ -217,11 +255,19 @@ export function extractStreamUsage(
 // ============================================================================
 
 /**
- * Calculate cost for a request based on token usage
+ * Calculate USD cost for OpenAI API request using per-model pricing (January 2025 rates)
  *
- * @param usage - Token usage metrics
- * @param model - Model name (e.g., 'gpt-4o-mini')
- * @returns Cost breakdown in USD
+ * Pricing logic:
+ * - Input/output tokens priced separately (per 1M tokens)
+ * - Falls back to gpt-4o-mini pricing for unknown models
+ * - Supports gpt-4o-mini, gpt-4o, gpt-4o-realtime, gpt-4-turbo, gpt-4
+ *
+ * @param usage - Token counts (prompt, completion, total)
+ * @param model - OpenAI model name (e.g., 'gpt-4o-mini', 'gpt-4o')
+ * @returns Cost breakdown with input, output, and total costs in USD
+ * @example
+ * const cost = calculateCost({ promptTokens: 1000, completionTokens: 500, totalTokens: 1500 }, 'gpt-4o-mini');
+ * console.log(`Total: $${cost.totalCost.toFixed(6)}`); // $0.000450
  */
 export function calculateCost(
   usage: UsageMetrics,
@@ -244,8 +290,20 @@ export function calculateCost(
 }
 
 /**
- * Calculate cost for streaming request
- * Use this when you have accumulated usage from stream
+ * Calculate cost for streaming request (alias of calculateCost)
+ *
+ * Use after accumulating usage from final streaming chunk
+ * Identical behavior to calculateCost, provided for semantic clarity
+ *
+ * @param usage - Accumulated token counts from stream
+ * @param model - OpenAI model name used for stream
+ * @returns Cost breakdown in USD
+ * @example
+ * const finalChunk = await getLastChunk(stream);
+ * const usage = extractStreamUsage(finalChunk);
+ * if (usage) {
+ *   const cost = calculateStreamCost(usage, 'gpt-4o-mini');
+ * }
  */
 export function calculateStreamCost(
   usage: UsageMetrics,
@@ -259,8 +317,21 @@ export function calculateStreamCost(
 // ============================================================================
 
 /**
- * Log response with full metadata
- * Use for debugging and analytics
+ * Log OpenAI response with complete metadata for analytics and debugging
+ *
+ * Logs to Vercel Log Drain with structured metadata:
+ * - Response ID, model, finish reason
+ * - Token usage (input/output/total)
+ * - Cost breakdown (USD, 6 decimal precision)
+ * - Tool call information
+ * - Optional context (conversation ID, user ID, message ID)
+ *
+ * @param validated - Validated response from validateChatResponse()
+ * @param context - Optional tracking IDs for correlation (conversation, user, message)
+ * @example
+ * const validated = validateChatResponse(response);
+ * logResponse(validated, { conversationId: conv.id, userId: user.id });
+ * // Logs: [OpenAI Response] Chat completion received { model, cost, usage, ... }
  */
 export function logResponse(
   validated: ValidatedChatResponse,
@@ -296,7 +367,19 @@ export function logResponse(
 }
 
 /**
- * Log usage metrics only (lightweight)
+ * Log token usage and cost without full response metadata (lightweight alternative to logResponse)
+ *
+ * Use when you only have usage data (e.g., from extractUsageMetrics)
+ * Automatically calculates cost based on model pricing
+ *
+ * @param usage - Token counts (prompt, completion, total)
+ * @param model - OpenAI model name for cost calculation
+ * @param context - Optional tracking IDs (conversation, user)
+ * @example
+ * const usage = extractUsageMetrics(response);
+ * if (usage) {
+ *   logUsageMetrics(usage, 'gpt-4o-mini', { conversationId: conv.id });
+ * }
  */
 export function logUsageMetrics(
   usage: UsageMetrics,
@@ -326,7 +409,23 @@ export function logUsageMetrics(
 // ============================================================================
 
 /**
- * Check if response indicates an error condition
+ * Detect error conditions in OpenAI response based on finish reason and content
+ *
+ * Error conditions checked:
+ * - content_filter: Response blocked by OpenAI content policy
+ * - length: Response truncated due to max_tokens limit
+ * - empty_response: No content and no tool calls (unexpected state)
+ *
+ * Note: 'stop' finish reason (normal completion) returns hasError: false
+ *
+ * @param validated - Validated response from validateChatResponse()
+ * @returns Error status object with type and message if error detected
+ * @example
+ * const error = hasResponseError(validated);
+ * if (error.hasError) {
+ *   console.error(`OpenAI error: ${error.errorType} - ${error.errorMessage}`);
+ *   // Handle content_filter, length, or empty_response
+ * }
  */
 export function hasResponseError(
   validated: ValidatedChatResponse
@@ -370,21 +469,34 @@ export function hasResponseError(
 // ============================================================================
 
 /**
- * Format cost for display
+ * Format cost as USD string with 6 decimal places
+ * @param cost - Cost in USD (e.g., 0.000150)
+ * @returns Formatted string (e.g., "$0.000150")
  */
 export function formatCost(cost: number): string {
   return `$${cost.toFixed(6)}`
 }
 
 /**
- * Format usage for display
+ * Format usage metrics as human-readable string with token breakdown
+ * @param usage - Token counts (prompt, completion, total)
+ * @returns Formatted string (e.g., "1500 tokens (1000 in + 500 out)")
  */
 export function formatUsage(usage: UsageMetrics): string {
   return `${usage.totalTokens} tokens (${usage.promptTokens} in + ${usage.completionTokens} out)`
 }
 
 /**
- * Get pricing for model
+ * Retrieve per-model pricing rates (USD per 1M tokens)
+ *
+ * Supported models: gpt-4o-mini, gpt-4o, gpt-4o-realtime, gpt-4-turbo, gpt-4
+ * Returns null for unknown models (calculateCost falls back to gpt-4o-mini)
+ *
+ * @param model - OpenAI model name (e.g., 'gpt-4o-mini')
+ * @returns Pricing object with input/output rates, or null if model unknown
+ * @example
+ * const pricing = getModelPricing('gpt-4o-mini');
+ * // { input: 0.150, output: 0.600 } (USD per 1M tokens)
  */
 export function getModelPricing(model: string): {
   input: number

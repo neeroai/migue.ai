@@ -1,3 +1,13 @@
+/**
+ * @file Messaging Windows Maintenance Cron Job
+ * @description Sends AI-generated contextual messages before 24h WhatsApp window expires, runs every 3 hours during business hours
+ * @module app/api/cron/maintain-windows
+ * @exports runtime, maxDuration, GET, proactiveAgent, jsonResponse, getActiveConversationMap, generateContextualMessage, mapWithConcurrency
+ * @runtime edge
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
+ */
+
 export const runtime = 'edge';
 export const maxDuration = 10; // Edge Functions max timeout (AI generation + multiple messages)
 

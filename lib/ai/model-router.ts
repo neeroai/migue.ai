@@ -13,8 +13,8 @@ import { models } from './providers'
 // Types
 // ============================================================================
 
-export type Provider = 'openai' | 'claude'
-export type SelectionReason = 'cost' | 'quality' | 'budget_critical'
+export type Provider = 'openai' | 'gemini'
+export type SelectionReason = 'cost' | 'budget_critical'
 export type Complexity = 'low' | 'high'
 
 export interface SelectionContext {
@@ -26,7 +26,6 @@ export interface SelectionContext {
 
 export interface ModelSelection {
   provider: Provider
-  model: any // Vercel AI SDK LanguageModel
   modelName: string
   reason: SelectionReason
   maxTokens: number
@@ -46,36 +45,17 @@ export function selectModel(context: SelectionContext): ModelSelection {
   if (context.budgetRemaining < 0.01) {
     return {
       provider: 'openai',
-      model: models.openai.primary,
-      modelName: 'gpt-4o-mini',
+      modelName: models.openai.primary,
       reason: 'budget_critical',
       maxTokens: models.openai.maxTokens,
       estimatedCost: estimateCost('openai', context.estimatedTokens),
     }
   }
 
-  // Gate 2: High complexity + sufficient tokens → Quality model
-  if (context.complexity === 'high' && context.estimatedTokens > 2000) {
-    const estimatedCost = estimateCost('claude', context.estimatedTokens)
-
-    // Only use Claude if budget allows (cost + 20% buffer)
-    if (context.budgetRemaining >= estimatedCost * 1.2) {
-      return {
-        provider: 'claude',
-        model: models.claude.primary,
-        modelName: 'claude-sonnet-4',
-        reason: 'quality',
-        maxTokens: models.claude.maxTokens,
-        estimatedCost,
-      }
-    }
-  }
-
-  // Gate 3: Default → Cost-optimized (GPT-4o-mini)
+  // Gate 2: Default → Cost-optimized (GPT-4o-mini)
   return {
     provider: 'openai',
-    model: models.openai.primary,
-    modelName: 'gpt-4o-mini',
+    modelName: models.openai.primary,
     reason: 'cost',
     maxTokens: models.openai.maxTokens,
     estimatedCost: estimateCost('openai', context.estimatedTokens),
@@ -100,23 +80,19 @@ function estimateCost(provider: Provider, totalTokens: number): number {
 
 /**
  * Get fallback model for a failed primary
- * Pattern: If OpenAI fails → Claude, if Claude fails → OpenAI
+ * Pattern: If OpenAI fails → Gemini
  */
 export function getFallbackSelection(
   primary: ModelSelection,
   context: SelectionContext
 ): ModelSelection {
-  const fallbackProvider: Provider =
-    primary.provider === 'openai' ? 'claude' : 'openai'
-
-  const fallbackConfig = models[fallbackProvider]
+  const fallbackProvider: Provider = 'gemini'
+  const fallbackConfig = models.gemini
 
   return {
     provider: fallbackProvider,
-    model: fallbackConfig.primary,
-    modelName:
-      fallbackProvider === 'openai' ? 'gpt-4o-mini' : 'claude-sonnet-4',
-    reason: 'quality', // Fallback is always for reliability
+    modelName: fallbackConfig.primary,
+    reason: 'cost', // Fallback is for reliability
     maxTokens: fallbackConfig.maxTokens,
     estimatedCost: estimateCost(fallbackProvider, context.estimatedTokens),
   }

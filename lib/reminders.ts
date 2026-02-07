@@ -1,3 +1,14 @@
+/**
+ * @file Reminder Parsing & Persistence
+ * @description AI-powered reminder extraction with Zod validation, natural language parsing via OpenAI, and Supabase database persistence
+ * @module lib/reminders
+ * @exports ReminderParseResult, parseReminderRequest, createReminder
+ * @see https://sdk.vercel.ai/docs/ai-sdk-core/generating-text
+ * @see https://supabase.com/docs/reference/javascript/insert
+ * @date 2026-02-07 19:15
+ * @updated 2026-02-07 19:15
+ */
+
 import { z } from 'zod'
 import { generateText, type ModelMessage } from 'ai'
 import { models } from './ai/providers'
@@ -52,6 +63,25 @@ export type ReminderParseResult =
       clarification: string
     }
 
+/**
+ * Extracts reminder details from natural language using AI with discriminated union response
+ * Uses OpenAI GPT to parse message, validates with Zod, handles clarification flow
+ *
+ * @param message - Natural language reminder request from user
+ * @param history - Optional last 2 conversation messages for context
+ * @returns Discriminated union: ready (parsed) or needs_clarification (missing fields)
+ * @throws {Error} Invalid JSON or schema validation failure from AI
+ *
+ * @example
+ * ```ts
+ * const result = await parseReminderRequest('Recordar reunión mañana 3pm');
+ * if (result.status === 'ready') {
+ *   console.log(result.datetimeIso); // '2026-02-08T15:00:00-05:00'
+ * } else {
+ *   console.log(result.clarification); // 'What should I remind you about?'
+ * }
+ * ```
+ */
 export async function parseReminderRequest(
   message: string,
   history?: ChatMessage[]
@@ -101,6 +131,25 @@ export async function parseReminderRequest(
   }
 }
 
+/**
+ * Persists reminder to Supabase database with pending status
+ *
+ * @param userId - User UUID to associate reminder with
+ * @param title - Reminder subject (what to remember)
+ * @param description - Optional detailed notes
+ * @param datetimeIso - Scheduled time in ISO 8601 format with timezone
+ * @throws {Error} Database error if insert fails
+ *
+ * @example
+ * ```ts
+ * await createReminder(
+ *   'user-123',
+ *   'Team meeting',
+ *   'Discuss Q2 roadmap',
+ *   '2026-02-08T15:00:00-05:00'
+ * );
+ * ```
+ */
 export async function createReminder(
   userId: string,
   title: string,

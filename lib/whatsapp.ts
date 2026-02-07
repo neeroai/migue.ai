@@ -1,12 +1,12 @@
 /**
- * WhatsApp API client - Optimized for Vercel Edge Functions 2025
- * Handles sending messages and interacting with WhatsApp Business API
- *
- * Performance optimizations:
- * - WhatsApp Cloud API v23.0 (2025)
- * - Rate limiting: 250 msg/sec
- * - Edge caching with stale-while-revalidate
- * - Sub-100ms global latency target
+ * @file WhatsApp Business API Client
+ * @description WhatsApp Cloud API v23.0 client with Edge Runtime optimization, rate limiting (250 msg/sec), message sending, media handling, and interactive components
+ * @module lib/whatsapp
+ * @exports GRAPH_BASE_URL, sendWhatsAppRequest, sendWhatsAppRequestWithRetry, sendWhatsAppText, sendInteractiveButtons, sendInteractiveList, sendCTAButton, requestLocation, sendLocation, requestCallPermission, blockPhoneNumber, unblockPhoneNumber, markAsReadWithTyping, createTypingManager, markAsRead, sendReaction, removeReaction, reactWithCheck, reactWithThinking, reactWithWarning, resolveMediaUrl, downloadWhatsAppMedia
+ * @runtime edge
+ * @see https://developers.facebook.com/docs/whatsapp/cloud-api
+ * @date 2026-02-07 18:40
+ * @updated 2026-02-07 18:40
  */
 
 import type {
@@ -225,6 +225,20 @@ export async function sendWhatsAppRequestWithRetry(
   throw new Error('Unexpected retry loop exit');
 }
 
+/**
+ * Sends text message via WhatsApp Cloud API
+ *
+ * @param to - Recipient phone number in E.164 format (e.g., +573001234567)
+ * @param body - Message text content (max 4096 chars)
+ * @returns WhatsApp message ID or null if send failed
+ * @throws {WhatsAppAPIError} If API request fails
+ *
+ * @example
+ * ```ts
+ * const msgId = await sendWhatsAppText('+573001234567', 'Hello!');
+ * // msgId: 'wamid.HBgLNTczMDAxMjM0NTY3FQIAERgRMTIzNDU2Nzg5MEFCQ0RF'
+ * ```
+ */
 export async function sendWhatsAppText(to: string, body: string) {
   const result = await sendWhatsAppRequest({
     messaging_product: 'whatsapp',
@@ -690,6 +704,19 @@ export function createTypingManager(to: string, messageId: string) {
 /**
  * Mark a message as read (without typing indicator)
  */
+/**
+ * Marks message as read (blue checkmarks for sender)
+ *
+ * @param messageId - WhatsApp message ID to mark as read
+ * @throws {Error} If WHATSAPP_TOKEN or WHATSAPP_PHONE_ID missing
+ * @throws {WhatsAppAPIError} If API request fails
+ *
+ * @example
+ * ```ts
+ * await markAsRead('wamid.xxx');
+ * // Sender sees blue checkmarks
+ * ```
+ */
 export async function markAsRead(messageId: string) {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_ID;
@@ -747,6 +774,19 @@ export async function removeReaction(to: string, messageId: string) {
 }
 
 // Convenience reaction methods for common emojis
+/**
+ * Reacts to message with checkmark emoji (visual acknowledgment)
+ *
+ * @param to - Recipient phone number in E.164 format
+ * @param messageId - WhatsApp message ID to react to
+ * @throws {WhatsAppAPIError} If API request fails
+ *
+ * @example
+ * ```ts
+ * await reactWithCheck('+573001234567', 'wamid.xxx');
+ * // User sees ✅ reaction on their message
+ * ```
+ */
 export const reactWithCheck = (to: string, messageId: string) =>
   sendReaction(to, messageId, '✅');
 
@@ -795,6 +835,19 @@ export async function resolveMediaUrl(mediaId: string, token: string) {
 /**
  * Download WhatsApp media (images, audio, documents)
  * Consolidated from whatsapp-media.ts for better organization
+ */
+/**
+ * Downloads WhatsApp media (image, audio, video) with 7-second timeout
+ *
+ * @param mediaId - WhatsApp media ID from webhook
+ * @returns Binary content (Uint8Array) and MIME type
+ * @throws {Error} If WHATSAPP_TOKEN missing, URL resolution fails, or timeout exceeded
+ *
+ * @example
+ * ```ts
+ * const { bytes, mimeType } = await downloadWhatsAppMedia('media_id_123');
+ * // bytes: Uint8Array, mimeType: 'image/jpeg'
+ * ```
  */
 export async function downloadWhatsAppMedia(mediaId: string): Promise<WhatsAppMediaDownload> {
   const token = process.env.WHATSAPP_TOKEN

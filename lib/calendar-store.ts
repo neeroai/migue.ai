@@ -1,3 +1,13 @@
+/**
+ * @file Calendar Credential & Event Storage
+ * @description Database layer for OAuth credentials and calendar event persistence via Supabase, supports credential fetch, token updates, and event recording
+ * @module lib/calendar-store
+ * @exports CalendarProvider, CalendarCredentialRecord, CalendarEventRecordInput, fetchCalendarCredential, updateAccessToken, recordCalendarEvent
+ * @see https://supabase.com/docs/reference/javascript/select
+ * @date 2026-02-07 19:35
+ * @updated 2026-02-07 19:35
+ */
+
 import { getSupabaseServerClient } from './supabase'
 import { logger } from './logger'
 

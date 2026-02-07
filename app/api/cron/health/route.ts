@@ -1,3 +1,13 @@
+/**
+ * @file Health Check Endpoint
+ * @description No-auth read-only endpoint exposing messaging window statistics and upcoming maintenance schedule
+ * @module app/api/cron/health
+ * @exports runtime, maxDuration, GET, jsonResponse
+ * @runtime edge
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
+ */
+
 export const runtime = 'edge';
 export const maxDuration = 10;
 

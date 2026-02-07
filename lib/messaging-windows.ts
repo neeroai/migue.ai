@@ -1,19 +1,17 @@
+/**
+ * @file messaging-windows.ts
+ * @description WhatsApp 24-hour messaging window management with business hours, daily limits, and proactive message scheduling
+ * @module lib/messaging-windows
+ * @exports COLOMBIA_TZ, BUSINESS_HOURS, MAX_PROACTIVE_PER_DAY, MIN_INTERVAL_HOURS, WINDOW_DURATION_HOURS, FREE_ENTRY_DURATION_HOURS, WINDOW_MAINTENANCE_THRESHOLD_HOURS, MessagingWindow, ProactiveMessageDecision, updateMessagingWindow, getMessagingWindow, isWithinBusinessHours, getCurrentHour, shouldSendProactiveMessage, incrementProactiveCounter, findWindowsNearExpiration, scheduleWindowMaintenance
+ * @runtime edge
+ * @see https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
+ */
+
 import { getSupabaseServerClient } from './supabase'
 import { logger } from './logger'
 import { getConversationHistory } from './conversation-utils'
-
-/**
- * WhatsApp 24-hour messaging window management
- *
- * Official WhatsApp API rules:
- * - Window opens when user sends message or makes call
- * - Lasts 24 hours
- * - All messages within window are FREE
- * - Free entry point: 72 hours free after first contact
- * - Outside window: only template messages (paid)
- *
- * Reference: https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages
- */
 
 // Constants
 export const COLOMBIA_TZ = 'America/Bogota'
@@ -56,7 +54,40 @@ type SupabaseClient = ReturnType<typeof getSupabaseServerClient>
 
 /**
  * Update messaging window when a message is sent/received
- * Call this from webhook for every inbound/outbound message
+ *
+ * Call this from webhook handler for EVERY inbound/outbound message to maintain window state.
+ *
+ * Behavior:
+ * - User message: Resets 24h window to now + 24h, sets free entry point (72h) if new user
+ * - Outbound message: Updates timestamp only, does NOT reset window
+ *
+ * WhatsApp rules:
+ * - Window opens when user sends message (24h free messaging)
+ * - Free entry point: First contact gets 72h window (more lenient)
+ * - Outside window: Only paid template messages allowed
+ *
+ * @param phoneNumber - User's phone number in E.164 format (e.g., +573001234567)
+ * @param messageId - WhatsApp message ID for tracking
+ * @param isUserMessage - true if message FROM user, false if message TO user (outbound)
+ *
+ * @example
+ * // Webhook handler - user sends message
+ * const entry = webhook.entry[0];
+ * const message = entry.changes[0].value.messages[0];
+ * await updateMessagingWindow(
+ *   message.from, // user's phone
+ *   message.id,
+ *   true // user message resets window
+ * );
+ *
+ * @example
+ * // After sending outbound message
+ * await sendWhatsAppText(phone, 'Hello');
+ * await updateMessagingWindow(
+ *   phone,
+ *   response.messageId,
+ *   false // outbound, doesn't reset window
+ * );
  */
 export async function updateMessagingWindow(
   phoneNumber: string,
@@ -131,6 +162,30 @@ export async function updateMessagingWindow(
 
 /**
  * Get current messaging window status for a phone number
+ *
+ * Returns comprehensive window state including:
+ * - isOpen: Can send free messages now
+ * - isFreeEntry: Within 72h free entry period (first contact)
+ * - hoursRemaining: Time until window closes
+ * - canSendProactive: Allowed to send proactive message (window open + not at daily limit)
+ * - messagesRemainingToday: Proactive messages left today (max 4/day)
+ *
+ * Returns closed state if no window record exists (user never messaged us).
+ *
+ * @param phoneNumber - User's phone number in E.164 format
+ * @param supabase - Supabase client (optional, defaults to server client for Edge Runtime)
+ * @returns MessagingWindow object with complete window state
+ *
+ * @example
+ * // Check if can send proactive message
+ * const window = await getMessagingWindow('+573001234567');
+ * if (window.canSendProactive) {
+ *   await sendWhatsAppText(phone, 'Reminder: Your appointment is tomorrow');
+ * } else {
+ *   logger.info('Cannot send proactive message', {
+ *     metadata: { isOpen: window.isOpen, remaining: window.messagesRemainingToday }
+ *   });
+ * }
  */
 export async function getMessagingWindow(
   phoneNumber: string,
@@ -183,6 +238,24 @@ export async function getMessagingWindow(
 
 /**
  * Check if current time is within business hours (7am-8pm) for a timezone
+ *
+ * Uses Intl.DateTimeFormat for timezone conversion (Edge Runtime compatible, no Node.js dependencies).
+ * Business hours default to 7am-8pm to avoid disturbing users at night.
+ *
+ * @param timezone - IANA timezone identifier (default: 'America/Bogota' for Colombia)
+ * @returns true if current time in timezone is between 7am (inclusive) and 8pm (exclusive), false otherwise
+ *
+ * @example
+ * // Check before sending proactive message
+ * if (await isWithinBusinessHours()) {
+ *   await sendReminderMessage(userId);
+ * } else {
+ *   logger.debug('Outside business hours, skipping proactive message');
+ * }
+ *
+ * @example
+ * // Custom timezone for multi-region app
+ * const inBusiness = await isWithinBusinessHours('America/Mexico_City');
  */
 export async function isWithinBusinessHours(timezone: string = COLOMBIA_TZ): Promise<boolean> {
   const now = new Date()
@@ -200,6 +273,19 @@ export async function isWithinBusinessHours(timezone: string = COLOMBIA_TZ): Pro
 
 /**
  * Get current hour in a specific timezone
+ *
+ * Returns hour in 24-hour format (0-23) for the specified timezone.
+ * Uses Intl.DateTimeFormat (Edge Runtime compatible).
+ *
+ * @param timezone - IANA timezone identifier (default: 'America/Bogota')
+ * @returns Current hour in 24-hour format (0-23)
+ *
+ * @example
+ * // Get hour in Colombia
+ * const hour = getCurrentHour(); // e.g., 14 for 2pm
+ * if (hour >= 12 && hour < 14) {
+ *   logger.info('Lunch time in Colombia');
+ * }
  */
 export function getCurrentHour(timezone: string = COLOMBIA_TZ): number {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -230,7 +316,47 @@ async function isUserActiveRecently(userId: string, conversationId: string): Pro
 
 /**
  * Decide if we should send a proactive message to a user
- * Considers: window status, business hours, daily limit, user activity, rate limiting
+ *
+ * Comprehensive decision logic considering:
+ * 1. Business hours (7am-8pm Bogotá) - don't disturb at night
+ * 2. Messaging window (24h or 72h free entry) - WhatsApp billing
+ * 3. Daily limit (4 messages/day) - avoid spam
+ * 4. Rate limiting (4h between messages) - avoid annoyance
+ * 5. User activity (< 30min) - don't interrupt active conversation
+ *
+ * Returns decision object with allowed flag, reason if denied, and nextAvailableTime if rate limited.
+ *
+ * @param userId - User ID for checking conversation activity
+ * @param phoneNumber - Phone number for checking messaging window
+ * @param conversationId - Conversation ID for checking recent activity (optional)
+ * @param supabase - Supabase client (optional, defaults to server client)
+ * @param snapshot - Pre-fetched window data for performance optimization (optional, avoids extra DB query)
+ * @returns ProactiveMessageDecision with allowed flag, optional reason and nextAvailableTime
+ *
+ * @example
+ * // Check before sending reminder
+ * const decision = await shouldSendProactiveMessage(userId, phone, conversationId);
+ * if (decision.allowed) {
+ *   await sendWhatsAppText(phone, 'Reminder: Meeting in 1 hour');
+ *   await incrementProactiveCounter(phone);
+ * } else {
+ *   logger.info('Proactive message denied', {
+ *     metadata: { reason: decision.reason, next: decision.nextAvailableTime }
+ *   });
+ * }
+ *
+ * @example
+ * // With snapshot optimization (batch processing)
+ * const windows = await fetchAllWindows();
+ * for (const window of windows) {
+ *   const decision = await shouldSendProactiveMessage(
+ *     window.user_id,
+ *     window.phone_number,
+ *     undefined,
+ *     supabase,
+ *     window // Pass snapshot to avoid repeated DB queries
+ *   );
+ * }
  */
 export async function shouldSendProactiveMessage(
   userId: string,
@@ -336,6 +462,23 @@ export async function shouldSendProactiveMessage(
 
 /**
  * Increment proactive message counter after sending
+ *
+ * CRITICAL: Call this immediately after sending a proactive message to track daily limit.
+ * Increments proactive_messages_sent_today and updates last_proactive_sent_at timestamp.
+ *
+ * Counter resets to 0 at midnight (handled by DB cron job).
+ * Max 4 proactive messages per user per day (MAX_PROACTIVE_PER_DAY).
+ *
+ * @param phoneNumber - Phone number to increment counter for
+ * @param supabase - Supabase client (optional, defaults to server client)
+ *
+ * @example
+ * // After sending proactive message
+ * const decision = await shouldSendProactiveMessage(userId, phone);
+ * if (decision.allowed) {
+ *   await sendWhatsAppText(phone, 'Reminder: Meeting in 1 hour');
+ *   await incrementProactiveCounter(phone); // Track it!
+ * }
  */
 export async function incrementProactiveCounter(
   phoneNumber: string,
@@ -372,7 +515,33 @@ export async function incrementProactiveCounter(
 
 /**
  * Find users with messaging windows near expiration
- * Used by cron job to send maintenance messages
+ *
+ * Queries database for windows expiring within threshold (default 4 hours).
+ * Used by cron job to send maintenance messages and keep windows open.
+ *
+ * Calls Supabase RPC function 'find_windows_near_expiration' which filters:
+ * - Windows expiring in < hoursThreshold
+ * - Windows still open (not already expired)
+ * - Users not at daily proactive message limit
+ *
+ * @param hoursThreshold - Hours before expiration to consider (default: 4)
+ * @returns Array of window records with user_id, phone_number, expiration time, hours remaining, and proactive count
+ *
+ * @example
+ * // Cron job: Find windows expiring soon
+ * const expiringWindows = await findWindowsNearExpiration(4);
+ * for (const window of expiringWindows) {
+ *   const decision = await shouldSendProactiveMessage(
+ *     window.user_id,
+ *     window.phone_number,
+ *     undefined,
+ *     supabase,
+ *     window // Pass as snapshot
+ *   );
+ *   if (decision.allowed) {
+ *     await sendMaintenanceMessage(window.phone_number);
+ *   }
+ * }
  */
 export async function findWindowsNearExpiration(
   hoursThreshold: number = WINDOW_MAINTENANCE_THRESHOLD_HOURS
@@ -401,7 +570,39 @@ export async function findWindowsNearExpiration(
 
 /**
  * Schedule a follow-up message to maintain the messaging window
- * This should be called proactively before window expires
+ *
+ * Schedules a maintenance message 4 hours before window expires to keep it open.
+ * This prevents window from closing and requiring paid template messages.
+ *
+ * Uses scheduleFollowUp to create deferred task with 'window_maintenance' type.
+ * Only schedules if maintenance time is in the future (delayMinutes > 0).
+ *
+ * Strategy: Send friendly check-in message before window closes to prompt user response,
+ * which resets the 24h window.
+ *
+ * @param userId - User ID for follow-up record
+ * @param conversationId - Conversation ID for follow-up record
+ * @param windowExpiresAt - When the current messaging window expires
+ *
+ * @example
+ * // After user sends message, schedule maintenance for their window
+ * const window = await getMessagingWindow(phoneNumber);
+ * if (window.isOpen && window.expiresAt) {
+ *   await scheduleWindowMaintenance(
+ *     userId,
+ *     conversationId,
+ *     window.expiresAt
+ *   );
+ * }
+ *
+ * @example
+ * // Followup handler for window_maintenance type
+ * if (followup.payload.type === 'window_maintenance') {
+ *   await sendWhatsAppText(
+ *     phone,
+ *     '¿Cómo va todo? 👋' // Friendly check-in to prompt response
+ *   );
+ * }
  */
 export async function scheduleWindowMaintenance(
   userId: string,

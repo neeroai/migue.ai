@@ -1,3 +1,13 @@
+/**
+ * @file Google Calendar Integration
+ * @description OAuth token management with 60s safety buffer, automatic retry on 401, Google Meet conferencing support, and event persistence
+ * @module lib/google-calendar
+ * @exports GoogleEventTime, GoogleEventAttendee, CalendarEventInput, CalendarEventResult, createCalendarEventForUser
+ * @see https://developers.google.com/calendar/api/v3/reference/events/insert
+ * @date 2026-02-07 19:25
+ * @updated 2026-02-07 19:25
+ */
+
 import { fetchCalendarCredential, updateAccessToken, recordCalendarEvent } from './calendar-store'
 
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
@@ -123,6 +133,26 @@ async function postGoogleEvent(accessToken: string, input: CalendarEventInput) {
   return (await res.json()) as Record<string, any>
 }
 
+/**
+ * Creates Google Calendar event with automatic OAuth token refresh and retry logic
+ * Uses 60s safety buffer before token expiry, retries once on 401 with fresh token, records to database after success
+ *
+ * @param userId - User UUID to fetch credentials for
+ * @param input - Event details with summary, start/end times, optional attendees, location, Google Meet conferencing
+ * @returns Event result with provider, external ID, HTML link, meeting URL, start/end timestamps
+ * @throws {Error} Missing credentials, token refresh failure, or API error
+ *
+ * @example
+ * ```ts
+ * const result = await createCalendarEventForUser('user-123', {
+ *   summary: 'Team Meeting',
+ *   start: { dateTime: '2026-02-08T15:00:00-05:00', timeZone: 'America/Bogota' },
+ *   end: { dateTime: '2026-02-08T16:00:00-05:00', timeZone: 'America/Bogota' },
+ *   conferencing: 'google_meet'
+ * });
+ * // result: { provider: 'google', externalId: 'abc123', meetingUrl: 'https://meet.google.com/...' }
+ * ```
+ */
 export async function createCalendarEventForUser(
   userId: string,
   input: CalendarEventInput

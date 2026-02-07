@@ -1,3 +1,13 @@
+/**
+ * @file Meeting Scheduling
+ * @description AI-powered meeting scheduling with natural language parsing, timezone handling (default: America/Bogota UTC-5), and discriminated union outcomes
+ * @module lib/scheduling
+ * @exports SchedulingOutcome, SchedulingRequestOptions, scheduleMeetingFromIntent
+ * @see https://sdk.vercel.ai/docs/ai-sdk-core/generating-text
+ * @date 2026-02-07 19:20
+ * @updated 2026-02-07 19:20
+ */
+
 import { generateText, type ModelMessage } from 'ai'
 import { models } from './ai/providers'
 import { logger } from './logger'
@@ -119,6 +129,24 @@ function formatMissingFields(missing: string[] | undefined) {
   return `Necesito confirmar estos datos antes de agendar:\n${list}`
 }
 
+/**
+ * Extracts meeting details from natural language and validates scheduling request
+ * Uses OpenAI GPT with temperature 0 for deterministic parsing, handles missing fields clarification flow
+ *
+ * @param options - Scheduling request with userId, userMessage, optional conversationHistory, fallbackTimeZone, userName
+ * @returns Discriminated union: scheduled (with ISO times) or needs_clarification or error
+ *
+ * @example
+ * ```ts
+ * const result = await scheduleMeetingFromIntent({
+ *   userId: 'user-123',
+ *   userMessage: 'Reunión mañana 3pm con equipo'
+ * });
+ * if (result.status === 'scheduled') {
+ *   console.log(result.start); // '2026-02-08T15:00:00.000Z'
+ * }
+ * ```
+ */
 export async function scheduleMeetingFromIntent(
   options: SchedulingRequestOptions
 ): Promise<SchedulingOutcome> {

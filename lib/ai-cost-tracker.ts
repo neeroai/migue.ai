@@ -1,13 +1,13 @@
 /**
  * @file ai-cost-tracker.ts
- * @description Multi-provider AI cost tracking (OpenAI, Claude)
+ * @description Multi-provider AI cost tracking (OpenAI, Gemini)
  * @module lib
  * @exports trackUsage, getBudgetStatus, canAffordRequest, CostTracker
  * @date 2026-02-02 11:00
  * @updated 2026-02-02 11:00
  *
  * Features:
- * - Multi-provider tracking (OpenAI, Claude)
+ * - Multi-provider tracking (OpenAI, Gemini)
  * - Real-time usage tracking (token-based)
  * - Daily/monthly budget monitoring
  * - Automatic alerts when limits exceeded
@@ -48,7 +48,7 @@ const ALERT_THRESHOLDS = {
 
 export type UsageRecord = {
   timestamp: Date
-  provider: 'openai' | 'claude'
+  provider: 'openai' | 'gemini'
   model: string
   usage: UsageMetrics
   cost: CostMetrics
@@ -208,6 +208,13 @@ export class CostTracker {
    */
   async ensureHydrated(): Promise<void> {
     await this.hydrateFromDatabase()
+  }
+
+  /**
+   * Check hydration state (useful for cold start gating)
+   */
+  isHydratedState(): boolean {
+    return this.isHydrated
   }
 
   /**
@@ -517,14 +524,14 @@ export function getCostTracker(): CostTracker {
 
 /**
  * Track usage (convenience wrapper)
- * @param provider - AI provider ('openai' | 'claude')
- * @param model - Model name (e.g., 'gpt-4o-mini', 'claude-sonnet-4')
+ * @param provider - AI provider ('openai' | 'gemini')
+ * @param model - Model name (e.g., 'gpt-4o-mini', 'gemini-2.5-flash-lite')
  * @param usage - Usage metrics (tokens)
  * @param cost - Cost metrics (USD)
  * @param context - Optional context (conversationId, userId, messageId)
  */
 export function trackUsage(
-  provider: 'openai' | 'claude',
+  provider: 'openai' | 'gemini',
   model: string,
   usage: UsageMetrics,
   cost: CostMetrics,

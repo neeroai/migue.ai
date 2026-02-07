@@ -1,3 +1,14 @@
+/**
+ * @file WhatsApp Flows Data Exchange
+ * @description Handles encrypted data exchange for WhatsApp Flows with signature validation and session completion
+ * @module app/api/whatsapp/flows
+ * @exports runtime, maxDuration, POST
+ * @runtime edge
+ * @see https://developers.facebook.com/docs/whatsapp/flows
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
+ */
+
 export const runtime = 'edge';
 export const maxDuration = 10;
 

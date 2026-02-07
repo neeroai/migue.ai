@@ -1,6 +1,11 @@
 /**
- * WhatsApp message normalization utilities
- * Converts WhatsApp webhook messages to normalized format
+ * @file WhatsApp Message Normalization
+ * @description Converts WhatsApp webhook messages to normalized format and persists to database with type-safe validation
+ * @module lib/message-normalization
+ * @exports NormalizedMessage, InteractiveReply, whatsAppMessageToNormalized, extractInteractiveReply, persistNormalizedMessage
+ * @see https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
+ * @date 2026-02-07 19:00
+ * @updated 2026-02-07 19:00
  */
 
 import type { WhatsAppMessage, InteractiveContent } from '../types/schemas'
@@ -30,7 +35,17 @@ export interface InteractiveReply {
 }
 
 /**
- * Convert validated WhatsApp message to normalized format
+ * Converts WhatsApp webhook message to normalized format with type-specific content extraction
+ * Supports text, image, audio, video, document, sticker, reaction, order, interactive types
+ *
+ * @param message - Validated WhatsApp message from webhook
+ * @returns Normalized message with content, mediaUrl, timestamp
+ *
+ * @example
+ * ```ts
+ * const normalized = whatsAppMessageToNormalized(webhookMsg);
+ * // normalized: { from: '+57...', type: 'text', content: 'Hello', ... }
+ * ```
  */
 export function whatsAppMessageToNormalized(message: WhatsAppMessage): NormalizedMessage {
   logger.debug('[normalize] Converting WhatsApp message', {
@@ -110,7 +125,18 @@ export function whatsAppMessageToNormalized(message: WhatsAppMessage): Normalize
 }
 
 /**
- * Extract interactive reply details from message
+ * Extracts interactive reply details (button_reply or list_reply) with Zod validation
+ *
+ * @param raw - Unvalidated interactive content from WhatsApp
+ * @returns Reply with id, title, description or null if validation fails
+ *
+ * @example
+ * ```ts
+ * const reply = extractInteractiveReply(message.interactive);
+ * if (reply) {
+ *   console.log(reply.id); // 'btn_confirm'
+ * }
+ * ```
  */
 export function extractInteractiveReply(raw: unknown): InteractiveReply | null {
   // Validate with Zod schema
@@ -138,8 +164,20 @@ export function extractInteractiveReply(raw: unknown): InteractiveReply | null {
 }
 
 /**
- * Persist normalized message to database
- * Returns userId, conversationId, and wasInserted flag (false if duplicate)
+ * Persists normalized message to database with user/conversation upsert and duplicate detection
+ *
+ * @param normalized - Normalized message with 'from' field required
+ * @returns {userId, conversationId, wasInserted} or null if 'from' missing
+ *
+ * @example
+ * ```ts
+ * const result = await persistNormalizedMessage(normalized);
+ * if (result?.wasInserted) {
+ *   console.log('New message stored');
+ * } else {
+ *   console.log('Duplicate message skipped');
+ * }
+ * ```
  */
 export async function persistNormalizedMessage(normalized: NormalizedMessage) {
   if (!normalized?.from) return null
