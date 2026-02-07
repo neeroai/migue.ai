@@ -19,7 +19,7 @@ import { transcribeAudio } from '../../../shared/infra/openai/audio-transcriptio
 import { createProactiveAgent } from './proactive-agent'
 import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from '../domain/cost-tracker'
-import { hasToolIntent } from '../domain/intent'
+import { detectToolIntents, hasToolIntent } from '../domain/intent'
 import { analyzeVisualInput } from './vision-pipeline'
 import {
   sendWhatsAppText,
@@ -56,6 +56,16 @@ function getTrivialResponse(message: string): string | null {
   }
 
   return null
+}
+
+function confirmationQuestionForIntent(intent: 'reminder' | 'schedule' | 'expense'): string {
+  if (intent === 'expense') {
+    return 'Detecté posible información de gasto. ¿Quieres que lo registre ahora?'
+  }
+  if (intent === 'schedule') {
+    return 'Detecté una posible cita/reunión. ¿Quieres que la agende ahora?'
+  }
+  return 'Detecté un posible recordatorio. ¿Quieres que lo cree ahora?'
 }
 
 
@@ -604,7 +614,19 @@ export async function processDocumentMessage(
       })
     }
 
+    const captionHasExplicitToolIntent = hasToolIntent(normalized.content)
+    const extractedIntents = detectToolIntents(visualResult.extractedText)
+
     if (visualResult.toolIntentDetected && visualResult.extractedText) {
+      // Auto-execute tools only when intent is explicit in user caption.
+      // If intent is inferred only from visual content, ask for confirmation first.
+      if (!captionHasExplicitToolIntent && extractedIntents.length > 0) {
+        const confirmation = confirmationQuestionForIntent(extractedIntents[0]!)
+        const responseWithConfirmation = `${visualResult.responseText}\n\n${confirmation}`.slice(0, 1000)
+        await sendTextAndPersist(conversationId, normalized.from, responseWithConfirmation)
+        return
+      }
+
       // Avoid duplicate typing managers: stop current one before delegating to tool pathway.
       if (typingManager) {
         await typingManager.stop()
