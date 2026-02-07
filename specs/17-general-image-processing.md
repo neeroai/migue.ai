@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`done`
 
 ## Objetivo
 
@@ -111,3 +111,9 @@ Archivo: `src/modules/ai/application/processing.ts`
 - Agregar pruebas unitarias de prompts por clase visual.
 - Agregar prueba de integracion para ruta `toolIntentDetected` desde imagen/documento.
 - Definir politica de redaccion de PII para inputs tipo `ID_FORM`.
+
+## Cierre
+
+- Fecha cierre: `2026-02-07`
+- Resultado: pipeline multimodal activo en produccion, validado con pruebas manuales y sin regresion del error de payload de WhatsApp.
+- Nota: los pendientes quedan como backlog para una siguiente iteracion.
