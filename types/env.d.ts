@@ -16,6 +16,7 @@ declare namespace NodeJS {
     NODE_ENV?: 'development' | 'test' | 'production';
     LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
     AGENT_EVENT_LEDGER_ENABLED?: string;
+    LEGACY_ROUTING_ENABLED?: string;
   }
 }
 

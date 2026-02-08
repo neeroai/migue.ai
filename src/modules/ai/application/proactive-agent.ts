@@ -33,6 +33,7 @@ import {
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
 import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
 import type { AgentContextSnapshot } from './agent-context-builder'
+import { isLegacyRoutingEnabled } from './runtime-flags'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -344,7 +345,7 @@ export async function respond(
   const fallbackModel = fallbackSelection.modelName
   const policyContext: ToolPolicyContext = { userId, pathway }
 
-  const toolsDefinition = isToolMessage ? {
+  const toolsDefinition = (!isLegacyRoutingEnabled() || isToolMessage) ? {
       create_reminder: tool({
         description: 'Crea recordatorio cuando usuario dice: recuérdame, no olvides, tengo que, avísame',
         // @ts-expect-error - AI SDK tool() type inference issue: ZodObject not assignable to FlexibleSchema<never>

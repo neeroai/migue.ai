@@ -23,12 +23,20 @@ function normalized(overrides: Partial<NormalizedMessage>): NormalizedMessage {
 }
 
 describe('Input Router', () => {
+  it('routes text as TEXT_SIMPLE by default (llm-first, legacy disabled)', () => {
+    delete process.env.LEGACY_ROUTING_ENABLED
+    const result = classifyInput(normalized({ content: 'recuérdame pagar la luz mañana' }))
+    expect(result.inputClass).toBe('TEXT_SIMPLE')
+  })
+
   it('classifies plain text as TEXT_SIMPLE', () => {
+    process.env.LEGACY_ROUTING_ENABLED = 'true'
     const result = classifyInput(normalized({ content: 'hola, como vas?' }))
     expect(result.inputClass).toBe('TEXT_SIMPLE')
   })
 
   it('classifies tool intent text as TEXT_TOOL_INTENT', () => {
+    process.env.LEGACY_ROUTING_ENABLED = 'true'
     const result = classifyInput(normalized({ content: 'recuérdame pagar la luz mañana' }))
     expect(result.inputClass).toBe('TEXT_TOOL_INTENT')
   })

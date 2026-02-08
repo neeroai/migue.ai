@@ -50,6 +50,7 @@ const envSchema = z
     .enum(['debug', 'info', 'warn', 'error'])
     .default('info'),
   AGENT_EVENT_LEDGER_ENABLED: z.string().optional(),
+  LEGACY_ROUTING_ENABLED: z.string().optional(),
 
   // Cron Authentication
   CRON_SECRET: z.string().min(16).optional(),

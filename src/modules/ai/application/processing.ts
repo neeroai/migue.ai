@@ -19,6 +19,7 @@ import { detectToolIntents, hasToolIntent } from '../domain/intent'
 import { analyzeVisualInput } from './vision-pipeline'
 import { type TextPathway } from './memory-policy'
 import { executeAgentTurn } from './agent-turn-orchestrator'
+import { isLegacyRoutingEnabled } from './runtime-flags'
 import {
   sendWhatsAppText,
   createTypingManager,
@@ -143,11 +144,13 @@ export async function processMessageWithAI(
       await markAsRead(messageId)
     }
 
-    // Early-exit for trivial messages (no AI call)
-    const trivialResponse = getTrivialResponse(userMessage)
-    if (trivialResponse) {
-      await sendTextAndPersist(conversationId, userPhone, trivialResponse)
-      return
+    // Legacy shortcut: canned replies for trivial messages.
+    if (isLegacyRoutingEnabled()) {
+      const trivialResponse = getTrivialResponse(userMessage)
+      if (trivialResponse) {
+        await sendTextAndPersist(conversationId, userPhone, trivialResponse)
+        return
+      }
     }
 
     if (shouldShowTyping) {

@@ -35,6 +35,9 @@ Migración a runtime LLM-first multimodelo con catálogo versionado y contexto u
 - `AgentTurnOrchestrator`:
   - entrypoint único del turno (`context -> model/tools -> response normalization`).
   - integrado en `processMessageWithAI`.
+- Heurísticas legacy detrás de flag:
+  - `LEGACY_ROUTING_ENABLED` controla split regex de intents y respuestas triviales canned.
+  - default `false` para priorizar camino LLM-first.
 
 ## Siguiente incremento
 Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.
