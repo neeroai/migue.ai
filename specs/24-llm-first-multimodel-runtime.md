@@ -23,6 +23,9 @@ Convertir el runtime a enfoque LLM-first multimodelo, donde el backend no decide
 - Catálogo versionado en `docs/model-capability-catalog.v1.json`.
 - `model-router` alineado a perfiles multimodelo (`default_chat`, `tool_execution`, `long_context`, `rich_vision`).
 - Selección primaria y fallback por perfil/capabilidad/costo.
+- `AgentContextBuilder` unificado en `src/modules/ai/application/agent-context-builder.ts`:
+  - centraliza `history + semantic memory + memory profile` antes del turno LLM.
+  - integra métricas `memory.*` desde una sola capa.
 
 ## Gaps abiertos
 - Migración completa para retirar heurísticas de intención legacy en `input-router`/`processing`.

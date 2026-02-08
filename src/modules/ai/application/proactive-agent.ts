@@ -32,6 +32,7 @@ import {
 } from './memory-policy'
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
 import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
+import type { AgentContextSnapshot } from './agent-context-builder'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -243,7 +244,12 @@ export async function respond(
   userMessage: string,
   userId: string,
   history: ModelMessage[],
-  context?: { conversationId?: string; messageId?: string; pathway?: TextPathway }
+  context?: {
+    conversationId?: string
+    messageId?: string
+    pathway?: TextPathway
+    agentContext?: AgentContextSnapshot
+  }
 ): Promise<{
   text: string
   usage: { inputTokens: number; outputTokens: number; totalTokens: number }
@@ -253,7 +259,6 @@ export async function respond(
 }> {
   const pathway = context?.pathway ?? 'default'
   const readPolicy = resolveMemoryReadPolicy(pathway)
-  const memoryReadStart = Date.now()
 
   const hasReminder = hasReminderKeywords(userMessage)
   const hasMeeting = hasMeetingKeywords(userMessage)
@@ -261,78 +266,15 @@ export async function respond(
   const isToolMessage = hasReminder || hasMeeting || hasExpense
 
   const {
-    searchMemories,
-    getMemoryProfile,
     containsPersonalFact,
     storeMemory,
     extractProfileUpdates,
     upsertMemoryProfile,
-    buildMemoryProfileSummary,
   } = await import('../domain/memory')
 
-  let memoryContext = ''
-  let memoryHit = 0
-  let profileHit = 0
-
-  const profile = readPolicy.includeProfile ? await getMemoryProfile(userId) : null
-  const profileSummary = buildMemoryProfileSummary(profile)
-  if (profile) {
-    profileHit = 1
-    memoryContext += `\n\n# USER PROFILE (stable preferences):\n- ${profileSummary || 'perfil disponible sin detalles estructurados'}\n`
-  }
-
-  if (readPolicy.semanticEnabled && readPolicy.semanticTopK > 0) {
-    const memories = await searchMemories(
-      userId,
-      userMessage,
-      readPolicy.semanticTopK,
-      readPolicy.semanticThreshold
-    )
-    if (memories.length > 0) {
-      memoryHit = 1
-      memoryContext = `\n\n# USER MEMORY (things you remember about this user):\n${memories
-        .map((m: any) => `- ${m.content} (${m.type})`)
-        .join('\n')}\n${memoryContext}`
-
-      logger.info('[ProactiveAgent] Memories injected', {
-        metadata: {
-          userId,
-          memoriesCount: memories.length,
-          topSimilarity: memories[0]?.similarity || 0,
-        },
-      })
-    }
-  } else if (isToolMessage) {
-    logger.info('[ProactiveAgent] Memory search skipped for tool message', {
-      metadata: { userId, hasReminder, hasMeeting, hasExpense },
-    })
-  } else {
-    logger.info('[ProactiveAgent] Semantic retrieval skipped by read policy', {
-      metadata: { userId, pathway },
-    })
-  }
-
-  emitSlaMetric(SLA_METRICS.MEMORY_READ_MS, {
-    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-    userId,
-    value: Date.now() - memoryReadStart,
-    messageType: 'text',
-    pathway,
-  })
-  emitSlaMetric(SLA_METRICS.MEMORY_HIT_RATIO, {
-    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-    userId,
-    value: memoryHit,
-    messageType: 'text',
-    pathway,
-  })
-  emitSlaMetric(SLA_METRICS.PROFILE_HIT_RATIO, {
-    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-    userId,
-    value: profileHit,
-    messageType: 'text',
-    pathway,
-  })
+  const memoryContext = context?.agentContext?.memoryContext ?? ''
+  const profileSummary = context?.agentContext?.profileSummary ?? ''
+  const hasAnyContext = context?.agentContext?.hasAnyContext ?? history.length > 0
 
   const useShortPrompt = userMessage.length < 120
   const recallQuestion = isMemoryRecallQuestion(userMessage)
@@ -341,8 +283,7 @@ export async function respond(
     : ''
   const systemPrompt = generateSystemPrompt(useShortPrompt) + memoryContext + recallGuard
 
-  const maxHistory = readPolicy.historyLimit
-  const trimmedHistory = history.slice(-maxHistory)
+  const trimmedHistory = context?.agentContext?.modelHistory ?? history.slice(-readPolicy.historyLimit)
 
   const messages: ModelMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -654,7 +595,7 @@ export async function respond(
   if (recallQuestion) {
     text = sanitizeMemoryContractResponse(
       text,
-      history.length > 0 || !!profile || memoryHit > 0,
+      hasAnyContext,
       profileSummary ? `Lo que sé de ti: ${profileSummary}.` : ''
     )
     if (text.length > 280) {

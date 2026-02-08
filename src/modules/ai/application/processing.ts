@@ -11,9 +11,7 @@
 
 import { logger } from '../../../shared/observability/logger'
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
-import { getConversationHistory, historyToModelMessages, trimHistoryByChars } from '../../conversation/application/utils'
 import { insertOutboundMessage, updateInboundMessageByWaId } from '../../../shared/infra/db/persist'
-import { getSupabaseServerClient } from '../../../shared/infra/db/supabase'
 // PROVIDER_COSTS removed - cost now comes from AI response
 import { transcribeAudio } from '../../../shared/infra/openai/audio-transcription'
 import { createProactiveAgent } from './proactive-agent'
@@ -21,7 +19,8 @@ import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from '../domain/cost-tracker'
 import { detectToolIntents, hasToolIntent } from '../domain/intent'
 import { analyzeVisualInput } from './vision-pipeline'
-import { resolveMemoryReadPolicy, type TextPathway } from './memory-policy'
+import { type TextPathway } from './memory-policy'
+import { buildAgentContext } from './agent-context-builder'
 import {
   sendWhatsAppText,
   createTypingManager,
@@ -32,9 +31,6 @@ import {
 import type { NormalizedMessage } from '@/src/modules/webhook/domain/message-normalization'
 
 const proactiveAgent = createProactiveAgent()
-const supabaseClient = getSupabaseServerClient()
-
-const HISTORY_CHAR_BUDGET = 4000
 
 type ProcessMessageOptions = {
   pathway?: TextPathway
@@ -217,20 +213,23 @@ export async function processMessageWithAI(
       return
     }
 
-    // Get conversation history (adaptive limit to reduce tokens for long messages)
-    logger.debug('[AI] Getting conversation history', {
+    logger.debug('[AI] Building unified agent context', {
       conversationId,
       userId,
     })
-    const historyLimit = resolveMemoryReadPolicy(pathway).historyLimit
-    const history = await getConversationHistory(conversationId, historyLimit, supabaseClient)
-    const trimmedHistory = trimHistoryByChars(history, HISTORY_CHAR_BUDGET)
+    const agentContext = await buildAgentContext({
+      conversationId,
+      userId,
+      userMessage,
+      pathway,
+      requestId: messageId,
+    })
 
     let response: string
     let agentName: string
 
     // Use Vercel AI SDK (primary provider)
-    const modelHistory = historyToModelMessages(trimmedHistory)
+    const modelHistory = agentContext.modelHistory
     logger.debug('[AI] Using Vercel AI SDK with conversation history', {
       conversationId,
       userId,
@@ -246,6 +245,7 @@ export async function processMessageWithAI(
       conversationId,
       messageId,
       pathway,
+      agentContext,
     })
     response = (aiResponse.text ?? '').trim()
     if (!response) {
