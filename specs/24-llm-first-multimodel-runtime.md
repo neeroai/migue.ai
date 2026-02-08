@@ -1,7 +1,7 @@
 # 24 - llm-first-multimodel-runtime
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/modules/ai/*`
 
@@ -22,6 +22,7 @@ Migración a runtime LLM-first multimodelo con catálogo versionado y contexto u
 - Typecheck en verde.
 - Tests unit/integration relevantes de la feature.
 - Logs estructurados en entorno real.
+- Validación productiva WhatsApp (2026-02-08): flujo `image -> confirmación explícita -> track_expense` sin mensajes placeholder y con respuesta final real.
 
 ## Riesgos y gaps
 - Completar e2e faltantes por feature.
@@ -44,6 +45,9 @@ Migración a runtime LLM-first multimodelo con catálogo versionado y contexto u
 - Confirmación de `rich_input` gobernada por policy:
   - `processDocumentMessage` delega al turno agente sin heurística de confirmación por intent detectado.
   - `tool-governance` decide `confirm/allow` en `rich_input` con base en `explicitConsent`.
+- UX final de rich input:
+  - se eliminaron mensajes placeholder (`Recibí tu archivo...`, `está tardando...`) en `input-orchestrator`.
+  - fallback de `tool-calls` ahora prioriza outcome real de tool para evitar respuesta genérica.
 
 ## Siguiente incremento
-Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.
+Mantener cobertura E2E multimodal y observabilidad de latencia por pathway.

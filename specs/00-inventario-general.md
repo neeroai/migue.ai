@@ -28,10 +28,10 @@
 | 18 | Agentic Core Runtime | YELLOW | `src/modules/agent/*` | Runtime durable parcial |
 | 19 | Agent Events And Run Ledger | YELLOW | `src/modules/agent/infra/*` | Base durable activa |
 | 20 | Personalization And Memory Contract | YELLOW | `src/modules/ai/domain/memory.ts` | Read/write policy por pathway |
-| 21 | Tool Governance And Policies | YELLOW | `src/modules/ai/application/tool-governance.ts` | Policy engine activo |
+| 21 | Tool Governance And Policies | GREEN | `src/modules/ai/application/tool-governance.ts` | Policy `confirm/allow/deny` validada en producción |
 | 22 | Latency And Fast-Path Architecture | YELLOW | `src/modules/webhook/*` + `src/modules/ai/*` | SLO medidos, falta dashboard externo |
 | 23 | Observability And E2E Readiness | YELLOW | `src/shared/observability/*` + `tests/integration/*` | E2E base + runbook |
-| 24 | LLM-First Multimodel Runtime | YELLOW | `src/modules/ai/*` | Base creada, migración en curso |
+| 24 | LLM-First Multimodel Runtime | GREEN | `src/modules/ai/*` | Runtime LLM-first y flujo rich input validados en producción |
 
 ## Referencias obligatorias
 - `architecture.md`

@@ -1,7 +1,7 @@
 # 21 - tool-governance-and-policies
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/modules/ai/application/tool-governance.ts`
 
@@ -22,10 +22,11 @@ Gobierno de herramientas con decisiones allow/confirm/deny y ejecución segura.
 - Typecheck en verde.
 - Tests unit/integration relevantes de la feature.
 - Logs estructurados en entorno real.
+- Validación productiva WhatsApp (2026-02-08): `track_expense` en `rich_input` ejecuta `confirm/allow` vía `explicitConsent`, con persistencia real y respuesta final al usuario.
 
 ## Riesgos y gaps
 - Completar e2e faltantes por feature.
 - Consolidar dashboards/alertas externas donde aplique.
 
 ## Siguiente incremento
-Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.
+Expandir cobertura de policies para tools nuevas (`web_search`, `send_whatsapp_message`) con tests de riesgo y consentimiento.
