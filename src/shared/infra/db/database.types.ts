@@ -1078,24 +1078,33 @@ export type Database = {
       users: {
         Row: {
           created_at: string
+          email: string | null
           id: string
           name: string | null
+          onboarding_completed_at: string | null
+          onboarding_version: string
           phone_number: string
           preferences: Json | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          email?: string | null
           id?: string
           name?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_version?: string
           phone_number: string
           preferences?: Json | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          email?: string | null
           id?: string
           name?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_version?: string
           phone_number?: string
           preferences?: Json | null
           updated_at?: string

@@ -51,6 +51,8 @@ const envSchema = z
     .default('info'),
   AGENT_EVENT_LEDGER_ENABLED: z.string().optional(),
   LEGACY_ROUTING_ENABLED: z.string().optional(),
+  SIGNUP_FLOW_ENABLED: z.string().optional(),
+  SIGNUP_FLOW_ID: z.string().optional(),
 
   // Cron Authentication
   CRON_SECRET: z.string().min(16).optional(),

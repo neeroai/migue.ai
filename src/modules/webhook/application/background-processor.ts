@@ -17,6 +17,7 @@ import { updateMessagingWindow } from '../../messaging-window/application/servic
 import { processInputByClass } from './input-orchestrator';
 import { isAgentEventLedgerEnabled } from '../../agent/application/feature-flags';
 import { enqueueAgentEvent } from '../../agent/infra/ledger';
+import { ensureSignupOnFirstContact } from '../../onboarding/application/service';
 
 /**
  * Background webhook processing (fire-and-forget)
@@ -180,6 +181,24 @@ export async function processWebhookInBackground(
       }
 
       normalized.type = 'text';
+    }
+
+    if (normalized.from) {
+      const signupGate = await ensureSignupOnFirstContact({
+        userId,
+        phoneNumber: normalized.from,
+        conversationId,
+        requestId,
+      });
+      if (signupGate.blocked) {
+        logger.info('[background] Onboarding gate active, skipping AI turn', {
+          requestId,
+          conversationId,
+          userId,
+          metadata: { reason: signupGate.reason, type: normalized.type },
+        });
+        return;
+      }
     }
 
     try {

@@ -361,6 +361,16 @@ async function handleFlowInit(
 ): Promise<FlowDataExchangeResponse> {
   // Return initial screen data based on flow type
   switch (session.flow_id) {
+    case 'user_signup_flow':
+      return {
+        version: '3.0',
+        screen: 'BASIC_INFO',
+        data: {
+          title: 'Completa tu registro',
+          required_fields: ['name', 'email'],
+        },
+      };
+
     case 'lead_generation_flow':
       return {
         version: '3.0',
@@ -419,6 +429,77 @@ async function handleDataExchange(
     .eq('flow_token', session.flow_token);
 
   // Determine next screen based on current screen and data
+  if (session.flow_id === 'user_signup_flow') {
+    if (screen === 'BASIC_INFO') {
+      const rawName = typeof data.name === 'string' ? data.name.trim() : '';
+      const rawEmail = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
+
+      const errors: Record<string, string> = {};
+      if (!isValidDisplayName(rawName)) {
+        errors.name = 'Ingresa un nombre válido (2-60 caracteres).';
+      }
+      if (!isValidEmail(rawEmail)) {
+        errors.email = 'Ingresa un email válido.';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        return {
+          version: '3.0',
+          screen: 'BASIC_INFO',
+          data: {
+            ...data,
+            errors,
+          },
+        };
+      }
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: rawName,
+          email: rawEmail,
+          onboarding_version: 'v1',
+          onboarding_completed_at: new Date().toISOString(),
+        } as any)
+        .eq('id', session.user_id);
+
+      if (error) {
+        logger.error('[WhatsApp Flow] Failed to persist signup data', error, {
+          metadata: {
+            userId: session.user_id,
+            flowToken: session.flow_token,
+          },
+        });
+        return {
+          version: '3.0',
+          screen: 'BASIC_INFO',
+          data: {
+            ...data,
+            errors: {
+              general: 'No pude guardar tus datos. Intenta de nuevo.',
+            },
+          },
+        };
+      }
+
+      return {
+        version: '3.0',
+        screen: 'SUCCESS',
+        data: {
+          message: 'Registro completado. Ya puedes continuar.',
+        },
+      };
+    }
+
+    return {
+      version: '3.0',
+      screen: 'BASIC_INFO',
+      data: {
+        error: 'Pantalla no soportada para registro.',
+      },
+    };
+  }
+
   switch (screen) {
     case 'LEAD_FORM':
       // Validate lead data and move to confirmation
@@ -506,6 +587,16 @@ export async function completeFlowSession(flowToken: string): Promise<void> {
 }
 
 // Helper functions
+function isValidDisplayName(value: string): boolean {
+  if (!value || value.length < 2 || value.length > 60) return false;
+  return !/[\u0000-\u001F\u007F]/.test(value);
+}
+
+function isValidEmail(value: string): boolean {
+  if (!value || value.length > 254) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function validateLeadData(data: Record<string, unknown>): boolean {
   return !!(data.name && data.email && data.phone);
 }
@@ -544,6 +635,13 @@ async function saveFeedback(userId: string, data: Record<string, unknown>): Prom
 
 // Pre-defined flow templates
 export const FLOW_TEMPLATES = {
+  USER_SIGNUP: {
+    id: 'user_signup_flow',
+    name: 'User Signup',
+    description: 'Capture basic onboarding fields for new WhatsApp users',
+    cta: 'Completar registro',
+    bodyText: 'Completa tu registro con nombre y email para personalizar tu asistente.',
+  },
   LEAD_GENERATION: {
     id: 'lead_generation_flow',
     name: 'Lead Generation',
