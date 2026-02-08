@@ -23,6 +23,14 @@ import {
 } from '../domain/model-router'
 import { canAffordFallback } from '../domain/fallback'
 import { getBudgetStatus } from '../domain/cost-tracker'
+import {
+  isMemoryRecallQuestion,
+  resolveMemoryReadPolicy,
+  sanitizeMemoryContractResponse,
+  shouldWriteMemory,
+  type TextPathway,
+} from './memory-policy'
+import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -234,7 +242,7 @@ export async function respond(
   userMessage: string,
   userId: string,
   history: ModelMessage[],
-  context?: { conversationId?: string; messageId?: string }
+  context?: { conversationId?: string; messageId?: string; pathway?: TextPathway }
 ): Promise<{
   text: string
   usage: { inputTokens: number; outputTokens: number; totalTokens: number }
@@ -242,25 +250,48 @@ export async function respond(
   finishReason: string
   toolCalls: number
 }> {
-  // OPTIMIZATION P0.2: Lazy memory search (only for conversational queries)
-  // Skip memory search for tool-heavy messages (reminders, expenses, scheduling)
-  // Reduces latency by 200-600ms on cache miss
+  const pathway = context?.pathway ?? 'default'
+  const readPolicy = resolveMemoryReadPolicy(pathway)
+  const memoryReadStart = Date.now()
+
   const hasReminder = hasReminderKeywords(userMessage)
   const hasMeeting = hasMeetingKeywords(userMessage)
   const hasExpense = hasExpenseKeywords(userMessage)
   const isToolMessage = hasReminder || hasMeeting || hasExpense
 
+  const {
+    searchMemories,
+    getMemoryProfile,
+    containsPersonalFact,
+    storeMemory,
+    extractProfileUpdates,
+    upsertMemoryProfile,
+    buildMemoryProfileSummary,
+  } = await import('../domain/memory')
+
   let memoryContext = ''
+  let memoryHit = 0
+  let profileHit = 0
 
-  // Only search memories for conversational messages (not tool invocations)
-  if (!isToolMessage) {
-    const { searchMemories } = await import('../domain/memory')
-    const memories = await searchMemories(userId, userMessage, 3) // Top 3 relevant memories
+  const profile = readPolicy.includeProfile ? await getMemoryProfile(userId) : null
+  const profileSummary = buildMemoryProfileSummary(profile)
+  if (profile) {
+    profileHit = 1
+    memoryContext += `\n\n# USER PROFILE (stable preferences):\n- ${profileSummary || 'perfil disponible sin detalles estructurados'}\n`
+  }
 
+  if (readPolicy.semanticEnabled && readPolicy.semanticTopK > 0) {
+    const memories = await searchMemories(
+      userId,
+      userMessage,
+      readPolicy.semanticTopK,
+      readPolicy.semanticThreshold
+    )
     if (memories.length > 0) {
+      memoryHit = 1
       memoryContext = `\n\n# USER MEMORY (things you remember about this user):\n${memories
         .map((m: any) => `- ${m.content} (${m.type})`)
-        .join('\n')}\n`
+        .join('\n')}\n${memoryContext}`
 
       logger.info('[ProactiveAgent] Memories injected', {
         metadata: {
@@ -270,16 +301,46 @@ export async function respond(
         },
       })
     }
-  } else {
+  } else if (isToolMessage) {
     logger.info('[ProactiveAgent] Memory search skipped for tool message', {
       metadata: { userId, hasReminder, hasMeeting, hasExpense },
     })
+  } else {
+    logger.info('[ProactiveAgent] Semantic retrieval skipped by read policy', {
+      metadata: { userId, pathway },
+    })
   }
 
-  const useShortPrompt = userMessage.length < 120
-  const systemPrompt = generateSystemPrompt(useShortPrompt) + memoryContext
+  emitSlaMetric(SLA_METRICS.MEMORY_READ_MS, {
+    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+    userId,
+    value: Date.now() - memoryReadStart,
+    messageType: 'text',
+    pathway,
+  })
+  emitSlaMetric(SLA_METRICS.MEMORY_HIT_RATIO, {
+    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+    userId,
+    value: memoryHit,
+    messageType: 'text',
+    pathway,
+  })
+  emitSlaMetric(SLA_METRICS.PROFILE_HIT_RATIO, {
+    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+    userId,
+    value: profileHit,
+    messageType: 'text',
+    pathway,
+  })
 
-  const maxHistory = userMessage.length > 600 ? 6 : userMessage.length > 200 ? 8 : 12
+  const useShortPrompt = userMessage.length < 120
+  const recallQuestion = isMemoryRecallQuestion(userMessage)
+  const recallGuard = recallQuestion
+    ? '\n\n# MEMORY CONTRACT\nSi el usuario pregunta por historial/memoria, responde con lo que sí tienes de conversación/perfil/memoria. No digas que no tienes acceso al historial cuando sí hay contexto.'
+    : ''
+  const systemPrompt = generateSystemPrompt(useShortPrompt) + memoryContext + recallGuard
+
+  const maxHistory = readPolicy.historyLimit
   const trimmedHistory = history.slice(-maxHistory)
 
   const messages: ModelMessage[] = [
@@ -535,10 +596,41 @@ export async function respond(
     }
   )
 
-  // WRITE: Store personal facts in memory (fire-and-forget)
-  const { containsPersonalFact, storeMemory } = await import('../domain/memory')
-  if (containsPersonalFact(userMessage)) {
+  // WRITE policy: persist useful facts/preferences and completed actions only.
+  const hasPersonalFact = containsPersonalFact(userMessage)
+  if (shouldWriteMemory(userMessage, hasPersonalFact, toolCallCount)) {
     storeMemory(userId, userMessage, 'fact')
+    emitSlaMetric(SLA_METRICS.MEMORY_WRITE_COUNT, {
+      ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+      userId,
+      value: 1,
+      messageType: 'text',
+      pathway,
+    })
+  }
+
+  const profileUpdates = extractProfileUpdates(userMessage)
+  if (Object.keys(profileUpdates).length > 0) {
+    void upsertMemoryProfile(userId, profileUpdates)
+    emitSlaMetric(SLA_METRICS.MEMORY_WRITE_COUNT, {
+      ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+      userId,
+      value: 1,
+      messageType: 'text',
+      pathway,
+      extra: { write_type: 'profile' },
+    })
+  }
+
+  if (recallQuestion) {
+    text = sanitizeMemoryContractResponse(
+      text,
+      history.length > 0 || !!profile || memoryHit > 0,
+      profileSummary ? `Lo que sé de ti: ${profileSummary}.` : ''
+    )
+    if (text.length > 280) {
+      text = text.slice(0, 277).trimEnd() + '...'
+    }
   }
 
   return {

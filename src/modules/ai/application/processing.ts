@@ -21,6 +21,7 @@ import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from '../domain/cost-tracker'
 import { detectToolIntents, hasToolIntent } from '../domain/intent'
 import { analyzeVisualInput } from './vision-pipeline'
+import { resolveMemoryReadPolicy, type TextPathway } from './memory-policy'
 import {
   sendWhatsAppText,
   createTypingManager,
@@ -34,8 +35,6 @@ const proactiveAgent = createProactiveAgent()
 const supabaseClient = getSupabaseServerClient()
 
 const HISTORY_CHAR_BUDGET = 4000
-
-type TextPathway = 'default' | 'text_fast_path' | 'tool_intent' | 'rich_input'
 
 type ProcessMessageOptions = {
   pathway?: TextPathway
@@ -223,9 +222,7 @@ export async function processMessageWithAI(
       conversationId,
       userId,
     })
-    const historyLimit = pathway === 'text_fast_path'
-      ? (userMessage.length > 300 ? 6 : 8)
-      : userMessage.length > 600 ? 8 : userMessage.length > 200 ? 12 : 15
+    const historyLimit = resolveMemoryReadPolicy(pathway).historyLimit
     const history = await getConversationHistory(conversationId, historyLimit, supabaseClient)
     const trimmedHistory = trimHistoryByChars(history, HISTORY_CHAR_BUDGET)
 
@@ -248,6 +245,7 @@ export async function processMessageWithAI(
     const aiResponse = await proactiveAgent.respond(userMessage, userId, modelHistory, {
       conversationId,
       messageId,
+      pathway,
     })
     response = (aiResponse.text ?? '').trim()
     if (!response) {

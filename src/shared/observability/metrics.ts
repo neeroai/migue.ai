@@ -6,6 +6,10 @@ export const SLA_METRICS = {
   RICH_INPUT_TIMEOUT_COUNT: 'sla.rich_input_timeout_count',
   TYPING_START_MS: 'sla.typing_start_ms',
   SLO_VIOLATION_COUNT: 'sla.slo_violation_count',
+  MEMORY_READ_MS: 'memory.read_ms',
+  MEMORY_WRITE_COUNT: 'memory.write_count',
+  MEMORY_HIT_RATIO: 'memory.hit_ratio',
+  PROFILE_HIT_RATIO: 'memory.profile_hit_ratio',
 } as const
 
 export type SlaMetricName = typeof SLA_METRICS[keyof typeof SLA_METRICS]

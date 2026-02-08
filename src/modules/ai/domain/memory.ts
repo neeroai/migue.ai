@@ -24,7 +24,19 @@ type MemorySearchResult = {
   created_at: string
 }
 
+export type MemoryProfile = {
+  user_id: string
+  display_name: string | null
+  tone_preference: string | null
+  language_preference: string | null
+  timezone: string | null
+  goals: Record<string, unknown>
+  constraints: Record<string, unknown>
+  updated_at: string
+}
+
 const memoryCache = new Map<string, { results: MemorySearchResult[]; timestamp: number }>()
+const profileCache = new Map<string, { profile: MemoryProfile | null; timestamp: number }>()
 const MEMORY_CACHE_TTL_MS = 300_000 // 5 minutes
 
 /**
@@ -60,7 +72,8 @@ export async function embedText(text: string): Promise<number[]> {
 export async function searchMemories(
   userId: string,
   query: string,
-  limit: number = 5
+  limit: number = 5,
+  threshold: number = 0.3
 ): Promise<MemorySearchResult[]> {
   try {
     // Check cache first
@@ -84,7 +97,7 @@ export async function searchMemories(
     const { data, error } = await supabase.rpc('search_user_memory', {
       query_embedding: queryEmbedding as any,
       target_user_id: userId,
-      match_threshold: 0.3, // 30% similarity minimum
+      match_threshold: threshold,
       match_count: limit,
     })
 
@@ -163,6 +176,118 @@ export function storeMemory(
       logger.error('[Memory] Store error', error)
     }
   })()
+}
+
+/**
+ * Reads persistent user profile from memory_profile table.
+ * Cached for 5min to reduce DB lookups in fast pathways.
+ */
+export async function getMemoryProfile(userId: string): Promise<MemoryProfile | null> {
+  try {
+    const now = Date.now()
+    const cached = profileCache.get(userId)
+    if (cached && (now - cached.timestamp) < MEMORY_CACHE_TTL_MS) {
+      return cached.profile
+    }
+
+    const supabase = getSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('memory_profile' as any)
+      .select('user_id, display_name, tone_preference, language_preference, timezone, goals, constraints, updated_at')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (error) {
+      logger.error('[MemoryProfile] Read failed', error, { metadata: { userId } })
+      return null
+    }
+
+    const profile = (data as MemoryProfile | null) ?? null
+    profileCache.set(userId, { profile, timestamp: now })
+    return profile
+  } catch (error: any) {
+    logger.error('[MemoryProfile] Read error', error, { metadata: { userId } })
+    return null
+  }
+}
+
+/**
+ * Upserts stable user preferences into memory_profile.
+ */
+export async function upsertMemoryProfile(
+  userId: string,
+  updates: Partial<Omit<MemoryProfile, 'user_id' | 'updated_at'>>
+): Promise<void> {
+  try {
+    if (Object.keys(updates).length === 0) return
+
+    const supabase = getSupabaseServerClient()
+    const payload = {
+      user_id: userId,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = await supabase
+      .from('memory_profile' as any)
+      .upsert(payload, { onConflict: 'user_id' })
+
+    if (error) {
+      logger.error('[MemoryProfile] Upsert failed', error, { metadata: { userId } })
+      return
+    }
+
+    profileCache.delete(userId)
+  } catch (error: any) {
+    logger.error('[MemoryProfile] Upsert error', error, { metadata: { userId } })
+  }
+}
+
+/**
+ * Extract stable profile updates from explicit user preferences.
+ */
+export function extractProfileUpdates(message: string): Partial<Omit<MemoryProfile, 'user_id' | 'updated_at'>> {
+  const updates: Partial<Omit<MemoryProfile, 'user_id' | 'updated_at'>> = {}
+  const normalized = message
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  const nameMatch = message.match(/\b(?:me llamo|mi nombre es)\s+([A-Za-zÁÉÍÓÚÑáéíóúñ ]{2,40})/i)
+  if (nameMatch?.[1]) {
+    updates.display_name = nameMatch[1].trim()
+  }
+
+  if (/\b(hablame de usted|tratame de usted|se formal)\b/i.test(normalized)) {
+    updates.tone_preference = 'formal'
+  } else if (/\b(hablame de tu|tuteame|se informal)\b/i.test(normalized)) {
+    updates.tone_preference = 'informal'
+  }
+
+  if (/\b(hablame en ingles|en ingles por favor)\b/i.test(normalized)) {
+    updates.language_preference = 'en'
+  } else if (/\b(hablame en espanol|en espanol por favor)\b/i.test(normalized)) {
+    updates.language_preference = 'es'
+  }
+
+  const tzMatch = message.match(/\b(?:mi zona horaria es|timezone)\s+([A-Za-z_\/+-]{3,64})/i)
+  if (tzMatch?.[1]) {
+    updates.timezone = tzMatch[1].trim()
+  }
+
+  return updates
+}
+
+export function buildMemoryProfileSummary(profile: MemoryProfile | null): string {
+  if (!profile) return ''
+
+  const parts: string[] = []
+  if (profile.display_name) parts.push(`te llamas ${profile.display_name}`)
+  if (profile.language_preference === 'en') parts.push('prefieres hablar en inglés')
+  if (profile.language_preference === 'es') parts.push('prefieres hablar en español')
+  if (profile.tone_preference) parts.push(`prefieres tono ${profile.tone_preference}`)
+  if (profile.timezone) parts.push(`tu zona horaria es ${profile.timezone}`)
+  return parts.join(', ')
 }
 
 /**

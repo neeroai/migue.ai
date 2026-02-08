@@ -1,7 +1,7 @@
 # 20 - Personalization And Memory Contract
 
 ## Estado
-- Semaforo: `RED`
+- Semaforo: `YELLOW`
 - Fecha: `2026-02-08`
 - Owner tecnico: `src/modules/ai/domain/memory.ts`
 
@@ -72,3 +72,29 @@ Ante preguntas tipo "que sabes de mi":
 1. `memory_profile` operativa.
 2. Read/write policy aplicada por input class.
 3. Tests de regression para prompts de historial/personalizacion.
+
+## Progreso implementado (2026-02-08)
+- `memory_profile` creada en `supabase/migrations/024_add_memory_profile.sql`.
+- Read policy por ruta (`pathway`) implementada:
+  - `text_fast_path`: ventana corta + profile, sin retrieval semantico.
+  - `tool_intent`: ventana + retrieval semantico selectivo + profile.
+  - `rich_input`: ventana reducida + profile.
+- Contrato de respuesta para memoria:
+  - deteccion de prompts tipo `que sabes de mi`.
+  - guarda anti-respuesta: evita "no tengo historial" cuando si existe contexto.
+- Write policy aplicada:
+  - persiste facts/preferencias utiles.
+  - ignora mensajes efimeros (`ok`, `gracias`, etc.).
+  - upsert de preferencias estables en `memory_profile`.
+- Observabilidad inicial agregada:
+  - `memory.read_ms`
+  - `memory.write_count`
+  - `memory.hit_ratio`
+  - `memory.profile_hit_ratio`
+- Cobertura unitaria:
+  - `tests/unit/memory-policy.test.ts`
+
+## Gaps abiertos para GREEN
+- Falta test de integracion end-to-end para validar respuestas de memoria sobre conversaciones reales historicas.
+- Falta consolidar write policy para goals/constraints con parser mas robusto.
+- Falta dashboard con p95/p99 y alertas sobre metricas de memoria.

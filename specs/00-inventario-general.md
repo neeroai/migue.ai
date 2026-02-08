@@ -38,7 +38,7 @@ Documentar cada feature como contrato vivo para planificar, implementar y operar
 | 17 | General Image Processing | GREEN | `src/modules/ai/application/vision-pipeline.ts` | Confirmacion previa para tool inferido |
 | 18 | Agentic Core Runtime (sin LangGraph) | YELLOW | `src/modules/webhook/*` + `src/modules/ai/*` | Enqueue + consumer cron inicial, falta worker completo |
 | 19 | Agent Events And Run Ledger | YELLOW | `src/shared/infra/db/*` | Base durable creada (migracion+enqueue), falta consumer/runtime |
-| 20 | Personalization And Memory Contract | RED | `src/modules/ai/domain/memory.ts` | Contrato en diseno, falta implementacion |
+| 20 | Personalization And Memory Contract | YELLOW | `src/modules/ai/domain/memory.ts` | Contrato activo por pathway + profile, faltan e2e/dashboards |
 | 21 | Tool Governance And Policies | RED | `src/modules/ai/application/*` | Policy engine pendiente |
 | 22 | Latency And Fast-Path Architecture | YELLOW | `src/modules/webhook/application/*` + `src/modules/ai/application/*` | SLO aplicados + violaciones medidas, falta dashboard p95 |
 | 23 | Observability And E2E Readiness | RED | `src/shared/observability/*` + `tests/integration/*` | Matriz e2e/operacion pendiente |
