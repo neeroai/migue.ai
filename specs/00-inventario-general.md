@@ -36,7 +36,7 @@ Documentar cada feature como contrato vivo para planificar, implementar y operar
 | 15 | Health Observability | GREEN | `app/api/health/route.ts` + `src/shared/observability/logger.ts` | Operativo |
 | 16 | Low Latency Intent Routing | GREEN | `src/modules/webhook/application/input-router.ts` | Routing por clase activo |
 | 17 | General Image Processing | GREEN | `src/modules/ai/application/vision-pipeline.ts` | Confirmacion previa para tool inferido |
-| 18 | Agentic Core Runtime (sin LangGraph) | RED | `src/modules/webhook/*` + `src/modules/ai/*` | Nuevo core en diseno SDD |
+| 18 | Agentic Core Runtime (sin LangGraph) | YELLOW | `src/modules/webhook/*` + `src/modules/ai/*` | Enqueue + consumer cron inicial, falta worker completo |
 | 19 | Agent Events And Run Ledger | YELLOW | `src/shared/infra/db/*` | Base durable creada (migracion+enqueue), falta consumer/runtime |
 | 20 | Personalization And Memory Contract | RED | `src/modules/ai/domain/memory.ts` | Contrato en diseno, falta implementacion |
 | 21 | Tool Governance And Policies | RED | `src/modules/ai/application/*` | Policy engine pendiente |

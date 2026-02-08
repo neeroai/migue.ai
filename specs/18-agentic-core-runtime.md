@@ -1,7 +1,7 @@
 # 18 - Agentic Core Runtime (Sin LangGraph)
 
 ## Estado
-- Semaforo: `RED`
+- Semaforo: `YELLOW`
 - Fecha: `2026-02-08`
 - Owner tecnico: `src/modules/webhook/*` + `src/modules/ai/*`
 
@@ -96,3 +96,20 @@ Transiciones:
 2. Retry idempotente funcional.
 3. Integracion con webhook via event enqueue.
 4. Metricas base operativas por estado de run.
+
+## Progreso implementado (2026-02-08)
+- Event enqueue en webhook background, protegido por flag:
+  - `src/modules/webhook/application/background-processor.ts`
+  - `src/modules/agent/infra/ledger.ts`
+- Consumer batch inicial por cron:
+  - `app/api/cron/process-agent-events/route.ts`
+  - `src/modules/agent/application/event-processor.ts`
+- Ciclo minimo operativo:
+  - `agent_events (pending -> processing -> done/failed)`
+  - creacion de `agent_runs` y `agent_steps` por evento.
+
+## Gaps abiertos para GREEN
+- Falta worker dedicado always-on (actualmente cron batch).
+- Falta transicion `waiting_confirmation` integrada con UX WhatsApp.
+- Falta procesamiento de tools dentro del run lifecycle del consumer.
+- Falta dead-letter handling explicito para `agent_runs`.
