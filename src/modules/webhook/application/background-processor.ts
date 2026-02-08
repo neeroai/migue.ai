@@ -190,6 +190,13 @@ export async function processWebhookInBackground(
         conversationId,
         requestId,
       });
+      if (signupGate.reason === 'flow_send_failed') {
+        await sendWhatsAppText(
+          normalized.from,
+          'No pude abrir el formulario de registro. Envíame por mensaje: "Me llamo <tu nombre>, mi email es <tu@email.com>".'
+        ).catch(() => undefined);
+        return;
+      }
       if (signupGate.blocked) {
         logger.info('[background] Onboarding gate active, skipping AI turn', {
           requestId,
