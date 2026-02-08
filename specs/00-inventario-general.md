@@ -32,6 +32,7 @@
 | 22 | Latency And Fast-Path Architecture | YELLOW | `src/modules/webhook/*` + `src/modules/ai/*` | SLO medidos, falta dashboard externo |
 | 23 | Observability And E2E Readiness | YELLOW | `src/shared/observability/*` + `tests/integration/*` | E2E base + runbook |
 | 24 | LLM-First Multimodel Runtime | GREEN | `src/modules/ai/*` | Runtime LLM-first y flujo rich input validados en producción |
+| 25 | User Signup Onboarding Flow | YELLOW | `src/shared/infra/whatsapp/flows.ts` + `src/modules/webhook/*` | MVP definido para captura `name+email` |
 
 ## Referencias obligatorias
 - `architecture.md`
