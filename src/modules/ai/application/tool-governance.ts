@@ -121,6 +121,13 @@ export function evaluateToolPolicy(toolName: ToolName, context: ToolPolicyContex
   }
 
   if (context.pathway === 'rich_input' && contract.riskLevel !== 'low') {
+    if (context.explicitConsent) {
+      return {
+        decision: 'allow',
+        reason: 'explicit user consent provided for rich input tool execution',
+        contract,
+      }
+    }
     return {
       decision: 'confirm',
       reason: 'medium/high risk tool inferred from rich input requires confirmation',

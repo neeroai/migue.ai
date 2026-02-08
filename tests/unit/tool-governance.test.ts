@@ -16,6 +16,15 @@ describe('tool governance policy', () => {
     expect(result.decision).toBe('confirm')
   })
 
+  it('allows medium risk tools on rich_input when explicit consent exists', () => {
+    const result = evaluateToolPolicy('create_reminder', {
+      userId: 'u1',
+      pathway: 'rich_input',
+      explicitConsent: true,
+    })
+    expect(result.decision).toBe('allow')
+  })
+
   it('denies outbound messaging when destination is not allowlisted', () => {
     const result = evaluateToolPolicy('send_whatsapp_message', {
       userId: 'u1',

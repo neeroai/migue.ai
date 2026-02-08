@@ -54,7 +54,7 @@ describe('agent turn orchestrator', () => {
       'u1',
       expect.any(Array),
       expect.objectContaining({
-        toolPolicy: { toolsEnabled: true },
+        toolPolicy: { toolsEnabled: true, explicitConsent: false },
       })
     )
   })
@@ -90,7 +90,44 @@ describe('agent turn orchestrator', () => {
       'u1',
       expect.any(Array),
       expect.objectContaining({
-        toolPolicy: { toolsEnabled: false },
+        toolPolicy: { toolsEnabled: false, explicitConsent: false },
+      })
+    )
+  })
+
+  it('propagates explicit tool consent to tool policy context', async () => {
+    delete process.env.LEGACY_ROUTING_ENABLED
+
+    ;(buildAgentContext as jest.Mock).mockResolvedValue({
+      modelHistory: [{ role: 'user', content: 'hola' }],
+      memoryContext: '',
+      profileSummary: '',
+      hasAnyContext: true,
+    })
+
+    mockRespond.mockResolvedValue({
+      text: 'Respuesta final',
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      cost: { input: 0.001, output: 0.001, total: 0.002 },
+      finishReason: 'stop',
+      toolCalls: 0,
+    })
+
+    await executeAgentTurn({
+      conversationId: 'c1',
+      userId: 'u1',
+      userMessage: 'hola',
+      messageId: 'w1',
+      pathway: 'rich_input',
+      explicitToolConsent: true,
+    })
+
+    expect(mockRespond).toHaveBeenCalledWith(
+      'hola',
+      'u1',
+      expect.any(Array),
+      expect.objectContaining({
+        toolPolicy: { toolsEnabled: true, explicitConsent: true },
       })
     )
   })

@@ -13,6 +13,7 @@ type ExecuteAgentTurnParams = {
   userMessage: string
   messageId: string
   pathway: TextPathway
+  explicitToolConsent?: boolean
 }
 
 export type AgentTurnResult = {
@@ -74,6 +75,7 @@ export async function executeAgentTurn(
       agentContext,
       toolPolicy: {
         toolsEnabled: shouldEnableTools(params.pathway, params.userMessage),
+        explicitConsent: params.explicitToolConsent ?? false,
       },
     }
   )

@@ -15,7 +15,7 @@ import { insertOutboundMessage, updateInboundMessageByWaId } from '../../../shar
 // PROVIDER_COSTS removed - cost now comes from AI response
 import { transcribeAudio } from '../../../shared/infra/openai/audio-transcription'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from '../domain/cost-tracker'
-import { detectToolIntents, hasToolIntent } from '../domain/intent'
+import { hasToolIntent } from '../domain/intent'
 import { analyzeVisualInput } from './vision-pipeline'
 import { type TextPathway } from './memory-policy'
 import { executeAgentTurn } from './agent-turn-orchestrator'
@@ -31,6 +31,7 @@ import type { NormalizedMessage } from '@/src/modules/webhook/domain/message-nor
 
 type ProcessMessageOptions = {
   pathway?: TextPathway
+  explicitToolConsent?: boolean
 }
 
 function getTrivialResponse(message: string): string | null {
@@ -49,17 +50,6 @@ function getTrivialResponse(message: string): string | null {
 
   return null
 }
-
-function confirmationQuestionForIntent(intent: 'reminder' | 'schedule' | 'expense'): string {
-  if (intent === 'expense') {
-    return 'Detecté posible información de gasto. ¿Quieres que lo registre ahora?'
-  }
-  if (intent === 'schedule') {
-    return 'Detecté una posible cita/reunión. ¿Quieres que la agende ahora?'
-  }
-  return 'Detecté un posible recordatorio. ¿Quieres que lo cree ahora?'
-}
-
 
 /**
  * Send text message and persist to database
@@ -219,6 +209,7 @@ export async function processMessageWithAI(
       userMessage,
       messageId,
       pathway,
+      explicitToolConsent: options.explicitToolConsent ?? false,
     })
 
     await sendTextAndPersist(conversationId, userPhone, turn.responseText)
@@ -440,13 +431,17 @@ export async function processAudioMessage(
     }
 
     // Process transcribed text with AI
+    const transcriptHasToolIntent = hasToolIntent(transcript)
     await processMessageWithAI(
       conversationId,
       userId,
       normalized.from,
       transcript,
       normalized.waMessageId,
-      { pathway: hasToolIntent(transcript) ? 'tool_intent' : 'rich_input' }
+      {
+        pathway: transcriptHasToolIntent ? 'tool_intent' : 'rich_input',
+        explicitToolConsent: transcriptHasToolIntent,
+      }
     )
 
     logger.info('Audio processed with OpenAI Whisper', {
@@ -607,18 +602,8 @@ export async function processDocumentMessage(
     }
 
     const captionHasExplicitToolIntent = hasToolIntent(normalized.content)
-    const extractedIntents = detectToolIntents(visualResult.extractedText)
 
     if (visualResult.toolIntentDetected && visualResult.extractedText) {
-      // Auto-execute tools only when intent is explicit in user caption.
-      // If intent is inferred only from visual content, ask for confirmation first.
-      if (!captionHasExplicitToolIntent && extractedIntents.length > 0) {
-        const confirmation = confirmationQuestionForIntent(extractedIntents[0]!)
-        const responseWithConfirmation = `${visualResult.responseText}\n\n${confirmation}`.slice(0, 1000)
-        await sendTextAndPersist(conversationId, normalized.from, responseWithConfirmation)
-        return
-      }
-
       // Avoid duplicate typing managers: stop current one before delegating to tool pathway.
       if (typingManager) {
         await typingManager.stop()
@@ -638,7 +623,10 @@ export async function processDocumentMessage(
         normalized.from,
         synthesizedMessage,
         normalized.waMessageId,
-        { pathway: 'rich_input' }
+        {
+          pathway: 'rich_input',
+          explicitToolConsent: captionHasExplicitToolIntent,
+        }
       )
       return
     }

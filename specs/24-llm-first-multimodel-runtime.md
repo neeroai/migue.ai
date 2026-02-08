@@ -41,6 +41,9 @@ Migración a runtime LLM-first multimodelo con catálogo versionado y contexto u
 - Tool policy movida al orquestador:
   - `AgentTurnOrchestrator` decide `toolsEnabled` por turno (legacy flag + intent explícito).
   - `proactive-agent` ya no decide exposición de tools por regex local; ejecuta según policy del turno.
+- Confirmación de `rich_input` gobernada por policy:
+  - `processDocumentMessage` delega al turno agente sin heurística de confirmación por intent detectado.
+  - `tool-governance` decide `confirm/allow` en `rich_input` con base en `explicitConsent`.
 
 ## Siguiente incremento
 Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.

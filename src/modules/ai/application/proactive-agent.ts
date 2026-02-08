@@ -224,6 +224,7 @@ export async function respond(
     agentContext?: AgentContextSnapshot
     toolPolicy?: {
       toolsEnabled?: boolean
+      explicitConsent?: boolean
     }
   }
 ): Promise<{
@@ -303,7 +304,13 @@ export async function respond(
 
   const primaryModel = primarySelection.modelName
   const fallbackModel = fallbackSelection.modelName
-  const policyContext: ToolPolicyContext = { userId, pathway }
+  const policyContext: ToolPolicyContext = {
+    userId,
+    pathway,
+    ...(context?.toolPolicy?.explicitConsent !== undefined
+      ? { explicitConsent: context.toolPolicy.explicitConsent }
+      : {}),
+  }
 
   const toolsDefinition = toolsEnabled ? {
       create_reminder: tool({
