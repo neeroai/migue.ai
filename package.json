@@ -37,7 +37,10 @@
     "db:verify": "npx tsx scripts/verify-supabase.ts",
     "db:cli": "./scripts/supabase-cli.sh",
     "audit:users": "npx tsx scripts/audit-users.ts",
-    "diagnose:cron": "npx tsx scripts/diagnose-cron-jobs.ts"
+    "diagnose:cron": "npx tsx scripts/diagnose-cron-jobs.ts",
+    "wa:webhook:status": "node scripts/wa-webhook-override.mjs status",
+    "wa:webhook:set": "node scripts/wa-webhook-override.mjs set",
+    "wa:webhook:reset": "node scripts/wa-webhook-override.mjs reset"
   },
   "keywords": [],
   "author": "",
