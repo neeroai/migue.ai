@@ -27,5 +27,14 @@ Migración a runtime LLM-first multimodelo con catálogo versionado y contexto u
 - Completar e2e faltantes por feature.
 - Consolidar dashboards/alertas externas donde aplique.
 
+## Progreso implementado
+- `model-router` capability-aware basado en catálogo versionado.
+- `AgentContextBuilder` unificado:
+  - centraliza `history + semantic memory + memory profile`.
+  - emite métricas `memory.*` desde una sola capa.
+- `AgentTurnOrchestrator`:
+  - entrypoint único del turno (`context -> model/tools -> response normalization`).
+  - integrado en `processMessageWithAI`.
+
 ## Siguiente incremento
 Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.

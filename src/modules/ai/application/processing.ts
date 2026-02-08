@@ -14,13 +14,11 @@ import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metric
 import { insertOutboundMessage, updateInboundMessageByWaId } from '../../../shared/infra/db/persist'
 // PROVIDER_COSTS removed - cost now comes from AI response
 import { transcribeAudio } from '../../../shared/infra/openai/audio-transcription'
-import { createProactiveAgent } from './proactive-agent'
-import type { ModelMessage } from 'ai'
 import { getBudgetStatus, isUserOverBudget, trackUsage } from '../domain/cost-tracker'
 import { detectToolIntents, hasToolIntent } from '../domain/intent'
 import { analyzeVisualInput } from './vision-pipeline'
 import { type TextPathway } from './memory-policy'
-import { buildAgentContext } from './agent-context-builder'
+import { executeAgentTurn } from './agent-turn-orchestrator'
 import {
   sendWhatsAppText,
   createTypingManager,
@@ -29,8 +27,6 @@ import {
   downloadWhatsAppMedia,
 } from '../../../shared/infra/whatsapp'
 import type { NormalizedMessage } from '@/src/modules/webhook/domain/message-normalization'
-
-const proactiveAgent = createProactiveAgent()
 
 type ProcessMessageOptions = {
   pathway?: TextPathway
@@ -213,54 +209,21 @@ export async function processMessageWithAI(
       return
     }
 
-    logger.debug('[AI] Building unified agent context', {
-      conversationId,
-      userId,
-    })
-    const agentContext = await buildAgentContext({
+    // Single LLM-first agent turn orchestrator (context + model + tool governance)
+    const turn = await executeAgentTurn({
       conversationId,
       userId,
       userMessage,
-      pathway,
-      requestId: messageId,
-    })
-
-    let response: string
-    let agentName: string
-
-    // Use Vercel AI SDK (primary provider)
-    const modelHistory = agentContext.modelHistory
-    logger.debug('[AI] Using Vercel AI SDK with conversation history', {
-      conversationId,
-      userId,
-      metadata: {
-        historyLength: modelHistory.length,
-        provider: 'openai',
-        lastUserMessage: modelHistory.slice(-3).filter(m => m.role === 'user').pop()?.content?.slice(0, 50)
-      },
-    })
-
-    // Budget OK, proceed with API call
-    const aiResponse = await proactiveAgent.respond(userMessage, userId, modelHistory, {
-      conversationId,
       messageId,
       pathway,
-      agentContext,
     })
-    response = (aiResponse.text ?? '').trim()
-    if (!response) {
-      response = aiResponse.toolCalls > 0
-        ? 'Listo. Ya ejecuté tu solicitud.'
-        : 'Listo.'
-    }
-    agentName = 'ProactiveAgent'
 
-    await sendTextAndPersist(conversationId, userPhone, response)
+    await sendTextAndPersist(conversationId, userPhone, turn.responseText)
 
     logger.functionExit('processMessageWithAI', Date.now() - startTime, {
-      agent: agentName,
-      responseLength: response.length,
-      cost: `$${aiResponse.cost.total.toFixed(4)}`,
+      agent: 'AgentTurnOrchestrator',
+      responseLength: turn.responseText.length,
+      cost: `$${turn.raw.cost.total.toFixed(4)}`,
       pathway,
     }, { conversationId, userId })
   } catch (error: any) {
