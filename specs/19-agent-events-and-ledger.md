@@ -1,7 +1,7 @@
 # 19 - Agent Events And Run Ledger
 
 ## Estado
-- Semaforo: `RED`
+- Semaforo: `YELLOW`
 - Fecha: `2026-02-08`
 - Owner tecnico: `src/shared/infra/db/*`
 
@@ -99,6 +99,21 @@ Archivo sugerido:
 ## Evidencia requerida
 - Migracion SQL + pruebas de integridad.
 - Prueba de doble entrega webhook sin duplicar run efectivo.
+
+## Progreso implementado (2026-02-08)
+- Migracion creada: `supabase/migrations/023_add_agent_events_ledger.sql`.
+- Contratos TypeScript creados: `src/modules/agent/domain/contracts.ts`.
+- Encolado no bloqueante integrado en background pipeline:
+  - `src/modules/agent/infra/ledger.ts`
+  - `src/modules/webhook/application/background-processor.ts`
+- Feature flag de rollout:
+  - `AGENT_EVENT_LEDGER_ENABLED`
+  - `src/modules/agent/application/feature-flags.ts`
+
+## Gaps abiertos para GREEN
+- Falta worker consumer de `agent_events` con locking por `conversation_id`.
+- Falta `agent_runs/agent_steps/agent_tool_calls/agent_checkpoints` en uso runtime (tablas ya creadas).
+- Falta test de integracion DB real para dedupe por `idempotency_key`.
 
 ## Criterio de salida a YELLOW
 1. Tablas/migraciones en produccion.

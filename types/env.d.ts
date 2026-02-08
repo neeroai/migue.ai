@@ -15,6 +15,7 @@ declare namespace NodeJS {
     TIMEZONE?: string;
     NODE_ENV?: 'development' | 'test' | 'production';
     LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
+    AGENT_EVENT_LEDGER_ENABLED?: string;
   }
 }
 

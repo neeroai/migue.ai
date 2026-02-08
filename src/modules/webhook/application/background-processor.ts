@@ -15,6 +15,8 @@ import { sendWhatsAppText, reactWithWarning } from '../../../shared/infra/whatsa
 import { retryWithBackoff, isDuplicateError, isTransientError } from '../../../shared/resilience/error-recovery';
 import { updateMessagingWindow } from '../../messaging-window/application/service';
 import { processInputByClass } from './input-orchestrator';
+import { isAgentEventLedgerEnabled } from '../../agent/application/feature-flags';
+import { enqueueAgentEvent } from '../../agent/infra/ledger';
 
 /**
  * Background webhook processing (fire-and-forget)
@@ -106,6 +108,29 @@ export async function processWebhookInBackground(
       userId,
       metadata: { wasInserted },
     });
+
+    if (isAgentEventLedgerEnabled()) {
+      waitUntil(
+        Promise.resolve(
+          enqueueAgentEvent({
+            requestId,
+            conversationId,
+            userId,
+            normalized,
+          })
+        ).catch((err) =>
+          logger.error('[background] Failed to enqueue agent event', err, {
+            requestId,
+            ...(conversationId && { conversationId }),
+            ...(userId && { userId }),
+            metadata: {
+              waMessageId: normalized.waMessageId,
+              inputType: normalized.type,
+            },
+          })
+        )
+      );
+    }
 
     waitUntil(
       Promise.resolve(updateMessagingWindow(normalized.from, normalized.waMessageId ?? `gen-${Date.now()}`, true)).catch((err) =>
