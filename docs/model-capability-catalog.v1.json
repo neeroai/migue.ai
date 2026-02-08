@@ -1,0 +1,49 @@
+{
+  "catalog_version": "v1.0.0",
+  "generated_at": "2026-02-08",
+  "default_primary": "openai/gpt-4o-mini",
+  "providers": {
+    "openai": {
+      "models": {
+        "openai/gpt-4o-mini": {
+          "latency_tier": "fast",
+          "cost_tier": "medium",
+          "context_window": 128000,
+          "tool_calling": true,
+          "json_reliability": "high",
+          "vision": true,
+          "audio": false,
+          "best_for": ["default_chat", "tool_execution", "rich_vision"]
+        }
+      }
+    },
+    "gemini": {
+      "models": {
+        "google/gemini-2.5-flash-lite": {
+          "latency_tier": "fast",
+          "cost_tier": "low",
+          "context_window": 1000000,
+          "tool_calling": true,
+          "json_reliability": "medium",
+          "vision": true,
+          "audio": false,
+          "best_for": ["default_chat", "long_context", "rich_vision"]
+        }
+      }
+    }
+  },
+  "routing_profiles": {
+    "default_chat": {
+      "priority": ["openai/gpt-4o-mini", "google/gemini-2.5-flash-lite"]
+    },
+    "tool_execution": {
+      "priority": ["openai/gpt-4o-mini", "google/gemini-2.5-flash-lite"]
+    },
+    "long_context": {
+      "priority": ["google/gemini-2.5-flash-lite", "openai/gpt-4o-mini"]
+    },
+    "rich_vision": {
+      "priority": ["openai/gpt-4o-mini", "google/gemini-2.5-flash-lite"]
+    }
+  }
+}

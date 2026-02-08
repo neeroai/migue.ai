@@ -42,6 +42,7 @@ Documentar cada feature como contrato vivo para planificar, implementar y operar
 | 21 | Tool Governance And Policies | YELLOW | `src/modules/ai/application/*` | Policy engine activo + faltan auditoria DB/runtime tools |
 | 22 | Latency And Fast-Path Architecture | YELLOW | `src/modules/webhook/application/*` + `src/modules/ai/application/*` | SLO aplicados + violaciones medidas, falta dashboard p95 |
 | 23 | Observability And E2E Readiness | YELLOW | `src/shared/observability/*` + `tests/integration/*` | E2E base + runbook, faltan alertas/escenarios completos |
+| 24 | LLM-First Multimodel Runtime | YELLOW | `src/modules/ai/domain/model-router.ts` | Source-of-truth versionada + router capability-aware inicial |
 
 ## Bloque agéntico 2026-Q1 (18-23)
 Orden recomendado de ejecucion:
@@ -51,6 +52,7 @@ Orden recomendado de ejecucion:
 4. `20-personalization-memory-contract.md`
 5. `21-tool-governance-and-policies.md`
 6. `23-observability-and-e2e-readiness.md`
+7. `24-llm-first-multimodel-runtime.md`
 
 Objetivo del bloque:
 - mantener experiencia de chat inmediata en texto simple

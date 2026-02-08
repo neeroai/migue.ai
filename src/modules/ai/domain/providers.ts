@@ -7,19 +7,21 @@
  * @updated 2026-02-01 15:15
  */
 
+import { MODEL_CAPABILITIES } from './model-capability-catalog'
+
 // Model configurations (AI Gateway model strings)
 export const models = {
   openai: {
     primary: 'openai/gpt-4o-mini',
-    maxTokens: 4000,
-    contextWindow: 128_000,
-    costPer1MTokens: { input: 0.15, output: 0.60 },
+    maxTokens: MODEL_CAPABILITIES['openai/gpt-4o-mini']!.maxTokens,
+    contextWindow: MODEL_CAPABILITIES['openai/gpt-4o-mini']!.contextWindow,
+    costPer1MTokens: MODEL_CAPABILITIES['openai/gpt-4o-mini']!.costPer1MTokens,
   },
   gemini: {
     primary: 'google/gemini-2.5-flash-lite',
-    maxTokens: 4000,
-    contextWindow: 1_000_000,
-    costPer1MTokens: { input: 0.10, output: 0.40 },
+    maxTokens: MODEL_CAPABILITIES['google/gemini-2.5-flash-lite']!.maxTokens,
+    contextWindow: MODEL_CAPABILITIES['google/gemini-2.5-flash-lite']!.contextWindow,
+    costPer1MTokens: MODEL_CAPABILITIES['google/gemini-2.5-flash-lite']!.costPer1MTokens,
   },
 }
 
@@ -30,10 +32,10 @@ export const MODEL_CATALOG: Record<
 > = {
   'openai/gpt-4o-mini': {
     provider: 'openai',
-    costPer1MTokens: { input: 0.15, output: 0.60 },
+    costPer1MTokens: MODEL_CAPABILITIES['openai/gpt-4o-mini']!.costPer1MTokens,
   },
   'google/gemini-2.5-flash-lite': {
     provider: 'gemini',
-    costPer1MTokens: { input: 0.10, output: 0.40 },
+    costPer1MTokens: MODEL_CAPABILITIES['google/gemini-2.5-flash-lite']!.costPer1MTokens,
   },
 }

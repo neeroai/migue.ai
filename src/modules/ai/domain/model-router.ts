@@ -1,20 +1,25 @@
 /**
  * @file model-router.ts
- * @description Intelligent multi-provider model selection with cost optimization
+ * @description Intelligent multi-provider model selection with capability-aware routing
  * @module lib/ai
  * @exports selectModel, ModelSelection, SelectionContext
- * @date 2026-02-02 10:45
- * @updated 2026-02-02 10:45
  */
 
-import { models } from './providers'
+import {
+  type Provider,
+  type TaskProfile,
+  getRoutingPriority,
+} from './model-capability-catalog'
+export type { Provider, TaskProfile } from './model-capability-catalog'
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type Provider = 'openai' | 'gemini'
-export type SelectionReason = 'cost' | 'budget_critical'
+export type SelectionReason =
+  | 'profile_priority'
+  | 'budget_critical'
+  | 'capability_filter'
 export type Complexity = 'low' | 'high'
 
 export interface SelectionContext {
@@ -22,6 +27,7 @@ export interface SelectionContext {
   complexity: Complexity
   budgetRemaining: number
   hasTools?: boolean
+  inputType?: 'text' | 'image' | 'audio' | 'document'
 }
 
 export interface ModelSelection {
@@ -30,82 +36,100 @@ export interface ModelSelection {
   reason: SelectionReason
   maxTokens: number
   estimatedCost: number
+  taskProfile: TaskProfile
 }
 
 // ============================================================================
 // Routing Logic
 // ============================================================================
 
-/**
- * Decision tree for model selection
- * Pattern from api-neero/lib/ai/router.ts L33-54
- */
-export function selectModel(context: SelectionContext): ModelSelection {
-  // Gate 1: Budget-critical (< $0.01) → Force cheapest
-  if (context.budgetRemaining < 0.01) {
-    return {
-      provider: 'openai',
-      modelName: models.openai.primary,
-      reason: 'budget_critical',
-      maxTokens: models.openai.maxTokens,
-      estimatedCost: estimateCost('openai', context.estimatedTokens),
-    }
-  }
-
-  // Gate 2: Default → Cost-optimized (GPT-4o-mini)
-  return {
-    provider: 'openai',
-    modelName: models.openai.primary,
-    reason: 'cost',
-    maxTokens: models.openai.maxTokens,
-    estimatedCost: estimateCost('openai', context.estimatedTokens),
-  }
+function resolveTaskProfile(context: SelectionContext): TaskProfile {
+  if (context.inputType === 'image' || context.inputType === 'document') return 'rich_vision'
+  if (context.estimatedTokens > 6000) return 'long_context'
+  if (context.hasTools) return 'tool_execution'
+  return 'default_chat'
 }
 
-/**
- * Estimate cost for a request
- * Assumes 70% input / 30% output ratio (typical conversation)
- */
-function estimateCost(provider: Provider, totalTokens: number): number {
+function estimateCost(modelName: string, totalTokens: number): number {
+  const candidates = getRoutingPriority('default_chat').concat(
+    getRoutingPriority('long_context')
+  )
+  const capability = candidates.find(candidate => candidate.modelName === modelName)
+  if (!capability) return Number.POSITIVE_INFINITY
+
   const inputTokens = Math.floor(totalTokens * 0.7)
   const outputTokens = Math.floor(totalTokens * 0.3)
 
-  const pricing = models[provider].costPer1MTokens
-
-  const inputCost = (inputTokens / 1_000_000) * pricing.input
-  const outputCost = (outputTokens / 1_000_000) * pricing.output
-
+  const inputCost = (inputTokens / 1_000_000) * capability.costPer1MTokens.input
+  const outputCost = (outputTokens / 1_000_000) * capability.costPer1MTokens.output
   return inputCost + outputCost
 }
 
 /**
- * Get fallback model for a failed primary
- * Pattern: If OpenAI fails → Gemini
+ * Capability-aware selection:
+ * 1) resolve task profile
+ * 2) pick profile priority model that satisfies minimum capability filters
+ * 3) if budget critical, pick cheapest compatible candidate
  */
+export function selectModel(context: SelectionContext): ModelSelection {
+  const taskProfile = resolveTaskProfile(context)
+  const candidates = getRoutingPriority(taskProfile)
+
+  const filtered = candidates.filter(candidate => {
+    if (context.hasTools && !candidate.toolCalling) return false
+    if ((taskProfile === 'rich_vision') && !candidate.vision) return false
+    return true
+  })
+
+  const compatible = filtered.length > 0 ? filtered : candidates
+
+  if (context.budgetRemaining < 0.01) {
+    const cheapest = [...compatible].sort((a, b) => {
+      const aCost = estimateCost(a.modelName, context.estimatedTokens)
+      const bCost = estimateCost(b.modelName, context.estimatedTokens)
+      return aCost - bCost
+    })[0]
+
+    return {
+      provider: cheapest!.provider,
+      modelName: cheapest!.modelName,
+      reason: 'budget_critical',
+      maxTokens: cheapest!.maxTokens,
+      estimatedCost: estimateCost(cheapest!.modelName, context.estimatedTokens),
+      taskProfile,
+    }
+  }
+
+  const primary = compatible[0]!
+  return {
+    provider: primary.provider,
+    modelName: primary.modelName,
+    reason: filtered.length > 0 ? 'profile_priority' : 'capability_filter',
+    maxTokens: primary.maxTokens,
+    estimatedCost: estimateCost(primary.modelName, context.estimatedTokens),
+    taskProfile,
+  }
+}
+
 export function getFallbackSelection(
   primary: ModelSelection,
   context: SelectionContext
 ): ModelSelection {
-  const fallbackProvider: Provider = 'gemini'
-  const fallbackConfig = models.gemini
+  const candidates = getRoutingPriority(primary.taskProfile)
+    .filter(candidate => candidate.provider !== primary.provider)
+
+  const fallback = candidates[0] ?? getRoutingPriority('default_chat')[0]!
 
   return {
-    provider: fallbackProvider,
-    modelName: fallbackConfig.primary,
-    reason: 'cost', // Fallback is for reliability
-    maxTokens: fallbackConfig.maxTokens,
-    estimatedCost: estimateCost(fallbackProvider, context.estimatedTokens),
+    provider: fallback.provider,
+    modelName: fallback.modelName,
+    reason: 'profile_priority',
+    maxTokens: fallback.maxTokens,
+    estimatedCost: estimateCost(fallback.modelName, context.estimatedTokens),
+    taskProfile: primary.taskProfile,
   }
 }
 
-/**
- * Analyze message complexity
- * Heuristics:
- * - Tools present → high
- * - Long messages (>1000 chars) → high
- * - Multi-turn conversations (>5 messages) → high
- * - Simple text → low
- */
 export function analyzeComplexity(
   messageContent: string,
   messageCount: number,
@@ -118,16 +142,12 @@ export function analyzeComplexity(
   return 'low'
 }
 
-/**
- * Estimate token count from message
- * Rough heuristic: 1 token ≈ 4 characters (English/Spanish mix)
- */
 export function estimateTokens(
   messageContent: string,
   historyCount: number
 ): number {
   const messageTokens = Math.ceil(messageContent.length / 4)
-  const historyTokens = historyCount * 100 // ~100 tokens per history message
+  const historyTokens = historyCount * 100
 
   return messageTokens + historyTokens
 }
