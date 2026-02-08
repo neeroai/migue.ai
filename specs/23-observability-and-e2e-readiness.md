@@ -1,7 +1,7 @@
 # 23 - Observability And E2E Readiness
 
 ## Estado
-- Semaforo: `RED`
+- Semaforo: `YELLOW`
 - Fecha: `2026-02-08`
 - Owner tecnico: `src/shared/observability/*` + `tests/integration/*`
 
@@ -60,3 +60,18 @@ Tener evidencia operativa y de pruebas suficiente para liberar el core agéntico
 
 ## Siguiente incremento
 - Generar tablero operacional minimo (queries + alertas) sin crear dashboard UI nuevo.
+
+## Progreso implementado (2026-02-08)
+- Suite E2E ampliada en `tests/integration/agent-e2e-text-tool-intent.test.ts`:
+  - texto simple conversacional sin side effects
+  - tool intent (recordatorio)
+  - deduplicacion por `wa_message_id` (doble webhook)
+- Runbook operativo con queries y checklist:
+  - `docs/observability-e2e-runbook.md`
+- Señales de observabilidad activas en runtime:
+  - `sla.*` y `memory.*` en logs estructurados.
+
+## Gaps abiertos para GREEN
+- Faltan escenarios e2e de audio, rich image con confirmacion y fallback de provider.
+- Falta persistir auditoria de tools en `agent_tool_calls` enlazada a `run_id` en toda la ruta.
+- Falta automatizar alertas externas p95/p99 y error-rate (actualmente runbook + queries manuales).

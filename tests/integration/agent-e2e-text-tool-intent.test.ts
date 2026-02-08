@@ -197,4 +197,152 @@ describe('Agent E2E - Text Tool Intent', () => {
       .eq('user_id', userId)
       .eq('title', currentReminderTitle)
   })
+
+  it('processes simple conversational text without creating side effects', async () => {
+    const random = (Date.now() + 1).toString().slice(-6)
+    const phone = `+573111${random}`
+    const inboundWaId = `wamid.e2e.simple.${random}`
+
+    const payload = {
+      object: 'whatsapp_business_account',
+      entry: [
+        {
+          id: 'ACCOUNT_ID',
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: '15551234567',
+                  phone_number_id: 'PHONE_ID',
+                },
+                contacts: [
+                  {
+                    profile: { name: 'E2E Simple User' },
+                    wa_id: phone,
+                  },
+                ],
+                messages: [
+                  {
+                    from: phone,
+                    id: inboundWaId,
+                    timestamp: `${Math.floor(Date.now() / 1000)}`,
+                    type: 'text',
+                    text: {
+                      body: 'hola',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    const req = createSignedWebhookRequest(payload)
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+
+    const { __flushWaitUntil } = jest.requireMock('@vercel/functions') as {
+      __flushWaitUntil: () => Promise<void>
+    }
+    await __flushWaitUntil()
+
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('id')
+      .eq('phone_number', phone)
+      .maybeSingle()
+    expect(userRow?.id).toBeDefined()
+    const userId = userRow!.id
+
+    const { data: reminders } = await supabase
+      .from('reminders')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+
+    expect((reminders ?? []).length).toBe(0)
+  })
+
+  it('deduplicates duplicate webhook delivery by wa_message_id', async () => {
+    const random = (Date.now() + 2).toString().slice(-6)
+    const phone = `+573112${random}`
+    currentReminderTitle = `E2E dedupe ${random}`
+    const inboundWaId = `wamid.e2e.dup.${random}`
+
+    const payload = {
+      object: 'whatsapp_business_account',
+      entry: [
+        {
+          id: 'ACCOUNT_ID',
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: '15551234567',
+                  phone_number_id: 'PHONE_ID',
+                },
+                contacts: [
+                  {
+                    profile: { name: 'E2E Dedupe User' },
+                    wa_id: phone,
+                  },
+                ],
+                messages: [
+                  {
+                    from: phone,
+                    id: inboundWaId,
+                    timestamp: `${Math.floor(Date.now() / 1000)}`,
+                    type: 'text',
+                    text: {
+                      body: 'avisame',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    const req1 = createSignedWebhookRequest(payload)
+    const req2 = createSignedWebhookRequest(payload)
+    const res1 = await POST(req1)
+    const res2 = await POST(req2)
+    expect(res1.status).toBe(200)
+    expect(res2.status).toBe(200)
+
+    const { __flushWaitUntil } = jest.requireMock('@vercel/functions') as {
+      __flushWaitUntil: () => Promise<void>
+    }
+    await __flushWaitUntil()
+
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('id')
+      .eq('phone_number', phone)
+      .maybeSingle()
+    expect(userRow?.id).toBeDefined()
+    const userId = userRow!.id
+
+    const { data: reminders } = await supabase
+      .from('reminders')
+      .select('id, title')
+      .eq('user_id', userId)
+      .eq('title', currentReminderTitle)
+
+    expect((reminders ?? []).length).toBe(1)
+
+    await supabase
+      .from('reminders')
+      .delete()
+      .eq('user_id', userId)
+      .eq('title', currentReminderTitle)
+  })
 })
