@@ -107,3 +107,8 @@ Cuando un usuario nuevo envía su primer mensaje por WhatsApp, disparar un flujo
 
 ## Siguiente incremento
 Implementar migración de esquema + wiring del trigger de onboarding en el orquestador de ingreso.
+
+## Artefactos WhatsApp Flow (Meta UI)
+- Plan operativo: `docs/whatsapp-signup-flow-plan.md`
+- JSON recomendado (data exchange endpoint): `docs/whatsapp-flows/user_signup_flow.endpoint.v1.json`
+- JSON fallback (estático): `docs/whatsapp-flows/user_signup_flow.static.v1.json`

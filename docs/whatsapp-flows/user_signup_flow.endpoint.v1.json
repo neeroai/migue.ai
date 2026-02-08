@@ -1,0 +1,140 @@
+{
+  "version": "7.1",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "WELCOME": [
+      "BASIC_INFO"
+    ],
+    "BASIC_INFO": [
+      "SUCCESS"
+    ],
+    "SUCCESS": []
+  },
+  "screens": [
+    {
+      "id": "WELCOME",
+      "title": "Registro inicial",
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "welcome_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Bienvenido a Migue.ai"
+              },
+              {
+                "type": "TextBody",
+                "text": "Para personalizar tu asistente, completa un registro rápido con tu nombre y email."
+              },
+              {
+                "type": "Footer",
+                "label": "Comenzar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "BASIC_INFO"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "BASIC_INFO",
+      "title": "Datos básicos",
+      "data": {
+        "name": {
+          "type": "string",
+          "__example__": "Polo"
+        },
+        "email": {
+          "type": "string",
+          "__example__": "polo@email.com"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "signup_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "name",
+                "label": "Nombre completo",
+                "required": true,
+                "input-type": "text"
+              },
+              {
+                "type": "TextInput",
+                "name": "email",
+                "label": "Correo electrónico",
+                "required": true,
+                "input-type": "email"
+              },
+              {
+                "type": "OptIn",
+                "name": "consent",
+                "label": "Acepto que mis datos se usen para personalizar mi asistente",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "name": "${form.name}",
+                    "email": "${form.email}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Listo",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Registro completado"
+              },
+              {
+                "type": "TextBody",
+                "text": "Perfecto. Ya tengo tus datos básicos y puedo personalizar mejor tu experiencia."
+              },
+              {
+                "type": "Footer",
+                "label": "Finalizar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+
