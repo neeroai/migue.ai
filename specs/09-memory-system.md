@@ -1,4 +1,4 @@
-# 20 - personalization-memory-contract
+# 09 - memory-system
 
 ## Estado
 - Semáforo: `YELLOW`
@@ -6,7 +6,7 @@
 - Owner técnico: `src/modules/ai/domain/memory.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Memoria semántica y de perfil para personalización persistente de respuestas.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 15 - health-observability
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `app/api/health/route.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Señales de salud y estructura base de observabilidad para operación.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

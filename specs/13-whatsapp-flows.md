@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 13 - whatsapp-flows
 
 ## Estado
 - Semáforo: `YELLOW`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/shared/infra/whatsapp/flows.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Soporte de flows interactivos con validación y manejo de callbacks.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

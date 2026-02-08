@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 01 - whatsapp-integration
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/shared/infra/whatsapp/*`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Conectividad robusta con WhatsApp Cloud API para envío/recepción y tipos de mensaje soportados.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

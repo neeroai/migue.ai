@@ -1,115 +1,31 @@
-# 18 - Agentic Core Runtime (Sin LangGraph)
+# 18 - agentic-core-runtime
 
 ## Estado
-- Semaforo: `YELLOW`
-- Fecha: `2026-02-08`
-- Owner tecnico: `src/modules/webhook/*` + `src/modules/ai/*`
+- Semáforo: `YELLOW`
+- Fuente de verdad: `architecture.md`
+- Owner técnico: `src/modules/agent/*`
 
 ## Objetivo funcional
-Evolucionar el asistente de un flujo reactivo por webhook a un runtime agéntico persistente que pueda:
-- percibir entrada
-- planear accion
-- ejecutar tools
-- validar resultado
-- responder al usuario
-- aprender memoria util
+Runtime agéntico durable para ejecutar turnos y mantener continuidad operativa.
 
-Todo sin romper la latencia del camino rapido para texto simple.
+## Alineación Architecture Master
+- LLM-first cuando aplique la decisión de negocio.
+- Backend como guardrail (policy, seguridad, idempotencia, persistencia).
+- Observabilidad obligatoria por turno (request/conversation/pathway/outcome).
 
-## Alcance
-- Runtime agéntico sin LangGraph.
-- Separacion control plane/data plane.
-- Loop por `conversation_id` con estado durable en Supabase.
-- Checkpoints y reintentos idempotentes.
+## Contratos clave
+- Entrada normalizada.
+- Contexto de agente (historial + memoria + perfil + restricciones).
+- Respuesta final al usuario (sin mocks en runtime productivo).
 
-## No alcance
-- Multi-canal (email, webchat, etc).
-- Dashboard UI nuevo.
-- Agente totalmente autonomo sin confirmaciones.
+## Evidencia mínima
+- Typecheck en verde.
+- Tests unit/integration relevantes de la feature.
+- Logs estructurados en entorno real.
 
-## Arquitectura objetivo
-### Control plane (Vercel)
-- Entrada webhook (`app/api/whatsapp/webhook/route.ts`).
-- Validacion y dedupe inicial.
-- ACK rapido (<150ms p95).
-- Encolado de evento a Supabase (`agent_events`).
+## Riesgos y gaps
+- Completar e2e faltantes por feature.
+- Consolidar dashboards/alertas externas donde aplique.
 
-### Data plane (Worker agéntico)
-- Consume eventos pendientes por conversacion.
-- Ejecuta run state machine.
-- Orquesta tools y validaciones.
-- Persiste pasos/resultado.
-- Envia respuesta por adaptador WhatsApp.
-
-## State machine del run
-Estados permitidos:
-- `queued`
-- `running`
-- `waiting_confirmation`
-- `completed`
-- `failed`
-- `dead_letter`
-
-Transiciones:
-1. `queued -> running`
-2. `running -> waiting_confirmation` (accion medium/high-risk)
-3. `waiting_confirmation -> running` (usuario confirma)
-4. `running -> completed`
-5. `running -> failed`
-6. `failed -> queued` (retry con politica)
-7. `failed -> dead_letter` (max retries)
-
-## Loop agéntico por turno
-1. `ingest`: normalizar input.
-2. `classify`: `TEXT_SIMPLE | TEXT_TOOL_INTENT | RICH_INPUT | STICKER_STANDBY | UNSUPPORTED`.
-3. `load_context`: historial corto + memoria relevante + profile.
-4. `plan`: responder directo o usar tool.
-5. `act`: ejecutar tool(s) con timeout y retry.
-6. `verify`: validar resultado de negocio.
-7. `respond`: construir respuesta final WhatsApp.
-8. `learn`: guardar memoria/facts y cerrar run.
-
-## Contratos publicos internos
-- `POST /internal/agent/events`
-- `GET /internal/agent/runs/:runId`
-- `POST /internal/agent/runs/:runId/retry`
-- `POST /internal/agent/runs/:runId/confirm`
-
-## Dependencias
-- Supabase (colas/ledger/memoria)
-- WhatsApp Cloud API
-- AI provider actual (gateway)
-
-## SLO/SLA
-- Webhook ACK: `<150ms p95`.
-- Typing start: `<300ms p95`.
-- `TEXT_SIMPLE` end-to-end: `<2000ms p95`.
-- `TEXT_TOOL_INTENT`: `<4000ms p95`.
-
-## Riesgos
-- Competencia entre workers en misma conversacion.
-- Duplicidad de side effects en retries.
-- Degradacion de latencia por contexto excesivo.
-
-## Criterio de salida a YELLOW
-1. State machine implementada con persistencia.
-2. Retry idempotente funcional.
-3. Integracion con webhook via event enqueue.
-4. Metricas base operativas por estado de run.
-
-## Progreso implementado (2026-02-08)
-- Event enqueue en webhook background, protegido por flag:
-  - `src/modules/webhook/application/background-processor.ts`
-  - `src/modules/agent/infra/ledger.ts`
-- Consumer batch inicial por cron:
-  - `app/api/cron/process-agent-events/route.ts`
-  - `src/modules/agent/application/event-processor.ts`
-- Ciclo minimo operativo:
-  - `agent_events (pending -> processing -> done/failed)`
-  - creacion de `agent_runs` y `agent_steps` por evento.
-
-## Gaps abiertos para GREEN
-- Falta worker dedicado always-on (actualmente cron batch).
-- Falta transicion `waiting_confirmation` integrada con UX WhatsApp.
-- Falta procesamiento de tools dentro del run lifecycle del consumer.
-- Falta dead-letter handling explicito para `agent_runs`.
+## Siguiente incremento
+Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.

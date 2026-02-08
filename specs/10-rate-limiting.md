@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 10 - rate-limiting
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/modules/webhook/domain/rate-limiter.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Protección contra ráfagas y abuso en ingreso de mensajes por usuario.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

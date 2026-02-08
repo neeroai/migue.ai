@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 14 - followups-actions
 
 ## Estado
 - Semáforo: `YELLOW`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/modules/followups/application/service.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Programación y ejecución de follow-ups con estado y control de envío.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

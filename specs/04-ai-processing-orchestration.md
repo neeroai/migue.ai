@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 04 - ai-processing-orchestration
 
 ## Estado
 - Semáforo: `YELLOW`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/modules/ai/*`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Orquestación del turno del asistente con contexto real y uso de tools gobernadas.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

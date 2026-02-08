@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 12 - messaging-windows
 
 ## Estado
 - Semáforo: `YELLOW`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/modules/messaging-window/application/service.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Reglas de ventana de mensajería y elegibilidad de envío proactivo.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

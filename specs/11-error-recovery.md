@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 11 - error-recovery
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/shared/resilience/error-recovery.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Manejo de errores transitorios/permanentes con retry y prevención de duplicados.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

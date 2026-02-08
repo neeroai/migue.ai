@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 03 - message-processing-pipeline
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/modules/webhook/*`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Pipeline de persistencia, deduplicación e inicio de procesamiento asíncrono por mensaje.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

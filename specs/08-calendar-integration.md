@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 08 - calendar-integration
 
 ## Estado
 - Semáforo: `YELLOW`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/shared/infra/google/calendar.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Integración de agenda con creación de eventos y trazabilidad de errores.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

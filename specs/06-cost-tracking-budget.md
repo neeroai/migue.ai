@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 06 - cost-tracking-budget
 
 ## Estado
-- Semáforo: `YELLOW`
+- Semáforo: `GREEN`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/modules/ai/domain/cost-tracker.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Control de costo global y por usuario con gates de presupuesto y registro de consumo.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.

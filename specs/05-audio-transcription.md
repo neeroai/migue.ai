@@ -1,12 +1,12 @@
-# 20 - personalization-memory-contract
+# 05 - audio-transcription
 
 ## Estado
 - Semáforo: `YELLOW`
 - Fuente de verdad: `architecture.md`
-- Owner técnico: `src/modules/ai/domain/memory.ts`
+- Owner técnico: `src/shared/infra/openai/audio-transcription.ts`
 
 ## Objetivo funcional
-Contrato de personalización consistente para responder con memoria e historial útil.
+Transcripción de notas de voz con integración al flujo conversacional del agente.
 
 ## Alineación Architecture Master
 - LLM-first cuando aplique la decisión de negocio.
