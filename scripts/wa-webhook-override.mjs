@@ -12,22 +12,25 @@ function usage() {
 WhatsApp Webhook Override CLI
 
 Usage:
-  node scripts/wa-webhook-override.mjs status [--waba-id <id>]
-  node scripts/wa-webhook-override.mjs set --url <callback_url> [--verify-token <token>] [--waba-id <id>]
-  node scripts/wa-webhook-override.mjs reset [--waba-id <id>]
+  node scripts/wa-webhook-override.mjs status [--mode app|waba] [--waba-id <id>]
+  node scripts/wa-webhook-override.mjs set --url <callback_url> [--verify-token <token>] [--mode app|waba] [--waba-id <id>]
+  node scripts/wa-webhook-override.mjs reset [--mode app|waba] [--waba-id <id>]
 
 Environment variables:
   WHATSAPP_TOKEN                     Required
   WHATSAPP_PHONE_ID                  Required (used to discover WABA ID if not provided)
   WHATSAPP_BUSINESS_ACCOUNT_ID       Optional (if omitted, script discovers via phone ID)
+  WHATSAPP_APP_ID                    Optional (required for mode=app)
+  WHATSAPP_APP_SECRET                Optional (required for mode=app)
   WHATSAPP_VERIFY_TOKEN              Optional default verify token
+  WHATSAPP_WEBHOOK_DEFAULT_URL       Optional default URL for reset in mode=app
   GRAPH_VERSION                      Optional (default: v23.0)
 `);
 }
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
-  const args = { command, url: undefined, verifyToken: undefined, wabaId: undefined };
+  const args = { command, url: undefined, verifyToken: undefined, wabaId: undefined, mode: undefined };
 
   for (let i = 0; i < rest.length; i += 1) {
     const item = rest[i];
@@ -43,6 +46,11 @@ function parseArgs(argv) {
     }
     if (item === '--waba-id') {
       args.wabaId = rest[i + 1];
+      i += 1;
+      continue;
+    }
+    if (item === '--mode') {
+      args.mode = rest[i + 1];
       i += 1;
     }
   }
@@ -124,7 +132,7 @@ async function resolveWabaId({ token, phoneId, explicitWabaId }) {
 }
 
 async function run() {
-  const { command, url, verifyToken, wabaId: argWabaId } = parseArgs(process.argv.slice(2));
+  const { command, url, verifyToken, wabaId: argWabaId, mode: argMode } = parseArgs(process.argv.slice(2));
 
   if (!command || command === '--help' || command === '-h') {
     usage();
@@ -133,8 +141,67 @@ async function run() {
 
   const token = requireEnv('WHATSAPP_TOKEN');
   const phoneId = requireEnv('WHATSAPP_PHONE_ID');
+  const appId = process.env.WHATSAPP_APP_ID?.trim();
+  const appSecret = process.env.WHATSAPP_APP_SECRET?.trim();
   const explicitWabaId = argWabaId?.trim() || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID?.trim();
   const defaultVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN?.trim();
+  const mode = (argMode || (appId && appSecret ? 'app' : 'waba')).toLowerCase();
+
+  const appToken = appId && appSecret ? `${appId}|${appSecret}` : null;
+
+  if (mode === 'app') {
+    if (!appId || !appToken) {
+      throw new Error('mode=app requires WHATSAPP_APP_ID and WHATSAPP_APP_SECRET');
+    }
+
+    if (command === 'status') {
+      const response = await graphGet(`/${appId}/subscriptions`, appToken);
+      console.log(JSON.stringify({ mode, appId, response }, null, 2));
+      return;
+    }
+
+    if (command === 'set') {
+      if (!url) {
+        throw new Error('Missing required argument: --url');
+      }
+      const effectiveVerifyToken = verifyToken || defaultVerifyToken;
+      if (!effectiveVerifyToken) {
+        throw new Error('Missing verify token. Provide --verify-token or WHATSAPP_VERIFY_TOKEN.');
+      }
+
+      const response = await graphPost(`/${appId}/subscriptions`, appToken, {
+        object: 'whatsapp_business_account',
+        callback_url: url,
+        verify_token: effectiveVerifyToken,
+        fields: 'messages,flows,message_template_status_update,business_status_update',
+      });
+      console.log(JSON.stringify({ ok: true, mode, action: 'set', appId, url, response }, null, 2));
+      return;
+    }
+
+    if (command === 'reset') {
+      const defaultUrl = process.env.WHATSAPP_WEBHOOK_DEFAULT_URL?.trim();
+      const effectiveVerifyToken = verifyToken || defaultVerifyToken;
+      if (!defaultUrl) {
+        throw new Error('mode=app reset requires WHATSAPP_WEBHOOK_DEFAULT_URL');
+      }
+      if (!effectiveVerifyToken) {
+        throw new Error('Missing verify token. Provide --verify-token or WHATSAPP_VERIFY_TOKEN.');
+      }
+
+      const response = await graphPost(`/${appId}/subscriptions`, appToken, {
+        object: 'whatsapp_business_account',
+        callback_url: defaultUrl,
+        verify_token: effectiveVerifyToken,
+        fields: 'messages,flows,message_template_status_update,business_status_update',
+      });
+      console.log(JSON.stringify({ ok: true, mode, action: 'reset', appId, url: defaultUrl, response }, null, 2));
+      return;
+    }
+
+    throw new Error(`Unknown command: ${command}`);
+  }
+
   const wabaId = await resolveWabaId({ token, phoneId, explicitWabaId });
 
   if (command === 'status') {

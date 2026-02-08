@@ -1,6 +1,7 @@
 # Testing recurrente de webhook WhatsApp sin cambiar manualmente Meta UI
 
-Este flujo permite testear ramas (preview) por CLI usando `override_callback_uri` en `/{WABA_ID}/subscribed_apps`.
+Este flujo permite testear ramas (preview) por CLI sin entrar a Meta UI.
+Modo recomendado: actualizar callback por `/{APP_ID}/subscriptions` (mode `app`).
 
 ## Problema
 - Meta usa un callback principal de webhook.
@@ -12,15 +13,21 @@ Script agregado:
 - `scripts/wa-webhook-override.mjs`
 
 Comandos:
-- `npm run wa:webhook:status`
-- `npm run wa:webhook:set -- --url <WEBHOOK_URL>`
-- `npm run wa:webhook:reset`
+- `npm run wa:webhook:status -- --mode app`
+- `npm run wa:webhook:set -- --mode app --url <WEBHOOK_URL>`
+- `npm run wa:webhook:reset -- --mode app`
 
 ## Variables necesarias
+Modo recomendado (`app`):
+- `WHATSAPP_APP_ID`
+- `WHATSAPP_APP_SECRET`
+- `WHATSAPP_VERIFY_TOKEN` (o `--verify-token`)
+- `WHATSAPP_WEBHOOK_DEFAULT_URL` (para reset)
+
+Modo alterno (`waba`):
 - `WHATSAPP_TOKEN`
 - `WHATSAPP_PHONE_ID`
-- `WHATSAPP_VERIFY_TOKEN` (o `--verify-token`)
-- `WHATSAPP_BUSINESS_ACCOUNT_ID` (recomendado; también puedes pasar `--waba-id`)
+- `WHATSAPP_BUSINESS_ACCOUNT_ID` (o `--waba-id`)
 
 ## Flujo recomendado para QA de rama
 1. Obtener URL webhook de preview (ejemplo):
@@ -28,14 +35,14 @@ Comandos:
 
 2. Apuntar override al preview:
 ```bash
-npm run wa:webhook:set -- --url https://<deployment>.vercel.app/api/whatsapp/webhook --waba-id <WABA_ID>
+npm run wa:webhook:set -- --mode app --url https://<deployment>.vercel.app/api/whatsapp/webhook
 ```
 
 3. Probar por WhatsApp real.
 
 4. Regresar a configuración por defecto:
 ```bash
-npm run wa:webhook:reset
+npm run wa:webhook:reset -- --mode app
 ```
 
 ## Buenas prácticas
