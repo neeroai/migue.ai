@@ -2,6 +2,8 @@ import { logger } from '../../../shared/observability/logger'
 import { createProactiveAgent } from './proactive-agent'
 import { buildAgentContext } from './agent-context-builder'
 import type { TextPathway } from './memory-policy'
+import { hasToolIntent } from '../domain/intent'
+import { isLegacyRoutingEnabled } from './runtime-flags'
 
 const proactiveAgent = createProactiveAgent()
 
@@ -21,6 +23,12 @@ export type AgentTurnResult = {
     finishReason: string
     toolCalls: number
   }
+}
+
+function shouldEnableTools(pathway: TextPathway, userMessage: string): boolean {
+  if (!isLegacyRoutingEnabled()) return true
+  if (pathway === 'tool_intent') return true
+  return hasToolIntent(userMessage)
 }
 
 /**
@@ -64,6 +72,9 @@ export async function executeAgentTurn(
       messageId: params.messageId,
       pathway: params.pathway,
       agentContext,
+      toolPolicy: {
+        toolsEnabled: shouldEnableTools(params.pathway, params.userMessage),
+      },
     }
   )
 

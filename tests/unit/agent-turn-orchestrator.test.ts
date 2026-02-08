@@ -23,7 +23,80 @@ beforeEach(() => {
 })
 
 describe('agent turn orchestrator', () => {
+  it('enables tools by default when legacy routing is disabled', async () => {
+    delete process.env.LEGACY_ROUTING_ENABLED
+
+    ;(buildAgentContext as jest.Mock).mockResolvedValue({
+      modelHistory: [{ role: 'user', content: 'hola' }],
+      memoryContext: '',
+      profileSummary: '',
+      hasAnyContext: true,
+    })
+
+    mockRespond.mockResolvedValue({
+      text: 'Respuesta final',
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      cost: { input: 0.001, output: 0.001, total: 0.002 },
+      finishReason: 'stop',
+      toolCalls: 0,
+    })
+
+    await executeAgentTurn({
+      conversationId: 'c1',
+      userId: 'u1',
+      userMessage: 'hola',
+      messageId: 'w1',
+      pathway: 'text_fast_path',
+    })
+
+    expect(mockRespond).toHaveBeenCalledWith(
+      'hola',
+      'u1',
+      expect.any(Array),
+      expect.objectContaining({
+        toolPolicy: { toolsEnabled: true },
+      })
+    )
+  })
+
+  it('disables tools in legacy mode without explicit tool intent', async () => {
+    process.env.LEGACY_ROUTING_ENABLED = 'true'
+
+    ;(buildAgentContext as jest.Mock).mockResolvedValue({
+      modelHistory: [{ role: 'user', content: 'hola' }],
+      memoryContext: '',
+      profileSummary: '',
+      hasAnyContext: true,
+    })
+
+    mockRespond.mockResolvedValue({
+      text: 'Respuesta final',
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      cost: { input: 0.001, output: 0.001, total: 0.002 },
+      finishReason: 'stop',
+      toolCalls: 0,
+    })
+
+    await executeAgentTurn({
+      conversationId: 'c1',
+      userId: 'u1',
+      userMessage: 'hola',
+      messageId: 'w1',
+      pathway: 'text_fast_path',
+    })
+
+    expect(mockRespond).toHaveBeenCalledWith(
+      'hola',
+      'u1',
+      expect.any(Array),
+      expect.objectContaining({
+        toolPolicy: { toolsEnabled: false },
+      })
+    )
+  })
+
   it('executes context + proactive agent and returns normalized response', async () => {
+    delete process.env.LEGACY_ROUTING_ENABLED
     ;(buildAgentContext as jest.Mock).mockResolvedValue({
       modelHistory: [{ role: 'user', content: 'hola' }],
       memoryContext: '',
@@ -52,6 +125,7 @@ describe('agent turn orchestrator', () => {
   })
 
   it('falls back to default confirmation text on empty tool response', async () => {
+    delete process.env.LEGACY_ROUTING_ENABLED
     ;(buildAgentContext as jest.Mock).mockResolvedValue({
       modelHistory: [],
       memoryContext: '',

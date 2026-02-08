@@ -33,7 +33,6 @@ import {
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
 import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
 import type { AgentContextSnapshot } from './agent-context-builder'
-import { isLegacyRoutingEnabled } from './runtime-flags'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -161,33 +160,6 @@ Format: YYYY-MM-DDTHH:MM:SS-05:00`
 }
 
 /**
- * Detect if message contains reminder keywords
- */
-function hasReminderKeywords(message: string): boolean {
-  const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  const keywords = /recuerd|record|no olvid|avis|tengo que|debo|me recuerdas|recordar|puedes recordar/i
-  return keywords.test(message) || keywords.test(normalized)
-}
-
-/**
- * Detect if message contains meeting keywords
- */
-function hasMeetingKeywords(message: string): boolean {
-  const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  const keywords = /agenda|agendar|reserva|reservar|programa|programar|reun|cita/i
-  return keywords.test(message) || keywords.test(normalized)
-}
-
-/**
- * Detect if message contains expense keywords
- */
-function hasExpenseKeywords(message: string): boolean {
-  const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  const keywords = /gast|pagu|pagué|compr|cost|costó|sali|salió/i
-  return keywords.test(message) || keywords.test(normalized)
-}
-
-/**
  * Map AI-provided category to database constraint values
  * AI may use variations like "Comida", "Food", "Mercado" - we normalize to DB allowed values
  */
@@ -250,6 +222,9 @@ export async function respond(
     messageId?: string
     pathway?: TextPathway
     agentContext?: AgentContextSnapshot
+    toolPolicy?: {
+      toolsEnabled?: boolean
+    }
   }
 ): Promise<{
   text: string
@@ -260,11 +235,7 @@ export async function respond(
 }> {
   const pathway = context?.pathway ?? 'default'
   const readPolicy = resolveMemoryReadPolicy(pathway)
-
-  const hasReminder = hasReminderKeywords(userMessage)
-  const hasMeeting = hasMeetingKeywords(userMessage)
-  const hasExpense = hasExpenseKeywords(userMessage)
-  const isToolMessage = hasReminder || hasMeeting || hasExpense
+  const toolsEnabled = context?.toolPolicy?.toolsEnabled ?? true
 
   const {
     containsPersonalFact,
@@ -292,19 +263,8 @@ export async function respond(
     { role: 'user', content: userMessage },
   ]
 
-  // Log keyword detection (variables already declared at top for memory optimization)
-  if (hasReminder || hasMeeting || hasExpense) {
-    logger.decision(
-      '[ProactiveAgent] Keywords detected',
-      `Reminder: ${hasReminder}, Meeting: ${hasMeeting}, Expense: ${hasExpense}`,
-      {
-        metadata: { userMessage: userMessage.slice(0, 100) },
-      }
-    )
-  }
-
   // Intelligent model selection
-  const hasTools = isToolMessage
+  const hasTools = toolsEnabled
   const complexity = analyzeComplexity(userMessage, trimmedHistory.length, hasTools)
   const estimatedTokenCount = estimateTokens(userMessage, trimmedHistory.length)
   const budgetStatus = getBudgetStatus()
@@ -345,7 +305,7 @@ export async function respond(
   const fallbackModel = fallbackSelection.modelName
   const policyContext: ToolPolicyContext = { userId, pathway }
 
-  const toolsDefinition = (!isLegacyRoutingEnabled() || isToolMessage) ? {
+  const toolsDefinition = toolsEnabled ? {
       create_reminder: tool({
         description: 'Crea recordatorio cuando usuario dice: recuérdame, no olvides, tengo que, avísame',
         // @ts-expect-error - AI SDK tool() type inference issue: ZodObject not assignable to FlexibleSchema<never>
@@ -477,7 +437,7 @@ export async function respond(
     model: primaryModel,
     messages,
     ...(toolsDefinition ? { tools: toolsDefinition } : {}),
-    temperature: isToolMessage ? 0.8 : 0.6,
+    temperature: toolsEnabled ? 0.8 : 0.6,
     ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
   })
 

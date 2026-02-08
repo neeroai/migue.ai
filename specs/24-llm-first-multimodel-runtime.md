@@ -38,6 +38,9 @@ Migración a runtime LLM-first multimodelo con catálogo versionado y contexto u
 - Heurísticas legacy detrás de flag:
   - `LEGACY_ROUTING_ENABLED` controla split regex de intents y respuestas triviales canned.
   - default `false` para priorizar camino LLM-first.
+- Tool policy movida al orquestador:
+  - `AgentTurnOrchestrator` decide `toolsEnabled` por turno (legacy flag + intent explícito).
+  - `proactive-agent` ya no decide exposición de tools por regex local; ejecuta según policy del turno.
 
 ## Siguiente incremento
 Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.
