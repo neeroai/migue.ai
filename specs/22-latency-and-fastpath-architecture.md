@@ -1,7 +1,7 @@
 # 22 - Latency And Fast-Path Architecture
 
 ## Estado
-- Semaforo: `RED`
+- Semaforo: `YELLOW`
 - Fecha: `2026-02-08`
 - Owner tecnico: `src/modules/webhook/application/*` + `src/modules/ai/application/*`
 
@@ -68,3 +68,22 @@ Maximizar percepcion de respuesta inmediata en WhatsApp, priorizando texto simpl
 1. SLO aplicados y medidos por ruta.
 2. Alertas por degradacion p95.
 3. Suite de regresion para fast-path.
+
+## Progreso implementado (2026-02-08)
+- `pathway` normalizado por ruta:
+  - `text_fast_path`
+  - `tool_intent`
+  - `rich_input`
+- Presupuestos SLO aplicados en runtime:
+  - `route_decision_ms <= 20ms`
+  - `typing_start_ms <= 300ms`
+  - `end_to_end_ms` por `pathway`
+- Deteccion de violaciones:
+  - log warning estructurado `[SLA] Budget violation detected`
+  - metrica adicional `sla.slo_violation_count`
+- Cobertura unitaria de presupuestos:
+  - `tests/unit/sla-metrics.test.ts`
+
+## Gaps abiertos para GREEN
+- Falta dashboard/alertas p95 en observabilidad externa.
+- Falta e2e dedicado para validar budgets bajo carga.

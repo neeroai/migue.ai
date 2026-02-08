@@ -22,6 +22,13 @@ const RICH_INPUT_TIMEOUT_MS = {
 
 const SLOW_PROCESSING_NOTICE_MS = 8_000
 
+function pathwayForInputClass(inputClass: string): string {
+  if (inputClass === 'TEXT_SIMPLE') return 'text_fast_path'
+  if (inputClass === 'TEXT_TOOL_INTENT') return 'tool_intent'
+  if (inputClass === 'RICH_INPUT' || inputClass === 'RICH_INPUT_TOOL_INTENT') return 'rich_input'
+  return 'unsupported'
+}
+
 function timeoutForType(type: string): number {
   if (type === 'audio') return RICH_INPUT_TIMEOUT_MS.audio
   if (type === 'image') return RICH_INPUT_TIMEOUT_MS.image
@@ -73,6 +80,7 @@ export async function processInputByClass({
     value: routeDecisionMs,
     inputClass: routed.inputClass,
     messageType: normalized.type,
+    pathway: pathwayForInputClass(routed.inputClass),
   })
 
   if (routed.inputClass === 'TEXT_SIMPLE' && normalized.content && normalized.from) {
@@ -90,6 +98,7 @@ export async function processInputByClass({
       value: Date.now() - startedAt,
       inputClass: routed.inputClass,
       messageType: normalized.type,
+      pathway: 'text_fast_path',
     })
     return
   }
@@ -109,6 +118,7 @@ export async function processInputByClass({
       value: Date.now() - startedAt,
       inputClass: routed.inputClass,
       messageType: normalized.type,
+      pathway: 'tool_intent',
     })
     return
   }
@@ -188,6 +198,7 @@ export async function processInputByClass({
         value: Date.now() - startedAt,
         inputClass: routed.inputClass,
         messageType: normalized.type,
+        pathway: 'rich_input',
       })
     }
     return
@@ -205,6 +216,7 @@ export async function processInputByClass({
       value: Date.now() - startedAt,
       inputClass: routed.inputClass,
       messageType: normalized.type,
+      pathway: 'unsupported',
     })
     return
   }
@@ -221,6 +233,7 @@ export async function processInputByClass({
       value: Date.now() - startedAt,
       inputClass: routed.inputClass,
       messageType: normalized.type,
+      pathway: 'unsupported',
     })
   }
 }

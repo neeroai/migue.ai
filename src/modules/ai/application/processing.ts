@@ -35,7 +35,7 @@ const supabaseClient = getSupabaseServerClient()
 
 const HISTORY_CHAR_BUDGET = 4000
 
-type TextPathway = 'default' | 'fast_text' | 'tool_intent' | 'rich_input'
+type TextPathway = 'default' | 'text_fast_path' | 'tool_intent' | 'rich_input'
 
 type ProcessMessageOptions = {
   pathway?: TextPathway
@@ -141,7 +141,7 @@ export async function processMessageWithAI(
     // OPTIMIZATION P0.1: Non-blocking hydration reduces cold start by 300-800ms
     const { getCostTracker } = await import('../domain/cost-tracker')
     const tracker = getCostTracker()
-    if (!tracker.isHydratedState() && pathway !== 'fast_text') {
+    if (!tracker.isHydratedState() && pathway !== 'text_fast_path') {
       await tracker.ensureHydrated()
     } else {
       void tracker.ensureHydrated() // Fire-and-forget
@@ -223,7 +223,7 @@ export async function processMessageWithAI(
       conversationId,
       userId,
     })
-    const historyLimit = pathway === 'fast_text'
+    const historyLimit = pathway === 'text_fast_path'
       ? (userMessage.length > 300 ? 6 : 8)
       : userMessage.length > 600 ? 8 : userMessage.length > 200 ? 12 : 15
     const history = await getConversationHistory(conversationId, historyLimit, supabaseClient)

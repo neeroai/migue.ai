@@ -15,6 +15,6 @@ export async function processTextFastPath(params: TextFastPathParams): Promise<v
     params.userPhone,
     params.userMessage,
     params.messageId,
-    { pathway: 'fast_text' }
+    { pathway: 'text_fast_path' }
   )
 }
