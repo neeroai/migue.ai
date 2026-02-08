@@ -311,6 +311,7 @@ export async function respond(
       ? { explicitConsent: context.toolPolicy.explicitConsent }
       : {}),
   }
+  let lastToolOutcomeMessage: string | null = null
 
   const toolsDefinition = toolsEnabled ? {
       create_reminder: tool({
@@ -336,8 +337,11 @@ export async function respond(
               return `Recordatorio creado: "${title}"`
             },
           })
-          if (governed.status === 'ok') return governed.output
-          return governed.userMessage
+          const outcome = governed.status === 'ok' ? governed.output : governed.userMessage
+          if (typeof outcome === 'string' && outcome.trim().length > 0) {
+            lastToolOutcomeMessage = outcome.trim()
+          }
+          return outcome
         },
       }),
       schedule_meeting: tool({
@@ -369,8 +373,11 @@ export async function respond(
               return result.reply
             },
           })
-          if (governed.status === 'ok') return governed.output
-          return governed.userMessage
+          const outcome = governed.status === 'ok' ? governed.output : governed.userMessage
+          if (typeof outcome === 'string' && outcome.trim().length > 0) {
+            lastToolOutcomeMessage = outcome.trim()
+          }
+          return outcome
         },
       }),
       track_expense: tool({
@@ -426,8 +433,11 @@ export async function respond(
               }
             },
           })
-          if (governed.status === 'ok') return governed.output
-          return governed.userMessage
+          const outcome = governed.status === 'ok' ? governed.output : governed.userMessage
+          if (typeof outcome === 'string' && outcome.trim().length > 0) {
+            lastToolOutcomeMessage = outcome.trim()
+          }
+          return outcome
         },
       }),
   } : undefined
@@ -488,7 +498,11 @@ export async function respond(
   // Some providers/flows finish with tool-calls and empty assistant text.
   // Ensure we always return a non-empty user-facing confirmation.
   if (text.trim().length === 0 && toolCallCount > 0) {
-    text = (toolResults[toolResults.length - 1] ?? 'Listo. Ya ejecuté tu solicitud.').trim()
+    text = (
+      toolResults[toolResults.length - 1] ??
+      lastToolOutcomeMessage ??
+      'Listo. Ya ejecuté tu solicitud.'
+    ).trim()
   }
 
   logger.info('[ProactiveAgent] Response generated', {

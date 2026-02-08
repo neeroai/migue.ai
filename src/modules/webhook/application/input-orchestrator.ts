@@ -20,7 +20,6 @@ const RICH_INPUT_TIMEOUT_MS = {
   document: 30_000,
 } as const
 
-const SLOW_PROCESSING_NOTICE_MS = 8_000
 
 function pathwayForInputClass(inputClass: string): string {
   if (inputClass === 'TEXT_SIMPLE') return 'text_fast_path'
@@ -126,24 +125,6 @@ export async function processInputByClass({
   if (routed.inputClass === 'RICH_INPUT' || routed.inputClass === 'RICH_INPUT_TOOL_INTENT') {
     if (!normalized.from || !normalized.waMessageId || !normalized.mediaUrl) return
 
-    // Immediate feedback for potentially long-running media jobs.
-    await sendWhatsAppText(
-      normalized.from,
-      'Recibí tu archivo. Lo estoy procesando y te respondo en breve.'
-    )
-
-    let done = false
-    const slowTimer = setTimeout(() => {
-      if (done) return
-      void sendWhatsAppText(
-        normalized.from,
-        'Estoy procesando tu archivo, está tardando más de lo normal. Te respondo apenas termine.'
-      ).catch(() => undefined)
-    }, SLOW_PROCESSING_NOTICE_MS)
-    if (typeof (slowTimer as NodeJS.Timeout).unref === 'function') {
-      (slowTimer as NodeJS.Timeout).unref()
-    }
-
     try {
       const timeoutMs = timeoutForType(normalized.type)
 
@@ -189,8 +170,6 @@ export async function processInputByClass({
           : 'No pude procesar ese archivo en este momento. Intenta de nuevo o envíame el contenido en texto.'
       ).catch(() => undefined)
     } finally {
-      done = true
-      clearTimeout(slowTimer)
       emitSlaMetric(SLA_METRICS.END_TO_END_MS, {
         requestId,
         conversationId,
