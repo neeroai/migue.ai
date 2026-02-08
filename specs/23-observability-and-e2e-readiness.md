@@ -27,5 +27,11 @@ Readiness operacional con runbooks, métricas y suites e2e de regresión.
 - Completar e2e faltantes por feature.
 - Consolidar dashboards/alertas externas donde aplique.
 
+## Progreso implementado
+- Test de integración de regresión para rich input:
+  - `tests/integration/agent-e2e-rich-input-expense.test.ts`
+  - Valida consentimiento explícito (`explicitToolConsent`) en imagen con gasto.
+  - Valida ausencia de placeholders de procesamiento en salida WhatsApp.
+
 ## Siguiente incremento
 Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.
