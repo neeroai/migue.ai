@@ -31,6 +31,7 @@ import {
   type TextPathway,
 } from './memory-policy'
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
+import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -400,6 +401,7 @@ export async function respond(
 
   const primaryModel = primarySelection.modelName
   const fallbackModel = fallbackSelection.modelName
+  const policyContext: ToolPolicyContext = { userId, pathway }
 
   const toolsDefinition = isToolMessage ? {
       create_reminder: tool({
@@ -416,8 +418,17 @@ export async function respond(
           description?: string
           datetimeIso: string
         }) => {
-          await createReminder(userId, title, description || null, datetimeIso)
-          return `Recordatorio creado: "${title}"`
+          const governed = await executeGovernedTool({
+            toolName: 'create_reminder',
+            context: policyContext,
+            input: { title, description, datetimeIso },
+            execute: async ({ title, description, datetimeIso }) => {
+              await createReminder(userId, title, description || null, datetimeIso)
+              return `Recordatorio creado: "${title}"`
+            },
+          })
+          if (governed.status === 'ok') return governed.output
+          return governed.userMessage
         },
       }),
       schedule_meeting: tool({
@@ -436,12 +447,21 @@ export async function respond(
           endTime: string
           description?: string
         }) => {
-          const result = await scheduleMeetingFromIntent({
-            userId,
-            userMessage: `${title}${description ? ': ' + description : ''}`,
-            conversationHistory: [],
+          const governed = await executeGovernedTool({
+            toolName: 'schedule_meeting',
+            context: policyContext,
+            input: { title, startTime, endTime, description },
+            execute: async ({ title, description }) => {
+              const result = await scheduleMeetingFromIntent({
+                userId,
+                userMessage: `${title}${description ? ': ' + description : ''}`,
+                conversationHistory: [],
+              })
+              return result.reply
+            },
           })
-          return result.reply
+          if (governed.status === 'ok') return governed.output
+          return governed.userMessage
         },
       }),
       track_expense: tool({
@@ -458,38 +478,47 @@ export async function respond(
           category: string
           description: string
         }) => {
-          try {
-            const { getSupabaseServerClient } = await import('../../../shared/infra/db/supabase')
-            const supabase = getSupabaseServerClient()
+          const governed = await executeGovernedTool({
+            toolName: 'track_expense',
+            context: policyContext,
+            input: { amount, currency, category, description },
+            execute: async ({ amount, currency, category, description }) => {
+              try {
+                const { getSupabaseServerClient } = await import('../../../shared/infra/db/supabase')
+                const supabase = getSupabaseServerClient()
 
-            // Map AI category to DB constraint values
-            const mappedCategory = mapExpenseCategory(category)
-            const expenseDate = new Date().toISOString().split('T')[0] ?? new Date().toISOString().slice(0, 10)
+                // Map AI category to DB constraint values
+                const mappedCategory = mapExpenseCategory(category)
+                const expenseDate = new Date().toISOString().split('T')[0] ?? new Date().toISOString().slice(0, 10)
 
-            const { error } = await supabase.from('expenses').insert({
-              user_id: userId,
-              amount,
-              currency,
-              category: mappedCategory,
-              description,
-              expense_date: expenseDate,
-            })
+                const { error } = await supabase.from('expenses').insert({
+                  user_id: userId,
+                  amount,
+                  currency,
+                  category: mappedCategory,
+                  description,
+                  expense_date: expenseDate,
+                })
 
-            if (error) {
-              logger.error('[trackExpense] Database insert failed', error, {
-                metadata: { userId, amount, currency, category: mappedCategory, description },
-              })
-              return `Error al registrar gasto. Por favor intenta de nuevo.`
-            }
+                if (error) {
+                  logger.error('[trackExpense] Database insert failed', error, {
+                    metadata: { userId, amount, currency, category: mappedCategory, description },
+                  })
+                  return 'Error al registrar gasto. Por favor intenta de nuevo.'
+                }
 
-            logger.info('[trackExpense] Persisted to database', {
-              metadata: { userId, amount, currency, category: mappedCategory, description },
-            })
-            return `Gasto registrado: ${currency} ${amount} en ${mappedCategory}`
-          } catch (error: any) {
-            logger.error('[trackExpense] Unexpected error', error)
-            return `Error al registrar gasto. Por favor intenta de nuevo.`
-          }
+                logger.info('[trackExpense] Persisted to database', {
+                  metadata: { userId, amount, currency, category: mappedCategory, description },
+                })
+                return `Gasto registrado: ${currency} ${amount} en ${mappedCategory}`
+              } catch (error: any) {
+                logger.error('[trackExpense] Unexpected error', error)
+                return 'Error al registrar gasto. Por favor intenta de nuevo.'
+              }
+            },
+          })
+          if (governed.status === 'ok') return governed.output
+          return governed.userMessage
         },
       }),
   } : undefined

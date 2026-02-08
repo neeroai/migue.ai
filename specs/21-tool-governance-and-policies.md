@@ -1,7 +1,7 @@
 # 21 - Tool Governance And Policies
 
 ## Estado
-- Semaforo: `RED`
+- Semaforo: `YELLOW`
 - Fecha: `2026-02-08`
 - Owner tecnico: `src/modules/ai/application/*`
 
@@ -74,3 +74,24 @@ Tabla objetivo: `agent_tool_calls`.
 1. Catalogo versionado operativo.
 2. Policy engine integrado antes de ejecutar tools.
 3. Logs/auditoria completos por tool call.
+
+## Progreso implementado (2026-02-08)
+- Catalogo V1 operativo en `src/modules/ai/application/tool-governance.ts`:
+  - contratos por tool con `schemaVersion`, `riskLevel`, `timeoutMs`, `retries`, `idempotencyStrategy`.
+- Policy engine integrado antes de side effects:
+  - `evaluateToolPolicy(...)` produce `allow|confirm|deny`.
+  - `executeGovernedTool(...)` envuelve ejecucion con timeout/retry y bloquea side effects cuando aplica.
+- Integracion en runtime del agente:
+  - `create_reminder`, `schedule_meeting`, `track_expense` ahora pasan por policy engine antes de ejecutar.
+- Auditoria en logs estructurados:
+  - `[ToolPolicy] Tool denied`
+  - `[ToolPolicy] Tool requires confirmation`
+  - `[ToolPolicy] Tool executed`
+  - `[ToolPolicy] Tool execution failed`
+- Cobertura unitaria:
+  - `tests/unit/tool-governance.test.ts`
+
+## Gaps abiertos para GREEN
+- Persistencia de auditoria de cada tool call en `agent_tool_calls` (actualmente logs, no ledger por `run_id` aun no conectado en toda la ruta).
+- Falta habilitar herramientas V1 pendientes en runtime (`web_search`, `send_whatsapp_message`, `memory_query`, `memory_upsert`).
+- Falta politica de loop detection tool->tool con checkpoint de progreso.
