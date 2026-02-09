@@ -36,9 +36,12 @@ type MessagesResult = {
 function createSupabaseMock(
   usersResult: UsersResult,
   flowSessionResult: FlowSessionResult,
+  completedFlowSessionResult: FlowSessionResult = { data: null, error: null },
   conversationsResult: ConversationsResult = { data: [], error: null },
   messagesResult: MessagesResult = { data: [], error: null }
 ) {
+  let flowSessionsTableCallCount = 0
+
   const usersQuery = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
@@ -52,6 +55,13 @@ function createSupabaseMock(
     gt: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     maybeSingle: jest.fn().mockResolvedValue(flowSessionResult),
+  }
+
+  const completedFlowSessionsQuery = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue(completedFlowSessionResult),
   }
 
   const conversationsQuery = {
@@ -70,7 +80,10 @@ function createSupabaseMock(
   return {
     from: jest.fn((table: string) => {
       if (table === 'users') return usersQuery
-      if (table === 'flow_sessions') return flowSessionsQuery
+      if (table === 'flow_sessions') {
+        flowSessionsTableCallCount += 1
+        return flowSessionsTableCallCount === 1 ? completedFlowSessionsQuery : flowSessionsQuery
+      }
       if (table === 'conversations') return conversationsQuery
       if (table === 'messages_v2') return messagesQuery
       throw new Error(`Unexpected table ${table}`)
@@ -209,6 +222,7 @@ describe('ensureSignupOnFirstContact', () => {
           },
           error: null,
         },
+        { data: null, error: null },
         { data: null, error: null },
         { data: [{ id: 'c1' }], error: null },
         { data: [{ id: 'm1' }], error: null }

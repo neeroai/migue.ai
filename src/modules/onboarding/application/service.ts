@@ -101,6 +101,29 @@ export async function ensureSignupOnFirstContact({
     return { blocked: false, reason: 'already_completed' }
   }
 
+  // If signup flow was already completed for this user, do not re-block.
+  const { data: completedSession, error: completedSessionError } = await supabase
+    .from('flow_sessions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('flow_id', flowId)
+    .eq('status', 'completed')
+    .limit(1)
+    .maybeSingle()
+
+  if (completedSessionError) {
+    logger.warn('[onboarding] Failed checking completed signup flow session', {
+      ...(requestId ? { requestId } : {}),
+      ...(conversationId ? { conversationId } : {}),
+      userId,
+      metadata: { errorMessage: completedSessionError.message, flowId },
+    })
+  }
+
+  if (completedSession?.id) {
+    return { blocked: false, reason: 'already_completed' }
+  }
+
   // Do not hard-block established users due to incomplete signup fields.
   // If the assistant has already replied historically, treat as completed.
   try {

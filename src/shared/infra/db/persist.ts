@@ -12,6 +12,7 @@ import { getSupabaseServerClient } from './supabase'
 import type { NormalizedMessage } from '@/src/modules/webhook/domain/message-normalization'
 import { logger } from '../../observability/logger'
 import { invalidateConversationCache } from '@/src/modules/conversation/application/utils'
+import { normalizePhoneNumber } from '../../utils/phone'
 
 /**
  * Valid WhatsApp Cloud API v23.0 message types matching PostgreSQL enum
@@ -40,15 +41,16 @@ type ValidMsgType = typeof VALID_MSG_TYPES[number];
  */
 export async function upsertUserByPhone(phoneNumber: string) {
   const startTime = Date.now()
+  const normalizedPhone = normalizePhoneNumber(phoneNumber)
 
   logger.debug('[DB] Upserting user', {
-    metadata: { phoneNumber: phoneNumber.slice(0, 8) + '***' }, // Partial for privacy
+    metadata: { phoneNumber: normalizedPhone.slice(0, 8) + '***' }, // Partial for privacy
   })
 
   const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('users')
-    .upsert({ phone_number: phoneNumber }, { onConflict: 'phone_number' })
+    .upsert({ phone_number: normalizedPhone }, { onConflict: 'phone_number' })
     .select('id')
     .single()
 
