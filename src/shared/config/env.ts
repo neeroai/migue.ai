@@ -21,6 +21,8 @@ const envSchema = z
   WHATSAPP_PHONE_ID: z.string().min(1, 'WHATSAPP_PHONE_ID is required'),
   WHATSAPP_VERIFY_TOKEN: z.string().min(1, 'WHATSAPP_VERIFY_TOKEN is required'),
   WHATSAPP_APP_SECRET: z.string().min(1, 'WHATSAPP_APP_SECRET is required'),
+  WHATSAPP_FLOW_PRIVATE_KEY: z.string().optional(),
+  WHATSAPP_FLOW_PRIVATE_KEY_PASSPHRASE: z.string().optional(),
 
   // Supabase Configuration
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),

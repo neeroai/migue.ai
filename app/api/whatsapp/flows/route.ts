@@ -9,7 +9,7 @@
  * @updated 2026-02-07 19:00
  */
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const maxDuration = 10;
 
 import {
@@ -17,6 +17,11 @@ import {
   completeFlowSession,
   validateFlowSignature,
 } from '../../../../src/shared/infra/whatsapp/flows';
+import {
+  decryptFlowRequest,
+  encryptFlowResponse,
+  isEncryptedFlowEnvelope,
+} from '../../../../src/shared/infra/whatsapp/flow-crypto';
 import { logger } from '../../../../src/shared/observability/logger';
 import type { FlowDataExchangeRequest } from '../../../../types/whatsapp';
 
@@ -44,7 +49,60 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Parse request body
-    const body = JSON.parse(rawBody) as FlowDataExchangeRequest;
+    const parsedBody = JSON.parse(rawBody) as any;
+
+    if (isEncryptedFlowEnvelope(parsedBody)) {
+      const decrypted = decryptFlowRequest(parsedBody);
+      const body = decrypted.payload as FlowDataExchangeRequest;
+
+      let responsePayload: any
+      if (body.action === 'ping') {
+        responsePayload = {
+          version: body.version || '3.0',
+          screen: body.screen || 'SUCCESS',
+          data: { status: 'active' },
+        }
+      } else {
+        if (!body.flow_token || !body.action || !body.screen) {
+          responsePayload = {
+            version: body.version || '3.0',
+            screen: body.screen || 'SUCCESS',
+            data: { status: 'ok' },
+          }
+        } else {
+          const routedResponse = await handleFlowDataExchange(body)
+          responsePayload = routedResponse ?? {
+            version: body.version || '3.0',
+            screen: body.screen || 'SUCCESS',
+            data: { status: 'ok' },
+          }
+          if (
+            body.flow_token &&
+            (responsePayload.screen === 'SUCCESS' ||
+              responsePayload.screen === 'THANK_YOU' ||
+              responsePayload.screen === 'APPOINTMENT_CONFIRMED')
+          ) {
+            await completeFlowSession(body.flow_token).catch((err) => {
+              logger.error(
+                '[Flow Endpoint] Error completing flow session',
+                err instanceof Error ? err : new Error(String(err)),
+                {
+                  metadata: { flow_token: body.flow_token, screen: responsePayload.screen },
+                }
+              )
+            })
+          }
+        }
+      }
+
+      const encryptedResponse = encryptFlowResponse(responsePayload, decrypted.aesKey, decrypted.iv)
+      return new Response(encryptedResponse, {
+        status: 200,
+        headers: { 'content-type': 'text/plain' },
+      })
+    }
+
+    const body = parsedBody as FlowDataExchangeRequest;
 
     // Meta health checks may send ping payloads without all runtime fields.
     if (body.action === 'ping') {

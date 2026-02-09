@@ -4,6 +4,8 @@ declare namespace NodeJS {
     WHATSAPP_PHONE_ID: string;
     WHATSAPP_VERIFY_TOKEN: string;
     WHATSAPP_APP_SECRET: string;
+    WHATSAPP_FLOW_PRIVATE_KEY?: string;
+    WHATSAPP_FLOW_PRIVATE_KEY_PASSPHRASE?: string;
 
     SUPABASE_URL: string;
     SUPABASE_KEY?: string;
