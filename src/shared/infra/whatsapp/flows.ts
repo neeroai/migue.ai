@@ -10,6 +10,7 @@
  */
 
 import { sendWhatsAppRequest } from './http';
+import { sendWhatsAppText } from './messaging';
 import { getSupabaseServerClient } from '../db/supabase';
 import { logger } from '../../observability/logger';
 import type {
@@ -589,13 +590,96 @@ async function handleDataExchange(
  */
 export async function completeFlowSession(flowToken: string): Promise<void> {
   const supabase = getSupabaseServerClient();
-  await supabase
+  const { error } = await supabase
     .from('flow_sessions')
     .update({
       status: 'completed',
       completed_at: new Date().toISOString(),
     })
     .eq('flow_token', flowToken);
+  if (error) {
+    throw error;
+  }
+}
+
+/**
+ * Mark session as completed only once and return session metadata when transition happens.
+ * This is used to run one-time post-completion side-effects (e.g. welcome message).
+ */
+export async function completeFlowSessionOnce(flowToken: string): Promise<{
+  completed: boolean;
+  flowId?: string;
+  userId?: string;
+}> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('flow_sessions')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    })
+    .eq('flow_token', flowToken)
+    .in('status', ['pending', 'in_progress'])
+    .select('flow_id,user_id')
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return { completed: false };
+  }
+
+  return {
+    completed: true,
+    flowId: (data as any).flow_id,
+    userId: (data as any).user_id,
+  };
+}
+
+/**
+ * Sends a one-shot welcome message after signup completion.
+ */
+export async function sendPostSignupWelcome(userId: string): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('phone_number,name')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('[WhatsApp Flow] Failed to load user for welcome message', error, {
+      metadata: { userId },
+    });
+    return false;
+  }
+
+  const phone = user?.phone_number;
+  if (!phone) {
+    logger.warn('[WhatsApp Flow] Missing phone_number for welcome message', {
+      metadata: { userId },
+    });
+    return false;
+  }
+
+  const firstName =
+    typeof user?.name === 'string' && user.name.trim().length > 0
+      ? user.name.trim().split(/\s+/)[0]
+      : null;
+  const greetingName = firstName ? `, ${firstName}` : '';
+  const body = `Listo${greetingName}. Tu registro quedó completo. Ya puedo ayudarte con recordatorios, gastos, agenda y más. ¿Qué quieres hacer primero?`;
+
+  try {
+    await sendWhatsAppText(phone, body);
+    return true;
+  } catch (sendError: any) {
+    logger.error('[WhatsApp Flow] Failed sending welcome message', sendError, {
+      metadata: { userId, phone: phone.slice(0, 8) + '***' },
+    });
+    return false;
+  }
 }
 
 // Helper functions

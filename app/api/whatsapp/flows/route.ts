@@ -15,6 +15,8 @@ export const maxDuration = 10;
 import {
   handleFlowDataExchange,
   completeFlowSession,
+  completeFlowSessionOnce,
+  sendPostSignupWelcome,
   validateFlowSignature,
 } from '../../../../src/shared/infra/whatsapp/flows';
 import {
@@ -82,7 +84,13 @@ export async function POST(req: Request): Promise<Response> {
               responsePayload.screen === 'THANK_YOU' ||
               responsePayload.screen === 'APPOINTMENT_CONFIRMED')
           ) {
-            await completeFlowSession(body.flow_token).catch((err) => {
+            await completeFlowSessionOnce(body.flow_token)
+              .then(async (completion) => {
+                if (completion.completed && completion.flowId === 'user_signup_flow' && completion.userId) {
+                  await sendPostSignupWelcome(completion.userId)
+                }
+              })
+              .catch((err) => {
               logger.error(
                 '[Flow Endpoint] Error completing flow session',
                 err instanceof Error ? err : new Error(String(err)),
@@ -152,11 +160,20 @@ export async function POST(req: Request): Promise<Response> {
     if (response.screen === 'SUCCESS' ||
         response.screen === 'THANK_YOU' ||
         response.screen === 'APPOINTMENT_CONFIRMED') {
-      await completeFlowSession(body.flow_token).catch((err) => {
-        logger.error('[Flow Endpoint] Error completing flow session', err instanceof Error ? err : new Error(String(err)), {
-          metadata: { flow_token: body.flow_token, screen: response.screen }
+      await completeFlowSessionOnce(body.flow_token)
+        .then(async (completion) => {
+          if (completion.completed && completion.flowId === 'user_signup_flow' && completion.userId) {
+            await sendPostSignupWelcome(completion.userId)
+          } else if (!completion.completed) {
+            // Backward compatibility for old sessions already marked as completed.
+            await completeFlowSession(body.flow_token).catch(() => undefined)
+          }
+        })
+        .catch((err) => {
+          logger.error('[Flow Endpoint] Error completing flow session', err instanceof Error ? err : new Error(String(err)), {
+            metadata: { flow_token: body.flow_token, screen: response.screen }
+          });
         });
-      });
     }
 
     return new Response(JSON.stringify(response), {
