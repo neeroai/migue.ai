@@ -300,6 +300,16 @@ export async function handleFlowDataExchange(
   try {
     const { flow_token, action, screen, data } = request;
 
+    // Meta can probe endpoint availability with ping before any flow session exists.
+    // This must not depend on flow_sessions lookup.
+    if (action === 'ping') {
+      return {
+        version: '3.0',
+        screen: 'SUCCESS',
+        data: { status: 'pong' },
+      };
+    }
+
     // Validate flow token and expiration
     const supabase = getSupabaseServerClient();
     const { data: session } = await supabase
@@ -327,13 +337,6 @@ export async function handleFlowDataExchange(
 
     // Handle different actions
     switch (action) {
-      case 'ping':
-        return {
-          version: '3.0',
-          screen: 'SUCCESS',
-          data: { status: 'pong' },
-        };
-
       case 'INIT':
         return handleFlowInit(session, screen, data);
 

@@ -59,6 +59,23 @@ describe('WhatsApp signup flow data exchange', () => {
     jest.clearAllMocks()
   })
 
+  it('responds pong on ping without requiring DB session', async () => {
+    const response = await handleFlowDataExchange({
+      version: '3.0',
+      action: 'ping',
+      screen: 'WELCOME',
+      flow_token: 'meta-probe-token',
+      data: {},
+    })
+
+    expect(response).toEqual({
+      version: '3.0',
+      screen: 'SUCCESS',
+      data: { status: 'pong' },
+    })
+    expect(getSupabaseServerClientMock).not.toHaveBeenCalled()
+  })
+
   it('keeps BASIC_INFO screen when email is invalid', async () => {
     const session: Session = {
       flow_token: 'token-1',
