@@ -203,6 +203,12 @@ export async function processWebhookInBackground(
         });
       }
       if (signupGate.blocked) {
+        if (signupGate.reason === 'already_in_progress') {
+          await sendWhatsAppText(
+            normalized.from,
+            'Tu registro sigue pendiente. Abre el formulario "Completar registro" para continuar, o envíame: "Me llamo <tu nombre>, mi email es <tu@email.com>".'
+          ).catch(() => undefined);
+        }
         logger.info('[background] Onboarding gate active, skipping AI turn', {
           requestId,
           conversationId,
