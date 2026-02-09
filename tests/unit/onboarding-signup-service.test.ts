@@ -23,7 +23,22 @@ type FlowSessionResult = {
   error: any
 }
 
-function createSupabaseMock(usersResult: UsersResult, flowSessionResult: FlowSessionResult) {
+type ConversationsResult = {
+  data: any
+  error: any
+}
+
+type MessagesResult = {
+  data: any
+  error: any
+}
+
+function createSupabaseMock(
+  usersResult: UsersResult,
+  flowSessionResult: FlowSessionResult,
+  conversationsResult: ConversationsResult = { data: [], error: null },
+  messagesResult: MessagesResult = { data: [], error: null }
+) {
   const usersQuery = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
@@ -39,10 +54,25 @@ function createSupabaseMock(usersResult: UsersResult, flowSessionResult: FlowSes
     maybeSingle: jest.fn().mockResolvedValue(flowSessionResult),
   }
 
+  const conversationsQuery = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockResolvedValue(conversationsResult),
+  }
+
+  const messagesQuery = {
+    select: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockResolvedValue(messagesResult),
+  }
+
   return {
     from: jest.fn((table: string) => {
       if (table === 'users') return usersQuery
       if (table === 'flow_sessions') return flowSessionsQuery
+      if (table === 'conversations') return conversationsQuery
+      if (table === 'messages_v2') return messagesQuery
       throw new Error(`Unexpected table ${table}`)
     }),
   }
@@ -114,7 +144,9 @@ describe('ensureSignupOnFirstContact', () => {
           },
           error: null,
         },
-        { data: { id: 'flow-1' }, error: null }
+        { data: { id: 'flow-1' }, error: null },
+        { data: [], error: null },
+        { data: [], error: null }
       )
     )
 
@@ -139,7 +171,9 @@ describe('ensureSignupOnFirstContact', () => {
           },
           error: null,
         },
-        { data: null, error: null }
+        { data: null, error: null },
+        { data: [], error: null },
+        { data: [], error: null }
       )
     )
 
@@ -162,5 +196,31 @@ describe('ensureSignupOnFirstContact', () => {
         initialScreen: 'WELCOME',
       })
     )
+  })
+
+  it('does not block users with prior assistant outbound history', async () => {
+    getSupabaseServerClientMock.mockReturnValue(
+      createSupabaseMock(
+        {
+          data: {
+            name: null,
+            email: null,
+            onboarding_completed_at: null,
+          },
+          error: null,
+        },
+        { data: null, error: null },
+        { data: [{ id: 'c1' }], error: null },
+        { data: [{ id: 'm1' }], error: null }
+      )
+    )
+
+    const result = await ensureSignupOnFirstContact({
+      userId: 'u1',
+      phoneNumber: '+573001112233',
+    })
+
+    expect(result).toEqual({ blocked: false, reason: 'already_completed' })
+    expect(sendFlowMock).not.toHaveBeenCalled()
   })
 })

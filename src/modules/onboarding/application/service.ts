@@ -36,6 +36,28 @@ function needsSignup(user: {
   return !(hasName && hasEmail)
 }
 
+async function hasHistoricalAssistantReplies(supabase: ReturnType<typeof getSupabaseServerClient>, userId: string): Promise<boolean> {
+  const { data: conversations, error: convError } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('user_id', userId)
+    .limit(50)
+
+  if (convError) throw convError
+  const conversationIds = (conversations ?? []).map((c: any) => c.id).filter(Boolean)
+  if (conversationIds.length === 0) return false
+
+  const { data: outbound, error: outboundError } = await supabase
+    .from('messages_v2')
+    .select('id')
+    .in('conversation_id', conversationIds)
+    .eq('direction', 'outbound')
+    .limit(1)
+
+  if (outboundError) throw outboundError
+  return Array.isArray(outbound) && outbound.length > 0
+}
+
 export async function ensureSignupOnFirstContact({
   userId,
   phoneNumber,
@@ -76,6 +98,28 @@ export async function ensureSignupOnFirstContact({
   }
 
   if (!userRow || !needsSignup(userRow)) {
+    return { blocked: false, reason: 'already_completed' }
+  }
+
+  // Do not hard-block established users due to incomplete signup fields.
+  // If the assistant has already replied historically, treat as completed.
+  try {
+    const hasHistory = await hasHistoricalAssistantReplies(supabase, userId)
+    if (hasHistory) {
+      logger.info('[onboarding] Skipping signup gate for existing user with assistant history', {
+        ...(requestId ? { requestId } : {}),
+        ...(conversationId ? { conversationId } : {}),
+        userId,
+      })
+      return { blocked: false, reason: 'already_completed' }
+    }
+  } catch (historyError: any) {
+    logger.warn('[onboarding] Failed to evaluate assistant history, skipping guard', {
+      ...(requestId ? { requestId } : {}),
+      ...(conversationId ? { conversationId } : {}),
+      userId,
+      metadata: { errorMessage: historyError?.message },
+    })
     return { blocked: false, reason: 'already_completed' }
   }
 
