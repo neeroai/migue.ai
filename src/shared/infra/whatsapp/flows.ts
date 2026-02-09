@@ -242,7 +242,7 @@ export async function sendFlow(
             flow_id: flowId,
             flow_cta: flowCta,
             flow_action: flowType,
-            ...(options?.initialScreen && {
+            ...(flowType === 'navigate' && options?.initialScreen && {
               flow_action_payload: {
                 screen: options.initialScreen,
                 ...(options.initialData && { data: options.initialData }),

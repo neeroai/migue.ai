@@ -107,7 +107,7 @@ export async function ensureSignupOnFirstContact({
     'Completar registro',
     'Antes de continuar, completa tu registro básico para personalizar tu asistente (nombre y email).',
     {
-      flowType: 'data_exchange',
+      flowType: 'navigate',
       initialScreen: 'WELCOME',
       expiresInMinutes: 60,
     }

@@ -133,10 +133,9 @@ describe('ensureSignupOnFirstContact', () => {
       expect.any(String),
       expect.any(String),
       expect.objectContaining({
-        flowType: 'data_exchange',
+        flowType: 'navigate',
         initialScreen: 'WELCOME',
       })
     )
   })
 })
-
