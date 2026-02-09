@@ -195,7 +195,12 @@ export async function processWebhookInBackground(
           normalized.from,
           'No pude abrir el formulario de registro. Envíame por mensaje: "Me llamo <tu nombre>, mi email es <tu@email.com>".'
         ).catch(() => undefined);
-        return;
+        logger.warn('[background] Signup flow send failed, continuing AI turn', {
+          requestId,
+          conversationId,
+          userId,
+          metadata: { type: normalized.type },
+        });
       }
       if (signupGate.blocked) {
         logger.info('[background] Onboarding gate active, skipping AI turn', {

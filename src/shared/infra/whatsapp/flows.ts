@@ -191,6 +191,7 @@ export async function sendFlow(
   options?: {
     header?: string;
     footer?: string;
+    userId?: string;
     flowType?: 'navigate' | 'data_exchange';
     initialScreen?: string;
     initialData?: Record<string, unknown>;
@@ -203,26 +204,34 @@ export async function sendFlow(
 
     // Store flow session in database
     const supabase = getSupabaseServerClient();
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('phone_number', to)
-      .single();
+    let resolvedUserId = options?.userId ?? null;
+    if (!resolvedUserId) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone_number', to)
+        .maybeSingle();
+      resolvedUserId = user?.id ?? null;
+    }
 
-    if (user) {
+    if (resolvedUserId) {
       // Default expiration: 1 hour (can be customized via options)
       const expiresAt = options?.expiresInMinutes
         ? new Date(Date.now() + options.expiresInMinutes * 60000).toISOString()
         : new Date(Date.now() + 3600000).toISOString(); // 1 hour default
 
       await supabase.from('flow_sessions').insert({
-        user_id: user.id,
+        user_id: resolvedUserId,
         flow_id: flowId,
         flow_token: flowToken,
         flow_type: flowType,
         status: 'pending' as const,
         session_data: (options?.initialData || {}) as any,
         expires_at: expiresAt,
+      });
+    } else {
+      logger.warn('[WhatsApp Flow] Sending flow without persisted session (user not found)', {
+        metadata: { to: to.slice(0, 8) + '***', flowId },
       });
     }
 

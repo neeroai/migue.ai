@@ -31,8 +31,9 @@ function needsSignup(user: {
 }): boolean {
   const hasName = typeof user.name === 'string' && user.name.trim().length >= 2
   const hasEmail = typeof user.email === 'string' && user.email.trim().length > 3
-  const hasCompletedAt = typeof user.onboarding_completed_at === 'string' && user.onboarding_completed_at.length > 0
-  return !(hasName && hasEmail && hasCompletedAt)
+  // Backward compatibility: legacy users may have name/email populated
+  // without onboarding_completed_at; they should not be blocked.
+  return !(hasName && hasEmail)
 }
 
 export async function ensureSignupOnFirstContact({
@@ -107,6 +108,7 @@ export async function ensureSignupOnFirstContact({
     'Completar registro',
     'Antes de continuar, completa tu registro básico para personalizar tu asistente (nombre y email).',
     {
+      userId,
       flowType: 'navigate',
       initialScreen: 'WELCOME',
       expiresInMinutes: 60,

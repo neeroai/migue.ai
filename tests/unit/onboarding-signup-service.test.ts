@@ -79,6 +79,30 @@ describe('ensureSignupOnFirstContact', () => {
     expect(sendFlowMock).not.toHaveBeenCalled()
   })
 
+  it('does not block legacy users with name/email even without onboarding timestamp', async () => {
+    getSupabaseServerClientMock.mockReturnValue(
+      createSupabaseMock(
+        {
+          data: {
+            name: 'Polo',
+            email: 'polo@example.com',
+            onboarding_completed_at: null,
+          },
+          error: null,
+        },
+        { data: null, error: null }
+      )
+    )
+
+    const result = await ensureSignupOnFirstContact({
+      userId: 'u1',
+      phoneNumber: '+573001112233',
+    })
+
+    expect(result).toEqual({ blocked: false, reason: 'already_completed' })
+    expect(sendFlowMock).not.toHaveBeenCalled()
+  })
+
   it('blocks if there is already an active signup flow session', async () => {
     getSupabaseServerClientMock.mockReturnValue(
       createSupabaseMock(
@@ -133,6 +157,7 @@ describe('ensureSignupOnFirstContact', () => {
       expect.any(String),
       expect.any(String),
       expect.objectContaining({
+        userId: 'u1',
         flowType: 'navigate',
         initialScreen: 'WELCOME',
       })
