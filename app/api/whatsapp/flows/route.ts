@@ -46,7 +46,22 @@ export async function POST(req: Request): Promise<Response> {
     // Parse request body
     const body = JSON.parse(rawBody) as FlowDataExchangeRequest;
 
-    // Validate required fields
+    // Meta health checks may send ping payloads without all runtime fields.
+    if (body.action === 'ping') {
+      return new Response(
+        JSON.stringify({
+          version: body.version || '3.0',
+          screen: body.screen || 'SUCCESS',
+          data: { status: 'pong' },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }
+      );
+    }
+
+    // Validate required fields for non-ping actions
     if (!body.flow_token || !body.action || !body.screen) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
