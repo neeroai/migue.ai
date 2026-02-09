@@ -61,12 +61,17 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
 
-    // Validate required fields for non-ping actions
+    // Meta health checks can hit this endpoint with partial payloads.
+    // Return 200 to keep endpoint active if signature is valid.
     if (!body.flow_token || !body.action || !body.screen) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({
+          version: body.version || '3.0',
+          screen: body.screen || 'SUCCESS',
+          data: { status: 'ok' },
+        }),
         {
-          status: 400,
+          status: 200,
           headers: { 'content-type': 'application/json' },
         }
       );
