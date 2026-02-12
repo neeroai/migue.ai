@@ -1,13 +1,36 @@
 ---
 title: "Session Log"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 11:24"
 session_id: "tracking-compaction-2026-02-07"
 ---
 
 # Session Log
 
 ## Session - 2026-02-07 15:38
+
+## Active Session - 2026-02-12 09:10
+
+### Context
+
+User requested to run discovery for internet search capability and create the new spec first, before implementation.
+
+### Operations
+
+| Time | Operation | File | Status |
+|------|-----------|------|--------|
+| 09:02 | Research | `src/modules/ai/application/*`, `specs/*`, official docs | Complete |
+| 09:10 | Create | `specs/27-web-search-tool-runtime.md` | Complete |
+| 09:10 | Update | `specs/00-inventario-general.md` | Complete |
+| 11:06 | Implement | `web_search` runtime + env flags + Gemini preference | Complete |
+| 11:09 | Validate | `npm run typecheck` | Complete |
+| 11:10 | Validate | `npm run test:unit` | Complete |
+| 11:24 | Validate | `npx jest tests/unit/proactive-agent-web-search.test.ts` | Complete |
+
+### Decisions Made
+
+- Choose AI Gateway-based `web_search` tool for compatibility with current runtime.
+- Keep activation under `WEB_SEARCH_ENABLED` feature flag for gradual rollout.
 
 ## Active Session - 2026-02-12 08:05
 

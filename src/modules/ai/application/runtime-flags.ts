@@ -11,6 +11,14 @@ export function isLegacyRoutingEnabled(): boolean {
   return parseBoolEnv(process.env.LEGACY_ROUTING_ENABLED)
 }
 
+/**
+ * Enables web search tool exposure in agent runtime.
+ * Default false for gradual rollout.
+ */
+export function isWebSearchEnabled(): boolean {
+  return parseBoolEnv(process.env.WEB_SEARCH_ENABLED)
+}
+
 export const _testOnly = {
   parseBoolEnv,
 }

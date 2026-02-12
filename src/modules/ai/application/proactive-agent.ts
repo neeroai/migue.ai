@@ -7,7 +7,7 @@
  * @updated 2026-02-01 15:20
  */
 
-import { generateText, tool } from 'ai'
+import { gateway, generateText, tool } from 'ai'
 import type { ModelMessage } from 'ai'
 import { z } from 'zod'
 import { MODEL_CATALOG, models } from '../domain/providers'
@@ -31,8 +31,9 @@ import {
   type TextPathway,
 } from './memory-policy'
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
-import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
+import { executeGovernedTool, evaluateToolPolicy, type ToolPolicyContext } from './tool-governance'
 import type { AgentContextSnapshot } from './agent-context-builder'
+import { isWebSearchEnabled } from './runtime-flags'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -97,6 +98,10 @@ Eres Migue, un asistente personal conversacional en WhatsApp. Tu objetivo es man
 **Example**: User: "gasté 50mil en mercado" → [track_expense] → "Listo! Registré $50,000 en Mercado"
 **WRONG**: "Lo siento, no puedo registrar gastos" NEVER SAY THIS
 
+## web_search WHEN INFORMATION REQUIRES INTERNET
+**Use when**: user asks for latest/current info, recent news, comparisons, or explicit verification on the web.
+**Action**: Use web_search and then answer with a concise summary for WhatsApp.
+
 # OUTPUT FORMAT
 - Language: Spanish (Colombia)
 - Tone: Warm, friendly, professional
@@ -132,6 +137,7 @@ Usa herramientas SOLO cuando el usuario lo necesite claramente:
 - create_reminder: recuérdame / no olvides / avísame
 - schedule_meeting: agenda / programa / cita
 - track_expense: gasté / pagué / compré / costó
+- web_search: cuando pidan información actual, noticias recientes, comparación o verificación en internet
 Si usas una herramienta, confirma con "Listo!".`
 
 /**
@@ -210,6 +216,15 @@ function mapExpenseCategory(aiCategory: string): string {
   return 'Otros'
 }
 
+function looksLikeWebSearchQuery(text: string): boolean {
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  return /busca|investiga|internet|web|google|ultima|ultimas|hoy|reciente|noticia|tendencia|compar|vs|precio|cotizacion|benchmark|fuente|verifica/.test(normalized)
+}
+
 /**
  * ProactiveAgent using Vercel AI SDK 6.0 generateText()
  */
@@ -237,6 +252,7 @@ export async function respond(
   const pathway = context?.pathway ?? 'default'
   const readPolicy = resolveMemoryReadPolicy(pathway)
   const toolsEnabled = context?.toolPolicy?.toolsEnabled ?? true
+  const webSearchEnabled = isWebSearchEnabled()
 
   const {
     containsPersonalFact,
@@ -302,8 +318,13 @@ export async function respond(
     fallbackSelection.estimatedCost
   )
 
-  const primaryModel = primarySelection.modelName
-  const fallbackModel = fallbackSelection.modelName
+  const preferGeminiForWebSearch = webSearchEnabled && looksLikeWebSearchQuery(userMessage)
+  const primaryModel = preferGeminiForWebSearch
+    ? models.gemini.primary
+    : primarySelection.modelName
+  const fallbackModel = preferGeminiForWebSearch
+    ? models.openai.primary
+    : fallbackSelection.modelName
   const policyContext: ToolPolicyContext = {
     userId,
     pathway,
@@ -312,6 +333,8 @@ export async function respond(
       : {}),
   }
   let lastToolOutcomeMessage: string | null = null
+
+  const webSearchPolicy = evaluateToolPolicy('web_search', policyContext)
 
   const toolsDefinition = toolsEnabled ? {
       create_reminder: tool({
@@ -440,6 +463,11 @@ export async function respond(
           return outcome
         },
       }),
+      ...(webSearchEnabled && webSearchPolicy.decision === 'allow'
+        ? {
+            web_search: gateway.tools.perplexitySearch(),
+          }
+        : {}),
   } : undefined
 
   const gatewayProviderOptions = budgetCheck.canAffordFallback

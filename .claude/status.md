@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 11:15"
 ---
 
 # Project Status
@@ -27,6 +27,7 @@ updated: "2026-02-12 04:14"
 - Enforce tracking updates in CI for pull requests touching critical paths.
 - Operate session start/close with `just resume` and `just close-session`.
 - Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
+- Monitorear adopción y costo de `web_search` (feature flag `WEB_SEARCH_ENABLED`) tras activación gradual.
 
 ## Recent Milestones
 

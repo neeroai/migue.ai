@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 11:15"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,19 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-12 11:15
+
+- Implemented `web_search` runtime wiring in `src/modules/ai/application/proactive-agent.ts` using AI Gateway built-in tool exposure.
+- Added feature flag support (`WEB_SEARCH_ENABLED`) in env/runtime flags/types and `.env.example`.
+- Added Gemini preference heuristic (`google/gemini-2.5-flash-lite`) for web-search-like queries.
+- Validation completed with `npm run typecheck`, `npm run test:unit`, and targeted `proactive-agent-web-search` unit test.
+
+### Changed - 2026-02-12 09:10
+
+- Added SDD spec `specs/27-web-search-tool-runtime.md` for internet search tool integration (`web_search`) using AI Gateway and rollout by feature flag.
+- Updated `specs/00-inventario-general.md` with new feature row `27 - Web Search Tool Runtime`.
+- Updated tracking artifacts (`session`, `status`, `todo`, `decisions`) to reflect discovery and spec-first phase.
 
 ### Changed - 2026-02-12 04:14
 

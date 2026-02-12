@@ -4,10 +4,52 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 11:15"
 ---
 
 # Architecture Decisions
+
+## ADR-018: Web Search Runtime Shipped With Gemini Preference
+
+**Date**: 2026-02-12 11:15  
+**Status**: Approved  
+**Deciders**: User request ("procedamos e implementemos esa spec con gemini-2.5-flash-lite")
+
+### Decision
+
+- Enable `web_search` tool wiring in `proactive-agent` via AI Gateway built-in tool.
+- Gate exposure with `WEB_SEARCH_ENABLED`.
+- Prefer `google/gemini-2.5-flash-lite` for turns that look like web-search queries, with `openai/gpt-4o-mini` fallback.
+
+### Consequences
+
+**Positive**:
+- Controlled rollout and rollback via env flag.
+- Lower expected cost for web-search-heavy turns while preserving provider fallback.
+
+**Tradeoff**:
+- Web-search intent heuristic for model preference may need tuning based on production logs.
+
+## ADR-017: Web Search Runtime via AI Gateway + Feature Flag
+
+**Date**: 2026-02-12 09:10  
+**Status**: Approved  
+**Deciders**: User request ("investigacion ... tool con la que pueda buscar en internet ... creemos la nueva spec")
+
+### Decision
+
+- Add SDD spec `specs/27-web-search-tool-runtime.md` before implementation.
+- Implement `web_search` via AI Gateway-compatible tool path to keep current multimodel runtime unchanged.
+- Ship behind `WEB_SEARCH_ENABLED` to control rollout and rollback.
+
+### Consequences
+
+**Positive**:
+- Minimum integration friction with existing `ai@6` + gateway model strings.
+- Controlled rollout without hard architecture switch.
+
+**Tradeoff**:
+- Depends on gateway tool behavior and quotas; deep custom ranking is deferred.
 
 ## ADR-016: Resume Execution From Master Tracker Priority Queue
 

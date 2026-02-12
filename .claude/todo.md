@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 11:15"
 ---
 
 # Task List
@@ -39,7 +39,7 @@ updated: "2026-02-12 04:14"
 - [x] Compact `.claude/status.md` with current-state focus (2026-02-07 15:38)
 - [x] Compact `.claude/decisions.md` preserving key ADRs + summary (2026-02-07 15:38)
 - [x] Compact `.claude/CHANGELOG.md` to recent changes + historical summary (2026-02-07 15:38)
-- [x] Update `whatsapp-api-expert` baseline from v23.0 to v24.0 (2026-02-07 15:25)
+- [x] Implementar `web_search` con `WEB_SEARCH_ENABLED` + preferencia `gemini-2.5-flash-lite` + validación `typecheck`/`test:unit` (2026-02-12 11:10)
 
 ## Blocked
 
