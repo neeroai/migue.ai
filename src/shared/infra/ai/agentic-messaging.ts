@@ -32,6 +32,10 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 }
 
 export async function generateAgenticMessage(params: AgenticMessageParams): Promise<string> {
+  if (process.env.NODE_ENV === 'test') {
+    return params.fallback
+  }
+
   if (!process.env.AI_GATEWAY_API_KEY) {
     return params.fallback
   }
