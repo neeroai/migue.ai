@@ -67,4 +67,33 @@ describe('proactive-agent web search routing', () => {
     expect(params.tools?.web_search).toBeUndefined()
     expect(mockPerplexitySearch).not.toHaveBeenCalled()
   })
+
+  it('uses object tool result as fallback text when provider returns no assistant text', async () => {
+    process.env.WEB_SEARCH_ENABLED = 'true'
+    mockGenerateText.mockResolvedValueOnce({
+      text: '   ',
+      usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 },
+      finishReason: 'tool-calls',
+      steps: [
+        {
+          toolCalls: [{ toolName: 'web_search' }],
+          toolResults: [
+            {
+              result: {
+                summary: 'Programación preliminar: desfiles centrales viernes y sábado.',
+              },
+            },
+          ],
+        },
+      ],
+      providerMetadata: {
+        gateway: {
+          model: 'google/gemini-2.5-flash-lite',
+        },
+      },
+    })
+
+    const response = await respond('busca en internet la programacion de los carnavales', 'u1', [])
+    expect(response.text).toContain('Programación preliminar')
+  })
 })

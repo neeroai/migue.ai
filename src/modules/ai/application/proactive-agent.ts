@@ -225,6 +225,45 @@ function looksLikeWebSearchQuery(text: string): boolean {
   return /busca|investiga|internet|web|google|ultima|ultimas|hoy|reciente|noticia|tendencia|compar|vs|precio|cotizacion|benchmark|fuente|verifica/.test(normalized)
 }
 
+function extractToolResultText(result: unknown): string | null {
+  if (typeof result === 'string') {
+    const trimmed = result.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  if (!result || typeof result !== 'object') return null
+  const asRecord = result as Record<string, unknown>
+
+  const directCandidates = ['answer', 'summary', 'content', 'text']
+  for (const key of directCandidates) {
+    const value = asRecord[key]
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim()
+    }
+  }
+
+  const results = asRecord.results
+  if (Array.isArray(results) && results.length > 0) {
+    const first = results[0]
+    if (first && typeof first === 'object') {
+      const firstRecord = first as Record<string, unknown>
+      const snippet =
+        (typeof firstRecord.snippet === 'string' && firstRecord.snippet.trim().length > 0
+          ? firstRecord.snippet.trim()
+          : null) ??
+        (typeof firstRecord.content === 'string' && firstRecord.content.trim().length > 0
+          ? firstRecord.content.trim()
+          : null) ??
+        (typeof firstRecord.title === 'string' && firstRecord.title.trim().length > 0
+          ? firstRecord.title.trim()
+          : null)
+      if (snippet) return snippet
+    }
+  }
+
+  return null
+}
+
 /**
  * ProactiveAgent using Vercel AI SDK 6.0 generateText()
  */
@@ -482,6 +521,7 @@ export async function respond(
     model: primaryModel,
     messages,
     ...(toolsDefinition ? { tools: toolsDefinition } : {}),
+    ...(toolsDefinition ? { maxSteps: 3 } : {}),
     temperature: toolsEnabled ? 0.8 : 0.6,
     ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
   })
@@ -521,7 +561,8 @@ export async function respond(
   const toolResults = steps
     .flatMap((s: any) => Array.isArray(s?.toolResults) ? s.toolResults : [])
     .map((r: any) => r?.result)
-    .filter((r: unknown): r is string => typeof r === 'string' && r.trim().length > 0)
+    .map(extractToolResultText)
+    .filter((r: string | null): r is string => typeof r === 'string' && r.trim().length > 0)
 
   // Some providers/flows finish with tool-calls and empty assistant text.
   // Ensure we always return a non-empty user-facing confirmation.

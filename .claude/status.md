@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 11:15"
+updated: "2026-02-12 11:53"
 ---
 
 # Project Status
@@ -28,6 +28,7 @@ updated: "2026-02-12 11:15"
 - Operate session start/close with `just resume` and `just close-session`.
 - Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
 - Monitorear adopción y costo de `web_search` (feature flag `WEB_SEARCH_ENABLED`) tras activación gradual.
+- Verificar en producción que respuestas post-`web_search` incluyan contenido (sin fallback genérico repetitivo).
 
 ## Recent Milestones
 

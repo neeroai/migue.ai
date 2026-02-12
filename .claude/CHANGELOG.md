@@ -16,6 +16,7 @@ scope: "Tracking and process notes"
 - Added feature flag support (`WEB_SEARCH_ENABLED`) in env/runtime flags/types and `.env.example`.
 - Added Gemini preference heuristic (`google/gemini-2.5-flash-lite`) for web-search-like queries.
 - Validation completed with `npm run typecheck`, `npm run test:unit`, and targeted `proactive-agent-web-search` unit test.
+- Fixed `web_search` post-tool fallback to parse object results and avoid repeated generic response.
 
 ### Changed - 2026-02-12 09:10
 

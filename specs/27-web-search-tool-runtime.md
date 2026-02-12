@@ -4,7 +4,7 @@
 - Semáforo: `GREEN`
 - Fase: `done`
 - Next Step: Monitorear uso/costo/latencia y ajustar heurística de ruteo web si hace falta.
-- Updated: 2026-02-12 11:15
+- Updated: 2026-02-12 11:53
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/modules/ai/application/proactive-agent.ts` + `src/modules/ai/application/tool-governance.ts`
 
@@ -94,3 +94,8 @@ Tradeoff principal:
 - Validate:
   - `npm run typecheck`
   - `npm run test:unit`
+  - `npx jest tests/unit/proactive-agent-web-search.test.ts --runInBand`
+
+## Hotfix aplicado post-validación
+- Se corrigió fallback de respuesta para resultados de tool no-string (payload objeto en `web_search`).
+- Se configuró `maxSteps: 3` cuando hay tools para permitir que el modelo produzca respuesta final después del tool call.
