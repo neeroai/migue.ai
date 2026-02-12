@@ -78,8 +78,8 @@ export async function GET(): Promise<Response> {
       timeStyle: 'long',
     });
 
-    // Calculate next cron execution times (12pm, 3pm, 6pm, 9pm UTC)
-    const nextCronTimes = [12, 15, 18, 21].map(hour => {
+    // Calculate next cron execution times (hourly between 12:00 and 00:00 UTC)
+    const nextCronTimes = [0, ...Array.from({ length: 12 }, (_v, idx) => idx + 12)].map(hour => {
       const next = new Date();
       next.setUTCHours(hour, 0, 0, 0);
       if (next <= now) {
@@ -125,8 +125,8 @@ export async function GET(): Promise<Response> {
       },
       cronSchedule: {
         nextExecutions: nextCronTimes,
-        schedule: '0 12,15,18,21 * * * (UTC)',
-        description: '7am, 10am, 1pm, 4pm Bogotá time',
+        schedule: '0 0,12-23 * * * (UTC)',
+        description: 'Hourly from 7am to 7pm Bogotá time',
       },
     });
   } catch (error: any) {

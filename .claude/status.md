@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:10"
+updated: "2026-02-12 14:51"
 ---
 
 # Project Status
@@ -30,6 +30,7 @@ updated: "2026-02-12 12:10"
 - Operate session start/close with `just resume` and `just close-session`.
 - Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
 - Endurecer tono conversacional LLM-first en onboarding y reminders.
+- Intensificar proactividad del cron de mantenimiento (cadencia y volumen con guardrails de negocio).
 
 ## Recent Milestones
 

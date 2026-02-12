@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:10"
+updated: "2026-02-12 14:51"
 scope: "project"
 ---
 
@@ -14,7 +14,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-12 12:10
+## [Unreleased] - 2026-02-12 14:51
+
+### Changed - Proactive Messaging Cadence
+- Increased proactive intensity: min interval 2h, daily cap 6 messages, plus 20h proactive horizon and hourly maintain-windows cron (Bogota business hours), with health metadata aligned.
 
 ### Added - Real Meta Flow JSON Validation
 - Added `scripts/wa-flows-validate.mjs` to validate WhatsApp Flow JSON against Meta Graph API (remote), not only local structure checks.

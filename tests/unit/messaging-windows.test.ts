@@ -22,8 +22,8 @@ describe('Messaging Windows', () => {
     });
 
     it('should define daily limits', () => {
-      expect(MAX_PROACTIVE_PER_DAY).toBe(4);
-      expect(MIN_INTERVAL_HOURS).toBe(4);
+      expect(MAX_PROACTIVE_PER_DAY).toBe(6);
+      expect(MIN_INTERVAL_HOURS).toBe(2);
     });
 
     it('should define window durations', () => {
@@ -92,8 +92,8 @@ describe('Messaging Windows', () => {
       const businessHoursSpan = BUSINESS_HOURS.end - BUSINESS_HOURS.start;
       const maxPossibleMessages = businessHoursSpan / MIN_INTERVAL_HOURS;
 
-      // With 13 business hours and 4h min interval, we can send ~3.25 messages
-      // So MAX_PROACTIVE_PER_DAY = 4 is reasonable but tight
+      // With 13 business hours and 2h min interval, we can send ~6.5 messages
+      // So MAX_PROACTIVE_PER_DAY = 6 is feasible without exhausting the schedule
       expect(maxPossibleMessages).toBeGreaterThan(MAX_PROACTIVE_PER_DAY - 1);
     });
 

@@ -4,10 +4,37 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:10"
+updated: "2026-02-12 14:51"
 ---
 
 # Architecture Decisions
+
+## ADR-020: Intensify Proactive Messaging Cadence for Window Maintenance
+
+**Date**: 2026-02-12 14:51  
+**Status**: Approved  
+**Deciders**: User request ("aumentar la proactividad del agente")
+
+### Decision
+
+- Increase proactive frequency guardrails in src/modules/messaging-window/application/service.ts:
+  - MIN_INTERVAL_HOURS: 4 -> 2
+  - MAX_PROACTIVE_PER_DAY: 4 -> 6
+- Increase proactive targeting horizon in app/api/cron/maintain-windows/route.ts:
+  - findWindowsNearExpiration(20) via PROACTIVE_SCAN_HOURS = 20
+- Increase cron execution frequency in vercel.json:
+  - /api/cron/maintain-windows: 0 0,12-23 * * * (hourly during Bogota business window)
+- Update health endpoint schedule metadata in app/api/cron/health/route.ts to reflect hourly cadence.
+
+### Consequences
+
+**Positive**:
+- More frequent and earlier proactive touchpoints.
+- Better chance to keep conversations active before the 24h window closes.
+
+**Tradeoff**:
+- Higher outbound volume and token cost.
+- Higher user-fatigue risk mitigated by existing checks (business hours, user activity, daily cap, min interval).
 
 ## ADR-019: Real Meta Validation Gate for Flow JSON
 
@@ -202,18 +229,6 @@ updated: "2026-02-12 12:10"
 **Tradeoff**:
 - Cost depends on multimodal token usage.
 
-## ADR-011: Automated Tracking Compaction Command
-
-**Date**: 2026-02-07 15:43  
-**Status**: Approved  
-**Deciders**: User request ("procedamos")
-
-### Decision
-
-- Add `scripts/compact-tracking-files.mjs` to compact `.claude` tracking files automatically.
-- Add `npm run tracking:compact` to standardize compaction execution.
-- Keep compaction idempotent and compatible with `npm run check:tracking`.
-
 ## ADR-010: Tracking Files Compact-First Policy
 
 **Date**: 2026-02-07 15:38  
@@ -257,3 +272,4 @@ Tracking files in `.claude` were within hard limits but too accumulative for fas
 ## Maintenance Rule
 
 When ADR count approaches the guardrail, collapse older full ADRs into this historical summary block.
+

@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:10"
+updated: "2026-02-12 14:51"
 ---
 
 # Task List
@@ -20,6 +20,8 @@ updated: "2026-02-12 12:10"
 - [ ] Define PII redaction policy for `ID_FORM` visual class
 
 ## Completed (Recent)
+
+- [x] Intensificar proactividad del agente: cron horario, intervalo 2h, tope diario 6 y horizonte 20h (2026-02-12 14:51)
 
 - [x] Implement keyword-triggered Flow QA mode (`flow test <name>`) with mock payloads in webhook pipeline (2026-02-12 11:20)
 - [x] Add real Meta Flow JSON validation/publish CLI (`scripts/wa-flows-validate.mjs`) plus docs/commands (2026-02-12 12:10)
@@ -40,7 +42,6 @@ updated: "2026-02-12 12:10"
 - [x] Add `scripts/compact-tracking-files.mjs` and `npm run tracking:compact` (2026-02-07 15:43)
 - [x] Implement stricter `check:tracking` limits and anti-accumulation rules (2026-02-07 15:37)
 - [x] Compact `.claude/session.md` with resumable format (2026-02-07 15:38)
-- [x] Compact `.claude/status.md` with current-state focus (2026-02-07 15:38)
 
 ## Blocked
 

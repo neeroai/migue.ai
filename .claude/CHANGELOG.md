@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 12:10"
+updated: "2026-02-12 14:51"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,15 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-12 14:51
+
+- Intensified proactive messaging cadence for window maintenance:
+  - MIN_INTERVAL_HOURS changed from 4 to 2
+  - MAX_PROACTIVE_PER_DAY changed from 4 to 6
+  - maintain-windows now scans a 20h proactive horizon
+  - cron schedule changed to hourly during Bogota business hours (UTC: 0,12-23)
+- Updated health endpoint schedule metadata to match the new hourly cron cadence.
 
 ### Changed - 2026-02-12 12:10
 

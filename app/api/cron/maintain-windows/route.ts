@@ -1,6 +1,6 @@
 /**
  * @file Messaging Windows Maintenance Cron Job
- * @description Sends AI-generated contextual messages before 24h WhatsApp window expires, runs every 3 hours during business hours
+ * @description Sends AI-generated contextual messages before 24h WhatsApp window expires, runs hourly during business hours
  * @module app/api/cron/maintain-windows
  * @exports runtime, maxDuration, GET, proactiveAgent, jsonResponse, getActiveConversationMap, generateContextualMessage, mapWithConcurrency
  * @runtime edge
@@ -31,15 +31,13 @@ import {
 } from '../../../../src/modules/messaging-window/application/service';
 
 const proactiveAgent = createProactiveAgent();
+const PROACTIVE_SCAN_HOURS = 20;
 
 /**
  * Cron job: Maintain WhatsApp messaging windows
  *
- * Schedule: Every 3 hours during business hours (Vercel uses UTC)
- * - 12pm UTC = 7am Bogotá (morning start)
- * - 3pm UTC = 10am Bogotá (mid-morning)
- * - 6pm UTC = 1pm Bogotá (post-lunch)
- * - 9pm UTC = 4pm Bogotá (afternoon)
+ * Schedule: Hourly during business hours (Vercel uses UTC)
+ * - 12:00-00:00 UTC = 7:00am-7:00pm Bogotá
  *
  * Purpose: Send proactive messages before 24h window expires to keep conversation free
  */
@@ -99,7 +97,8 @@ ${history.slice(-3).map((m: ConversationMessage) => `${m.direction === 'inbound'
 Reglas:
 - Máximo 2 líneas
 - Personalizado según el contexto reciente
-- Invita a responder de forma natural
+- Invita a responder con una pregunta concreta y útil
+- Sonar cercano y resolutivo (no genérico)
 - Usa emojis con moderación
 - NO menciones "ventana" o "24 horas"
 
@@ -247,10 +246,10 @@ export async function GET(req: Request): Promise<Response> {
   }
 
   try {
-    // Find windows expiring in next 4 hours
-    const windows = await findWindowsNearExpiration(4);
+    // Find active windows within proactive scan horizon
+    const windows = await findWindowsNearExpiration(PROACTIVE_SCAN_HOURS);
 
-    logger.info('[maintain-windows] Found windows near expiration', {
+    logger.info('[maintain-windows] Found windows in proactive horizon', {
       metadata: { count: windows.length },
     });
 

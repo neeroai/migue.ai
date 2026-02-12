@@ -1,7 +1,7 @@
 ---
 title: "Session Log"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:10"
+updated: "2026-02-12 14:51"
 session_id: "tracking-compaction-2026-02-07"
 ---
 
@@ -154,3 +154,23 @@ User requested best practices to prevent tracking files in `.claude` from becomi
 
 - When a task closes, keep only current and recent sessions in full detail.
 - Convert older detailed sections into 5-10 bullet summaries.
+
+## Active Session - 2026-02-12 14:51
+
+### Context
+
+User requested stronger proactive behavior from the agent for WhatsApp messaging windows.
+
+### Operations
+
+| Time | Operation | File | Status |
+|------|-----------|------|--------|
+| 14:40 | Implement | `src/modules/messaging-window/application/service.ts` | Complete |
+| 14:43 | Implement | `app/api/cron/maintain-windows/route.ts`, `app/api/cron/health/route.ts`, `vercel.json` | Complete |
+| 14:46 | Validate | `npx jest tests/unit/messaging-windows.test.ts --runInBand` | Complete |
+| 14:47 | Validate | `npm run typecheck` | Complete |
+
+### Decisions Made
+
+- Increased proactive cadence with guardrails: `MIN_INTERVAL_HOURS=2`, `MAX_PROACTIVE_PER_DAY=6`.
+- Expanded proactive scan horizon to 20h so cron engages users earlier, not only near window expiration.

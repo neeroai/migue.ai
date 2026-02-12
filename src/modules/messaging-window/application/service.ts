@@ -16,8 +16,8 @@ import { getConversationHistory } from '../../conversation/application/utils'
 // Constants
 export const COLOMBIA_TZ = 'America/Bogota'
 export const BUSINESS_HOURS = { start: 7, end: 20 } // 7am-8pm
-export const MAX_PROACTIVE_PER_DAY = 4
-export const MIN_INTERVAL_HOURS = 4
+export const MAX_PROACTIVE_PER_DAY = 6
+export const MIN_INTERVAL_HOURS = 2
 export const WINDOW_DURATION_HOURS = 24
 export const FREE_ENTRY_DURATION_HOURS = 72
 export const WINDOW_MAINTENANCE_THRESHOLD_HOURS = 4 // Send maintenance message when < 4h remaining
@@ -320,8 +320,8 @@ async function isUserActiveRecently(userId: string, conversationId: string): Pro
  * Comprehensive decision logic considering:
  * 1. Business hours (7am-8pm Bogotá) - don't disturb at night
  * 2. Messaging window (24h or 72h free entry) - WhatsApp billing
- * 3. Daily limit (4 messages/day) - avoid spam
- * 4. Rate limiting (4h between messages) - avoid annoyance
+ * 3. Daily limit (6 messages/day) - avoid spam
+ * 4. Rate limiting (2h between messages) - avoid annoyance
  * 5. User activity (< 30min) - don't interrupt active conversation
  *
  * Returns decision object with allowed flag, reason if denied, and nextAvailableTime if rate limited.
@@ -467,7 +467,7 @@ export async function shouldSendProactiveMessage(
  * Increments proactive_messages_sent_today and updates last_proactive_sent_at timestamp.
  *
  * Counter resets to 0 at midnight (handled by DB cron job).
- * Max 4 proactive messages per user per day (MAX_PROACTIVE_PER_DAY).
+ * Max 6 proactive messages per user per day (MAX_PROACTIVE_PER_DAY).
  *
  * @param phoneNumber - Phone number to increment counter for
  * @param supabase - Supabase client (optional, defaults to server client)
