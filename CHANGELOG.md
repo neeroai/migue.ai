@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 11:15"
+updated: "2026-02-12 12:37"
 scope: "project"
 ---
 # CHANGELOG
@@ -12,9 +12,9 @@ scope: "project"
 ### Added - Web Search Tool Runtime
 - Added spec `specs/27-web-search-tool-runtime.md`, implemented `web_search` via AI Gateway, and added `WEB_SEARCH_ENABLED` support with updated unit tests.
 - Added focused test `/Users/mercadeo/.codex/worktrees/ba70/migue.ai/tests/unit/proactive-agent-web-search.test.ts` to validate web-search activation and Gemini preference path.
-- Web-search-like turns now prefer `google/gemini-2.5-flash-lite` with OpenAI fallback.
 - Fixed fallback handling for object/nested `web_search` payloads and strengthened prompt behavior to avoid "Listo" only responses.
 - Added retry-context handling so confirmations like `"si"` reattempt prior web-search topic instead of generic fallback.
+- Fixed SDK result parsing for gateway tools by reading `toolResults[].output` shape.
 
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.

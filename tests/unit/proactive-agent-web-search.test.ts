@@ -79,7 +79,7 @@ describe('proactive-agent web search routing', () => {
           toolCalls: [{ toolName: 'web_search' }],
           toolResults: [
             {
-              result: {
+              output: {
                 summary: 'Programación preliminar: desfiles centrales viernes y sábado.',
               },
             },
@@ -95,6 +95,41 @@ describe('proactive-agent web search routing', () => {
 
     const response = await respond('busca en internet la programacion de los carnavales', 'u1', [])
     expect(response.text).toContain('Programación preliminar')
+  })
+
+  it('supports AI SDK v6 tool result shape using output field', async () => {
+    process.env.WEB_SEARCH_ENABLED = 'true'
+    mockGenerateText.mockResolvedValueOnce({
+      text: ' ',
+      usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 },
+      finishReason: 'tool-calls',
+      steps: [
+        {
+          toolCalls: [{ toolName: 'web_search' }],
+          toolResults: [
+            {
+              output: {
+                results: [
+                  {
+                    title: 'Carnaval de Barranquilla',
+                    url: 'https://example.com/carnaval',
+                    snippet: 'Hoy hay desfile de la Batalla de Flores a las 11:00.',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      providerMetadata: {
+        gateway: {
+          model: 'google/gemini-2.5-flash-lite',
+        },
+      },
+    })
+
+    const response = await respond('busca la programación de hoy en barranquilla', 'u1', [])
+    expect(response.text.toLowerCase()).toContain('batalla de flores')
   })
 
   it('retries web search context when user confirms with "si" after failed search', async () => {

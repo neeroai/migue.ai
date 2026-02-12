@@ -652,7 +652,7 @@ export async function respond(
   const toolCallCount = steps.filter((s) => s.toolCalls && s.toolCalls.length > 0).length
   const toolResults = steps
     .flatMap((s: any) => Array.isArray(s?.toolResults) ? s.toolResults : [])
-    .map((r: any) => r?.result)
+    .map((r: any) => r?.output ?? r?.result)
     .map(extractToolResultText)
     .filter((r: string | null): r is string => typeof r === 'string' && r.trim().length > 0)
 

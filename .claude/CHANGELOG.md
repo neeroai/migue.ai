@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 11:15"
+updated: "2026-02-12 12:37"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -19,6 +19,7 @@ scope: "Tracking and process notes"
 - Fixed `web_search` post-tool fallback to parse object results and avoid repeated generic response.
 - Strengthened prompt instructions for `web_search` and added deep text extraction fallback for nested tool payloads.
 - Added retry-context handling for short confirmations (e.g. "si") after failed `web_search`.
+- Fixed root cause in SDK parsing: tool outputs for gateway searches are read from `toolResults[].output` (not only `result`).
 
 ### Changed - 2026-02-12 09:10
 

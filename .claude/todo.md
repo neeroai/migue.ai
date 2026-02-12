@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:22"
+updated: "2026-02-12 12:37"
 ---
 
 # Task List
@@ -20,7 +20,6 @@ updated: "2026-02-12 12:22"
 
 ## Completed (Recent)
 
-- [x] Recover `npm run typecheck` by clearing stale `tsconfig.tsbuildinfo` cache (2026-02-12 08:04)
 - [x] Add `.github/pull_request_template.md` tracking checklist (2026-02-12 08:05)
 - [x] Rebase and push tracking governance commit to `origin/main` (2026-02-12 03:12)
 - [x] Add PR CI guardrail for tracking updates on critical paths (2026-02-12 03:13)
@@ -40,6 +39,7 @@ updated: "2026-02-12 12:22"
 - [x] Corregir fallback repetitivo de `web_search` cuando el tool result llega como objeto (2026-02-12 11:53)
 - [x] Endurecer prompt y fallback parser para evitar respuestas vacías/genéricas tras `web_search` (2026-02-12 12:08)
 - [x] Cubrir flujo de reintento `"si"` tras fallo de `web_search` con contexto de búsqueda previa (2026-02-12 12:22)
+- [x] Corregir parsing SDK (`toolResults[].output`) para extraer resultados reales de búsqueda (2026-02-12 12:37)
 
 ## Blocked
 

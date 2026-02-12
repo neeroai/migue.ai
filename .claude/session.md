@@ -1,7 +1,7 @@
 ---
 title: "Session Log"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:22"
+updated: "2026-02-12 12:37"
 session_id: "tracking-compaction-2026-02-07"
 ---
 
@@ -29,6 +29,7 @@ User requested to run discovery for internet search capability and create the ne
 | 11:53 | Fix | `web_search` fallback text for object tool results + maxSteps | Complete |
 | 12:08 | Fix | prompt + deep fallback parsing to avoid repeated "Listo" in web_search | Complete |
 | 12:22 | Validate | retry flow `"si"` after failed web_search via unit test | Complete |
+| 12:37 | Audit/Fix | AI SDK tool result shape mismatch (`output` vs `result`) in web_search fallback | Complete |
 
 ### Decisions Made
 

@@ -4,7 +4,7 @@
 - Semáforo: `GREEN`
 - Fase: `done`
 - Next Step: Monitorear uso/costo/latencia y ajustar heurística de ruteo web si hace falta.
-- Updated: 2026-02-12 12:22
+- Updated: 2026-02-12 12:37
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/modules/ai/application/proactive-agent.ts` + `src/modules/ai/application/tool-governance.ts`
 
@@ -101,3 +101,4 @@ Tradeoff principal:
 - Se configuró `maxSteps: 3` cuando hay tools para permitir que el modelo produzca respuesta final después del tool call.
 - Se reforzó prompt para `web_search` (evitar respuesta solo "Listo") y parser profundo para payloads anidados.
 - Se agregó manejo de contexto de reintento para confirmaciones breves (`"si"`) tras falla de búsqueda web previa.
+- Se corrigió shape de integración AI SDK para tool results (`output` en lugar de depender de `result`).
