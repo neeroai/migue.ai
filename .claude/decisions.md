@@ -4,7 +4,7 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 11:15"
+updated: "2026-02-12 08:48"
 ---
 
 # Architecture Decisions

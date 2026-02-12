@@ -30,6 +30,7 @@ updated: "2026-02-12 12:22"
 - Monitorear adopción y costo de `web_search` (feature flag `WEB_SEARCH_ENABLED`) tras activación gradual.
 - Verificar en producción que respuestas post-`web_search` incluyan contenido (sin fallback genérico repetitivo).
 - Verificar en producción el flujo de confirmación de reintento (`"si"`) para búsqueda web fallida previa.
+- Verificar en producción síntesis LLM post-tool (sin payload crudo) y fallback sin tools ante error de `web_search`.
 
 ## Recent Milestones
 
@@ -40,6 +41,7 @@ updated: "2026-02-12 12:22"
 | 2026-02-12 03:13 | CI tracking guardrail added for PRs on critical paths | COMPLETE |
 | 2026-02-12 03:12 | Governance commit rebased and pushed to `origin/main` | COMPLETE |
 | 2026-02-12 08:05 | Tracking governance playbook added in `docs/` | COMPLETE |
+| 2026-02-12 13:02 | `web_search` ahora sintetiza siempre vía LLM y recupera sin tools ante fallo | COMPLETE |
 | 2026-02-12 08:05 | `CLAUDE.md` + `AGENTS.md` aligned to tracking contract | COMPLETE |
 | 2026-02-12 08:04 | Typecheck recovered after clearing `tsconfig.tsbuildinfo` cache | COMPLETE |
 | 2026-02-07 16:41 | Multimodal image/document pipeline migrated (no Tesseract) | COMPLETE |

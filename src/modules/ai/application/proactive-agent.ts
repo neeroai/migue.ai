@@ -351,6 +351,18 @@ function extractToolResultText(result: unknown): string | null {
   return deepPickText(result)
 }
 
+function addUsage(
+  base: { inputTokens: number; outputTokens: number; totalTokens: number },
+  extra:
+    | { inputTokens: number | undefined; outputTokens: number | undefined; totalTokens: number | undefined }
+    | undefined
+): { inputTokens: number; outputTokens: number; totalTokens: number } {
+  const inputTokens = base.inputTokens + (extra?.inputTokens ?? 0)
+  const outputTokens = base.outputTokens + (extra?.outputTokens ?? 0)
+  const totalTokens = base.totalTokens + (extra?.totalTokens ?? ((extra?.inputTokens ?? 0) + (extra?.outputTokens ?? 0)))
+  return { inputTokens, outputTokens, totalTokens }
+}
+
 /**
  * ProactiveAgent using Vercel AI SDK 6.0 generateText()
  */
@@ -609,17 +621,39 @@ export async function respond(
       } as any)
     : undefined
 
-  const response = await generateText({
-    model: primaryModel,
-    messages,
-    ...(toolsDefinition ? { tools: toolsDefinition } : {}),
-    ...(toolsDefinition ? { maxSteps: 3 } : {}),
-    temperature: toolsEnabled ? 0.8 : 0.6,
-    ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
-  })
+  let response
+  try {
+    response = await generateText({
+      model: primaryModel,
+      messages,
+      ...(toolsDefinition ? { tools: toolsDefinition } : {}),
+      ...(toolsDefinition ? { maxSteps: 2 } : {}),
+      temperature: toolsEnabled ? 0.8 : 0.6,
+      ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
+    })
+  } catch (error: any) {
+    logger.warn('[ProactiveAgent] Primary generation failed, retrying without tools', {
+      metadata: {
+        ...context,
+        errorMessage: error?.message,
+        toolsEnabled,
+      },
+    })
+
+    response = await generateText({
+      model: primaryModel,
+      messages: [
+        { role: 'system', content: `${SYSTEM_PROMPT_SHORT}\nSi una herramienta falla o no está disponible, responde útilmente y ofrece reintentar.` },
+        ...trimmedHistory,
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.6,
+      ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
+    })
+  }
 
   let { text } = response
-  const usage = {
+  let usage = {
     inputTokens: response.usage.inputTokens ?? 0,
     outputTokens: response.usage.outputTokens ?? 0,
     totalTokens: response.usage.totalTokens ?? 0,
@@ -657,15 +691,56 @@ export async function respond(
     .filter((r: string | null): r is string => typeof r === 'string' && r.trim().length > 0)
 
   // Some providers/flows finish with tool-calls and empty assistant text.
-  // Ensure we always return a non-empty user-facing confirmation.
+  // We force a second LLM synthesis pass so users never receive raw tool payloads.
   if (text.trim().length === 0 && toolCallCount > 0) {
-    text = (
-      toolResults[toolResults.length - 1] ??
-      lastToolOutcomeMessage ??
-      (looksLikeWebSearchQuery(userMessage) || webSearchRetryContext.shouldRetrySearch
-        ? 'Hice la búsqueda, pero no pude extraer resultados útiles. ¿Quieres que lo intente de nuevo con otro enfoque?'
-        : 'Listo. Ya ejecuté tu solicitud.')
-    ).trim()
+    const toolSummary = toolResults.slice(0, 3).join('\n- ')
+    try {
+      const synthesisResponse = await generateText({
+        model: primaryModel,
+        messages: [
+          {
+            role: 'system',
+            content: `${SYSTEM_PROMPT_SHORT}\nDebes sintetizar resultados de herramientas en lenguaje natural. Nunca devuelvas payload crudo.`,
+          },
+          {
+            role: 'user',
+            content: [
+              `Consulta del usuario: ${userMessage}`,
+              toolSummary.length > 0
+                ? `Resultados de herramienta:\n- ${toolSummary}`
+                : 'La herramienta no devolvió datos útiles.',
+              'Responde al usuario en 1-2 frases útiles.',
+            ].join('\n\n'),
+          },
+        ],
+        temperature: 0.4,
+        ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
+      })
+
+      usage = addUsage(usage, synthesisResponse.usage)
+      const synthesized = (synthesisResponse.text ?? '').trim()
+      if (synthesized.length > 0) {
+        text = synthesized
+      }
+    } catch (error: any) {
+      logger.warn('[ProactiveAgent] Tool synthesis failed', {
+        metadata: {
+          ...context,
+          errorMessage: error?.message,
+          toolCallCount,
+          toolResultCount: toolResults.length,
+        },
+      })
+    }
+
+    if (text.trim().length === 0) {
+      text = (
+        lastToolOutcomeMessage ??
+        (looksLikeWebSearchQuery(userMessage) || webSearchRetryContext.shouldRetrySearch
+          ? 'Hice la búsqueda, pero no pude consolidar resultados confiables. ¿Quieres que lo intente de nuevo con otro enfoque?'
+          : 'Listo. Ya ejecuté tu solicitud.')
+      ).trim()
+    }
   }
 
   logger.info('[ProactiveAgent] Response generated', {

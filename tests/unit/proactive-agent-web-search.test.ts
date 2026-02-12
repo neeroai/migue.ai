@@ -92,9 +92,21 @@ describe('proactive-agent web search routing', () => {
         },
       },
     })
+    mockGenerateText.mockResolvedValueOnce({
+      text: 'Sobre Barranquilla encontré programación preliminar de desfiles para hoy.',
+      usage: { inputTokens: 8, outputTokens: 12, totalTokens: 20 },
+      finishReason: 'stop',
+      steps: [],
+      providerMetadata: {
+        gateway: {
+          model: 'google/gemini-2.5-flash-lite',
+        },
+      },
+    })
 
     const response = await respond('busca en internet la programacion de los carnavales', 'u1', [])
-    expect(response.text).toContain('Programación preliminar')
+    expect(response.text).toContain('Sobre Barranquilla encontré')
+    expect(mockGenerateText).toHaveBeenCalledTimes(2)
   })
 
   it('supports AI SDK v6 tool result shape using output field', async () => {
@@ -127,9 +139,21 @@ describe('proactive-agent web search routing', () => {
         },
       },
     })
+    mockGenerateText.mockResolvedValueOnce({
+      text: 'Sobre Barranquilla encontré que hoy la Batalla de Flores inicia a las 11:00.',
+      usage: { inputTokens: 9, outputTokens: 14, totalTokens: 23 },
+      finishReason: 'stop',
+      steps: [],
+      providerMetadata: {
+        gateway: {
+          model: 'google/gemini-2.5-flash-lite',
+        },
+      },
+    })
 
     const response = await respond('busca la programación de hoy en barranquilla', 'u1', [])
-    expect(response.text.toLowerCase()).toContain('batalla de flores')
+    expect(response.text.toLowerCase()).toContain('sobre barranquilla encontré')
+    expect(mockGenerateText).toHaveBeenCalledTimes(2)
   })
 
   it('retries web search context when user confirms with "si" after failed search', async () => {
@@ -151,6 +175,15 @@ describe('proactive-agent web search routing', () => {
         content: 'Hice la búsqueda, pero no pude extraer resultados útiles. ¿Quieres que lo intente de nuevo con otro enfoque?',
       },
     ]
+    mockGenerateText.mockResolvedValueOnce({
+      text: 'Sobre Barranquilla encontré eventos para hoy y puedo afinar por zona o tipo.',
+      usage: { inputTokens: 8, outputTokens: 10, totalTokens: 18 },
+      finishReason: 'stop',
+      steps: [],
+      providerMetadata: {
+        gateway: { model: 'google/gemini-2.5-flash-lite' },
+      },
+    })
 
     const response = await respond('si', 'u1', history as any)
     const params = mockGenerateText.mock.calls[0]?.[0] as any
@@ -159,6 +192,27 @@ describe('proactive-agent web search routing', () => {
     expect(params.model).toBe('google/gemini-2.5-flash-lite')
     expect(lastUserContent).toContain('reintentar la búsqueda web previa')
     expect(lastUserContent).toContain('barranquilla')
-    expect(response.text).toContain('Hice la búsqueda')
+    expect(response.text).toContain('Sobre Barranquilla encontré')
+    expect(mockGenerateText).toHaveBeenCalledTimes(2)
+  })
+
+  it('retries without tools when primary generation fails', async () => {
+    process.env.WEB_SEARCH_ENABLED = 'true'
+    mockGenerateText.mockRejectedValueOnce(new Error('perplexity timeout'))
+    mockGenerateText.mockResolvedValueOnce({
+      text: 'No pude consultar internet en este momento, pero neero.ai parece ser una plataforma de IA.',
+      usage: { inputTokens: 6, outputTokens: 10, totalTokens: 16 },
+      finishReason: 'stop',
+      steps: [],
+      providerMetadata: {
+        gateway: { model: 'google/gemini-2.5-flash-lite' },
+      },
+    })
+
+    const response = await respond('busca en internet neero.ai', 'u1', [])
+    expect(response.text.toLowerCase()).toContain('no pude consultar internet')
+    expect(mockGenerateText).toHaveBeenCalledTimes(2)
+    const secondCallParams = mockGenerateText.mock.calls[1]?.[0] as any
+    expect(secondCallParams.tools).toBeUndefined()
   })
 })

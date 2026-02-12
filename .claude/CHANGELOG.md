@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 12:37"
+updated: "2026-02-12 08:48"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -88,3 +88,9 @@ scope: "Tracking and process notes"
 - Multiple broad documentation sessions were logged in detail.
 - Internal changelog became too verbose for operational use.
 - Current policy shifts this file to concise operational deltas only.
+
+### Changed - 2026-02-12 13:02
+
+- Updated `src/modules/ai/application/proactive-agent.ts` to force LLM synthesis after tool calls with empty assistant text.
+- Added resilient retry path: if primary generation fails with tools, re-run one pass without tools.
+- Added/updated tests in `tests/unit/proactive-agent-web-search.test.ts` for synthesis and no-tools recovery behavior.

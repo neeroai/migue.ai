@@ -102,3 +102,5 @@ Tradeoff principal:
 - Se reforzó prompt para `web_search` (evitar respuesta solo "Listo") y parser profundo para payloads anidados.
 - Se agregó manejo de contexto de reintento para confirmaciones breves (`"si"`) tras falla de búsqueda web previa.
 - Se corrigió shape de integración AI SDK para tool results (`output` en lugar de depender de `result`).
+- Se cambió el flujo para que, si hay tool call con texto vacío, siempre se ejecute una segunda pasada LLM de síntesis (sin devolver payload crudo al usuario).
+- Se agregó recuperación automática: si falla la generación principal con tools, se reintenta una pasada sin tools para evitar error conversacional genérico al usuario.
