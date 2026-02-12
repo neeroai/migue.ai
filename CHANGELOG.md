@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-07 12:15"
+updated: "2026-02-12 08:05"
 scope: "project"
 ---
 
@@ -14,7 +14,40 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-07 12:15
+## [Unreleased] - 2026-02-07 16:41
+
+### Changed - Tracking Governance
+- Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
+- Updated `CLAUDE.md` to current modular architecture (`app/api`, `src/modules`, `src/shared`) and tracking contract.
+
+### Fixed - Typecheck Hygiene
+- Resolved stale generated type error by clearing `tsconfig.tsbuildinfo` and re-running `npm run typecheck`.
+
+### Changed - Multimodal Image/Document Pipeline
+- Replaced `tesseract.js` OCR flow with new `vision-pipeline` in `src/modules/ai/application/vision-pipeline.ts`.
+- `processDocumentMessage` now runs multimodal extraction/response and only delegates to text tool pathway when tool intent is detected.
+- Added classification buckets for visual inputs: `DOCUMENT_TEXT`, `RECEIPT_INVOICE`, `ID_FORM`, `GENERAL_IMAGE`.
+- Added unit tests in `tests/unit/vision-pipeline.test.ts`.
+- Removed `tesseract.js` dependency from `package.json`.
+
+### Added - SDD
+- Added spec `specs/17-general-image-processing.md` with architecture, tradeoffs, validation criteria, and pending items.
+
+### Changed - Tracking Policy
+- Tightened `check:tracking` size limits to enforce compact operational logs.
+- Added anti-accumulation checks in `scripts/check-tracking-files.mjs`:
+  - max detailed sessions in `.claude/session.md`
+  - max completed tasks in `.claude/todo.md`
+  - max full ADR blocks in `.claude/decisions.md`
+  - max detailed dated sections in `.claude/CHANGELOG.md`
+- Updated `AGENTS.md` with explicit compact-first tracking rules and retention guidance.
+- Compacted `.claude` tracking files to prioritize resume context over historical accumulation.
+- Added `scripts/compact-tracking-files.mjs` and `npm run tracking:compact` to automate future compaction.
+
+### Changed - Skills
+- Updated `codex-skills/claude-migrated/whatsapp-api-expert` baseline from WhatsApp Business API `v23.0` to `v24.0`.
+- Added skill-level version policy: default `v24.0`, explicit compatibility handling when repository code is pinned to older API versions.
+- No runtime/API client migration was performed in application code in this change.
 
 ### Changed - Architecture
 - **AI Gateway mandatory**: Models now use Gateway strings (`openai/gpt-4o-mini`, `google/gemini-2.5-flash-lite`) with Gateway fallback.
@@ -204,8 +237,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Codebase: -470 lines
 - Complexity: Single AI system (was: 2 parallel)
 - Tests: 254 passing, 26 skipped
-
-### Rationale
-- WhatsApp bot not responding due to expired API keys
-- Root cause: Direct API usage bypassed gateway
-- Solution: Centralize all AI through Vercel AI SDK gateway

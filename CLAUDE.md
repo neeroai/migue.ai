@@ -1,79 +1,50 @@
 # migue.ai
 
-**Agente IA conversacional por WhatsApp** - Responde mensajes, procesa audio/imágenes, recordatorios, gastos
+Asistente IA conversacional por WhatsApp con backend en Next.js (App Router), Edge Runtime y Supabase.
 
----
+## Must Follow
 
-<must_follow>
+- Mantener consistencia con la arquitectura modular actual (`app/api`, `src/modules`, `src/shared`).
+- Si hay cambio de comportamiento, actualizar tracking + changelog en la misma sesion/PR.
+- Usar como referencia operativa: `docs/tracking-best-practices.md`.
 
-**SIEMPRE mantener actualizados tracking files** (.claude/session.md, CHANGELOG.md, status.md, decisions.md, todo.md)
+## Stack Actual
 
-</must_follow>
-
----
-
-## Stack
-
-- Next.js 16 + Vercel Edge Functions
+- Next.js 16 + React 19 + TypeScript 5
 - WhatsApp Business API
 - Supabase PostgreSQL + pgvector
-- OpenAI GPT-4o-mini + Claude Sonnet fallback
-- Budget: $90/month
-
----
+- OpenAI SDK + AI Gateway/fallback configurado por entorno
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `app/api/whatsapp/webhook/route.ts` | Webhook entrada mensajes WhatsApp |
-| `lib/ai/proactive-agent.ts` | Orquestación AI (herramientas: reminders, expenses, calendar) |
-| `lib/ai-processing-v2.ts` | Pipeline procesamiento (text/audio/image → AI → response) |
-| `.claude/CHANGELOG.md` | Qué cambió en código |
+| `app/api/whatsapp/webhook/route.ts` | Ingreso de eventos WhatsApp |
+| `app/api/cron/check-reminders/route.ts` | Cron de recordatorios |
+| `src/modules/ai/application/processing.ts` | Orquestacion principal de procesamiento AI |
+| `src/modules/ai/application/vision-pipeline.ts` | Pipeline multimodal de imagen/documento |
+| `src/shared/infra/db/supabase.ts` | Cliente DB y acceso a Supabase |
 
----
+## Tracking Contract
 
-## Specs (specs/)
+Archivos de tracking y su responsabilidad:
 
-12 comprehensive .md files documenting implementation:
+- `.claude/session.md`: handoff entre sesiones.
+- `.claude/status.md`: estado actual y riesgos.
+- `.claude/todo.md`: backlog operativo.
+- `.claude/decisions.md`: decisiones (ADR) y tradeoffs.
+- `.claude/CHANGELOG.md`: historial tecnico interno.
+- `CHANGELOG.md`: cambios relevantes del proyecto.
 
-- **P0**: ai-processing, reminders, whatsapp-integration
-- **P1**: calendar-integration, memory-system, message-processing
-- **P3**: cost-tracking, audio-transcription, rate-limiting, error-recovery, messaging-windows, webhook-validation
+Comandos de control:
 
-Each spec: what it does, why, files, exports, dependencies, tests, ADRs, logs, next steps
+- `npm run check:tracking`
+- `npm run tracking:compact`
 
----
+## Runtime Constraints
 
-## WhatsApp API Constraints
+- Rutas API criticas en Edge Runtime.
+- Evitar APIs Node no soportadas en handlers Edge.
+- Mantener logging estructurado y seguro (sin exponer PII completa).
 
-- NO streaming response (buffer completo antes de enviar)
-- NO typing indicator control (solo reactions)
-- 24h window mensajes gratis (fuera = template pagado)
-- Rate limit: 250 msg/sec
-
----
-
-## Edge Runtime Constraints
-
-- Timeout: 5s máximo
-- No Node.js APIs (solo Web APIs: fetch, crypto)
-- Cold start: 300-800ms
-- All routes: `export const runtime = 'edge'`
-
----
-
-## Tracking Files (.claude/)
-
-6 archivos MANDATORY - actualizar después de cambios:
-
-- `session.md` - Qué pasó en sesión
-- `CHANGELOG.md` - Qué cambió en código (BLOCKING)
-- `todo.md` - Tareas pending/in_progress/completed
-- `decisions.md` - Por qué se decidió X
-- `status.md` - Estado actual proyecto
-- `plan.md` - Plan aprobado actual
-
----
-
-**Last Updated**: 2026-02-07 03:10
+**Last Updated**: 2026-02-12

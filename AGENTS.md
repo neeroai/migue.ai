@@ -93,6 +93,33 @@ Cuando haya cambios de codigo, mantener actualizados:
 
 Si aplica, actualizar tambien `specs/*.md` del feature afectado.
 
+Referencia base de proceso:
+
+- `docs/tracking-best-practices.md`
+
+### Fuente unica de verdad por archivo (obligatoria)
+
+- `.claude/session.md`: handoff entre sesiones; no duplicar estado global.
+- `.claude/status.md`: solo estado actual, foco y riesgos.
+- `.claude/todo.md`: solo backlog operativo (pending/in_progress/completed).
+- `.claude/decisions.md`: solo decisiones y tradeoffs (ADR).
+- `.claude/CHANGELOG.md`: historial tecnico interno de cambios.
+- `CHANGELOG.md`: cambios relevantes del proyecto para consumidores humanos.
+
+No copiar la misma narrativa completa en multiples archivos.
+
+### Minimo de evidencia por entrada
+
+Cada entrada de tracking debe incluir, cuando aplique:
+
+- fecha/hora
+- accion (Implement/Validate/Decide/Fix/Document)
+- alcance (feature/modulo)
+- evidencia (ruta de archivo y/o comando/test)
+- resultado (`Complete`, `Partial`, `Blocked`)
+
+Evitar entradas vagas sin evidencia verificable.
+
 ### Politica de tamano (estricta)
 
 Los tracking files deben permanecer pequenos y legibles. Validar con:
@@ -120,6 +147,22 @@ Si un archivo supera limite: resumir entradas antiguas y conservar detalle recie
   - `.claude/CHANGELOG.md`: conservar cambios recientes y resumir periodos anteriores.
 - Cuando haya crecimiento acumulativo, consolidar en secciones de "Historical Summary" (5-10 bullets).
 - Si se necesita detalle historico largo, moverlo fuera de tracking files (por ejemplo `docs/`).
+
+### Cadencia operativa recomendada
+
+- Inicio de sesion: leer `status.md`, `todo.md` y ultima seccion de `session.md`.
+- Durante la sesion: registrar hitos reales (decision, implementacion, validacion, bloqueo).
+- Cierre de sesion: actualizar tracking relevante y correr `npm run check:tracking`.
+- Semanal o tras sesiones intensas: correr `npm run tracking:compact`.
+
+### Checklist de cierre de sesion (obligatorio)
+
+- [ ] `session.md` actualizado con operaciones y notas de reanudacion.
+- [ ] `todo.md` sincronizado con estado real de tareas.
+- [ ] `status.md` actualizado si cambio el estado del proyecto.
+- [ ] `decisions.md` actualizado si hubo decisiones relevantes.
+- [ ] changelog(s) actualizados si hubo cambios observables.
+- [ ] `npm run check:tracking` ejecutado.
 
 ## 11) Convenciones de entrega para agentes
 
