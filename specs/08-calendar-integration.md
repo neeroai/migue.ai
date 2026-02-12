@@ -2,6 +2,9 @@
 
 ## Estado
 - Semáforo: `YELLOW`
+- Fase: `in_progress`
+- Next Step: Cerrar gaps e2e y mover a GREEN con evidencia verificable.
+- Updated: 2026-02-12 03:30
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/shared/infra/google/calendar.ts`
 

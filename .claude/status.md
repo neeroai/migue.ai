@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 03:15"
+updated: "2026-02-12 04:14"
 ---
 
 # Project Status
@@ -13,6 +13,8 @@ updated: "2026-02-12 03:15"
 | Tests (last known) | 264 passing | 240+ | OK |
 | AI Gateway migration | Complete | Required | OK |
 | Tracking governance docs | Implemented | Required | OK |
+| Session continuity system | Implemented (`just` + master tracker) | Required | OK |
+| just runtime | Installed locally (`just 1.46.0`) | Required | OK |
 | Tracking compactness | Enforced by script | Required | OK |
 | Typecheck | Recovered after clearing stale incremental cache | Required | OK |
 
@@ -23,11 +25,15 @@ updated: "2026-02-12 03:15"
 - Preserve only recent operational detail.
 - Apply PR checklist to enforce tracking updates per behavior change.
 - Enforce tracking updates in CI for pull requests touching critical paths.
+- Operate session start/close with `just resume` and `just close-session`.
+- Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
 
 ## Recent Milestones
 
 | Date | Milestone | Status |
 |------|-----------|--------|
+| 2026-02-12 04:12 | `just` instalado y operativo para workflow de continuidad | COMPLETE |
+| 2026-02-12 03:59 | Session continuity system implemented (`just`, handoff, master tracker) | COMPLETE |
 | 2026-02-12 03:13 | CI tracking guardrail added for PRs on critical paths | COMPLETE |
 | 2026-02-12 03:12 | Governance commit rebased and pushed to `origin/main` | COMPLETE |
 | 2026-02-12 08:05 | Tracking governance playbook added in `docs/` | COMPLETE |

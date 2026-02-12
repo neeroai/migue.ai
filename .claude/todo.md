@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 03:15"
+updated: "2026-02-12 04:14"
 ---
 
 # Task List
@@ -9,6 +9,7 @@ updated: "2026-02-12 03:15"
 ## In Progress
 
 - [ ] Keep applying `tracking:compact` after heavy documentation sessions
+- [ ] Cerrar gap E2E de `specs/04-ai-processing-orchestration.md` para mover semáforo a GREEN
 
 ## Pending
 
@@ -26,6 +27,8 @@ updated: "2026-02-12 03:15"
 - [x] Add `.github/pull_request_template.md` tracking checklist (2026-02-12 08:05)
 - [x] Rebase and push tracking governance commit to `origin/main` (2026-02-12 03:12)
 - [x] Add PR CI guardrail for tracking updates on critical paths (2026-02-12 03:13)
+- [x] Implement session continuity system with `just` runner and guardrails (2026-02-12 03:59)
+- [x] Install `just` locally and validate recipes (`resume`, `sync-master`, `check-tracking`) (2026-02-12 04:12)
 - [x] Replace local OCR with multimodal vision pipeline (`vision-pipeline`) (2026-02-07 16:41)
 - [x] Add SDD spec `specs/17-general-image-processing.md` (2026-02-07 16:36)
 - [x] Remove `tesseract.js` dependency (2026-02-07 16:40)

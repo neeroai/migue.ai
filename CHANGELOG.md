@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 08:05"
+updated: "2026-02-12 04:14"
 scope: "project"
 ---
 
@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
-- Updated `CLAUDE.md`/`AGENTS.md`, PR template, and CI guardrail to enforce tracking updates on critical PR changes.
+- Updated `CLAUDE.md`/`AGENTS.md`, `just` continuity commands, master tracker generation, PR template, and CI/pre-commit guardrails.
 
 ### Fixed - Typecheck Hygiene
 - Resolved stale generated type error by clearing `tsconfig.tsbuildinfo` and re-running `npm run typecheck`.

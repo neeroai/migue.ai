@@ -225,9 +225,17 @@ out/
 .backup/
 #docs-global/
 
-# Documentation (keep local only)
-docs/
+# Documentation (selective tracking)
+docs/*
+!docs/master-tracker.md
+!docs/session-continuity-runbook.md
+!docs/tracking-best-practices.md
+!docs/session-tracking-system.md
 
 .npm-cache/
 .vercel
 scripts/
+!scripts/
+scripts/*
+!scripts/check-tracking-files.mjs
+!scripts/compact-tracking-files.mjs

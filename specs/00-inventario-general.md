@@ -1,5 +1,11 @@
 # SDD - Inventario General (Alineado a Architecture Master v1.0.0)
 
+## Estado
+- Semáforo: `YELLOW`
+- Fase: `in_progress`
+- Next Step: Consolidar el maestro autogenerado y mantener sincronía continua con `specs/*.md`.
+- Updated: 2026-02-12 03:30
+
 ## Estado global
 - Arquitectura fuente de verdad: `architecture.md`
 - Principio rector: `LLM-first` + backend como guardrail

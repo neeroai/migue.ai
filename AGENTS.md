@@ -96,6 +96,7 @@ Si aplica, actualizar tambien `specs/*.md` del feature afectado.
 Referencia base de proceso:
 
 - `docs/tracking-best-practices.md`
+- `docs/session-continuity-runbook.md`
 
 ### Fuente unica de verdad por archivo (obligatoria)
 
@@ -105,6 +106,8 @@ Referencia base de proceso:
 - `.claude/decisions.md`: solo decisiones y tradeoffs (ADR).
 - `.claude/CHANGELOG.md`: historial tecnico interno de cambios.
 - `CHANGELOG.md`: cambios relevantes del proyecto para consumidores humanos.
+- `.claude/handoff.md`: estado operativo corto para reanudar la siguiente sesion.
+- `docs/master-tracker.md`: tablero maestro autogenerado desde `specs/*.md`.
 
 No copiar la misma narrativa completa en multiples archivos.
 
@@ -124,7 +127,7 @@ Evitar entradas vagas sin evidencia verificable.
 
 Los tracking files deben permanecer pequenos y legibles. Validar con:
 
-- `npm run check:tracking`
+- `just check-tracking`
 
 Limites actuales (lineas/bytes):
 
@@ -150,10 +153,10 @@ Si un archivo supera limite: resumir entradas antiguas y conservar detalle recie
 
 ### Cadencia operativa recomendada
 
-- Inicio de sesion: leer `status.md`, `todo.md` y ultima seccion de `session.md`.
+- Inicio de sesion: correr `just resume`.
 - Durante la sesion: registrar hitos reales (decision, implementacion, validacion, bloqueo).
-- Cierre de sesion: actualizar tracking relevante y correr `npm run check:tracking`.
-- Semanal o tras sesiones intensas: correr `npm run tracking:compact`.
+- Cierre de sesion: ejecutar `just close-session "..." "..." "step1|step2" "[blockers]" "[files]" "[commands]"`.
+- Semanal o tras sesiones intensas: correr `npm run tracking:compact` (compatibilidad legacy).
 
 ### Checklist de cierre de sesion (obligatorio)
 
@@ -162,7 +165,8 @@ Si un archivo supera limite: resumir entradas antiguas y conservar detalle recie
 - [ ] `status.md` actualizado si cambio el estado del proyecto.
 - [ ] `decisions.md` actualizado si hubo decisiones relevantes.
 - [ ] changelog(s) actualizados si hubo cambios observables.
-- [ ] `npm run check:tracking` ejecutado.
+- [ ] `just sync-master` ejecutado.
+- [ ] `just check-tracking` ejecutado.
 
 ## 11) Convenciones de entrega para agentes
 

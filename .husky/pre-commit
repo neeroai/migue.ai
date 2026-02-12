@@ -1,2 +1,11 @@
-# Fast type checking before commit
-npm run typecheck
+if ! command -v just >/dev/null 2>&1; then
+  echo "Error: 'just' is required for commit checks. Install: https://just.systems/"
+  exit 1
+fi
+
+# Keep master tracker synced with specs and include generated file in commit.
+just sync-master || exit 1
+git add docs/master-tracker.md || exit 1
+
+# Enforce tracking/session continuity guardrails.
+just check-tracking || exit 1

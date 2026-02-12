@@ -29,17 +29,22 @@ Asistente IA conversacional por WhatsApp con backend en Next.js (App Router), Ed
 
 Archivos de tracking y su responsabilidad:
 
+- `.claude/handoff.md`: estado operativo para retomar la siguiente sesión.
 - `.claude/session.md`: handoff entre sesiones.
 - `.claude/status.md`: estado actual y riesgos.
 - `.claude/todo.md`: backlog operativo.
 - `.claude/decisions.md`: decisiones (ADR) y tradeoffs.
 - `.claude/CHANGELOG.md`: historial tecnico interno.
 - `CHANGELOG.md`: cambios relevantes del proyecto.
+- `docs/master-tracker.md`: tablero maestro autogenerado desde `specs/*.md`.
 
 Comandos de control:
 
-- `npm run check:tracking`
-- `npm run tracking:compact`
+- `just sync-master`
+- `just check-tracking`
+- `just checkpoint "..." "..." "step1|step2" "[blockers]" "[files]" "[commands]"`
+- `just resume`
+- `just close-session "..." "..." "step1|step2" "[blockers]" "[files]" "[commands]"`
 
 ## Runtime Constraints
 
