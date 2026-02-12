@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 06:23"
+updated: "2026-02-12 11:20"
 ---
 
 # Project Status
@@ -20,6 +20,7 @@ updated: "2026-02-12 06:23"
 
 ## Current Focus
 
+- Keyword flows QA mode (`flow test <name>`) integrated in webhook background pipeline.
 - Keep tracking files compact and resumable.
 - Avoid duplicate reporting across `.claude/*` files.
 - Preserve only recent operational detail.

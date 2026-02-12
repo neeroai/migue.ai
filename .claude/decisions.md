@@ -4,10 +4,31 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 06:23"
+updated: "2026-02-12 11:20"
 ---
 
 # Architecture Decisions
+
+## ADR-018: Keyword-Gated Flow QA Mode with Mock Payloads
+
+**Date**: 2026-02-12 11:20  
+**Status**: Approved  
+**Deciders**: User request (probar todos los flows por palabra clave)
+
+### Decision
+
+- Add `src/modules/flow-testing/application/service.ts` to parse commands like `flow test transfer` and send corresponding WhatsApp Flow with `initialData` mock payloads.
+- Integrate command handler into `src/modules/webhook/application/background-processor.ts` before onboarding gate and normal AI orchestration.
+- Keep behavior environment-gated via `FLOW_TEST_MODE_ENABLED` (default enabled outside production, disabled in production unless explicit override).
+
+### Consequences
+
+**Positive**:
+- Fast QA path to validate screen routing and placeholders for all flow variants.
+- No impact on normal conversations unless explicit command is sent.
+
+**Tradeoff**:
+- Requires Meta-published `flow_id` alignment for each test flow.
 
 ## ADR-017: LLM-First User-Facing Messaging for Signup Lifecycle and Reminder Delivery
 

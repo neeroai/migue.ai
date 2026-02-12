@@ -19,6 +19,7 @@ import { isAgentEventLedgerEnabled } from '../../agent/application/feature-flags
 import { enqueueAgentEvent } from '../../agent/infra/ledger';
 import { ensureSignupOnFirstContact } from '../../onboarding/application/service';
 import { generateSignupLifecycleMessage } from '../../../shared/infra/ai/agentic-messaging';
+import { tryHandleFlowTestingCommand } from '../../flow-testing/application/service';
 
 /**
  * Background webhook processing (fire-and-forget)
@@ -185,6 +186,23 @@ export async function processWebhookInBackground(
     }
 
     if (normalized.from) {
+      const handledAsFlowTest = await tryHandleFlowTestingCommand({
+        phoneNumber: normalized.from,
+        content: normalized.type === 'text' ? normalized.content : null,
+        userId,
+        requestId,
+        conversationId,
+      });
+      if (handledAsFlowTest) {
+        logger.info('[background] Flow testing command handled', {
+          requestId,
+          conversationId,
+          userId,
+          metadata: { type: normalized.type },
+        });
+        return;
+      }
+
       const signupGate = await ensureSignupOnFirstContact({
         userId,
         phoneNumber: normalized.from,
@@ -192,11 +210,8 @@ export async function processWebhookInBackground(
         requestId,
       });
       if (signupGate.reason === 'flow_send_failed') {
-        const fallbackMessage = await generateSignupLifecycleMessage('flow_send_failed')
-        await sendWhatsAppText(
-          normalized.from,
-          fallbackMessage
-        ).catch(() => undefined);
+        const fallbackMessage = await generateSignupLifecycleMessage('flow_send_failed');
+        await sendWhatsAppText(normalized.from, fallbackMessage).catch(() => undefined);
         logger.warn('[background] Signup flow send failed, continuing AI turn', {
           requestId,
           conversationId,
@@ -205,8 +220,8 @@ export async function processWebhookInBackground(
         });
       }
       if (signupGate.blocked) {
-        const messageType = signupGate.reason === 'already_in_progress' ? 'already_in_progress' : 'flow_sent'
-        const gatedMessage = await generateSignupLifecycleMessage(messageType)
+        const messageType = signupGate.reason === 'already_in_progress' ? 'already_in_progress' : 'flow_sent';
+        const gatedMessage = await generateSignupLifecycleMessage(messageType);
         await sendWhatsAppText(normalized.from, gatedMessage).catch(() => undefined);
 
         if (signupGate.reason === 'already_in_progress') {
@@ -214,7 +229,7 @@ export async function processWebhookInBackground(
             requestId,
             conversationId,
             userId,
-          })
+          });
         }
         logger.info('[background] Onboarding gate active, skipping AI turn', {
           requestId,

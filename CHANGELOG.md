@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 11:20"
 scope: "project"
 ---
 
@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-02-07 16:41
 
+### Changed - Flow Testing Mode
+- Added `src/modules/flow-testing/application/service.ts` with keyword commands (`flow test <nombre>`) to trigger WhatsApp Flows for QA.
+- Each supported flow is sent with mock `initialData` payload when required for first-screen placeholders.
+- Integrated command interception in `src/modules/webhook/application/background-processor.ts` before onboarding gate and AI orchestration.
+- Added unit coverage in `tests/unit/flow-testing-service.test.ts` and validated full unit suite.
 ### Changed - Agentic Messaging (Onboarding + Reminders)
 - Added `src/shared/infra/ai/agentic-messaging.ts` to generate WhatsApp-ready copy with LLM-first behavior and safe fallback.
 - Updated onboarding gate messages in `src/modules/webhook/application/background-processor.ts`:
@@ -112,7 +117,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - P0.1: void getCostTracker().ensureHydrated() - Fire-and-forget prevents blocking 2 sequential DB queries
 - P0.2: if (!isToolMessage) searchMemories() - Lazy loading skips embedding + pgvector search for reminders/expenses/scheduling
 - Database: Indexes already optimal (idx_openai_usage_user_date_utc composite index, usage_date_utc generated column)
-- Edge Runtime: Tesseract already lazy-loaded, imports optimized
 - Tests: 254 passing, TypeScript strict mode passing
 
 ### Rationale
