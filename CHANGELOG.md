@@ -16,6 +16,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-02-07 16:41
 
+### Changed - Agentic Messaging (Onboarding + Reminders)
+- Added `src/shared/infra/ai/agentic-messaging.ts` to generate WhatsApp-ready copy with LLM-first behavior and safe fallback.
+- Updated onboarding gate messages in `src/modules/webhook/application/background-processor.ts`:
+  - `flow_sent`, `already_in_progress`, and `flow_send_failed` now use agentic messaging.
+- Updated post-signup welcome in `src/shared/infra/whatsapp/flows.ts` to use LLM-first personalized welcome text.
+- Updated reminder cron delivery text in `app/api/cron/check-reminders/route.ts` to use LLM-first reminder phrasing.
+
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
 - Updated `CLAUDE.md`/`AGENTS.md`, `just` continuity commands, master tracker generation, PR template, and CI/pre-commit guardrails.
@@ -114,17 +121,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Tool messages (reminders, expenses, scheduling) don't need conversational context - skip memory
 - getBudgetStatus() already cached 30s with cache invalidation on trackUsage() - no further optimization needed
 - Database queries already use optimal indexes - no schema changes required
-
-### Reminder Race Condition Details
-- **Problem**: Cron runs every 5min (2:35, 2:40, 2:45). All 3 executions fetched same pending reminder
-- **Timeline**:
-  1. Execution 1 (2:35): SELECT pending reminders
-  2. Execution 2 (2:40): SELECT pending reminders (same rows)
-  3. Execution 3 (2:45): SELECT pending reminders (same rows)
-  4. All 3 mark as 'sent' and send WhatsApp message = 3 duplicates
-- **Fix**: PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED` locks fetched rows, skips already-locked rows
-- **Result**: Each cron execution gets different reminders, no duplicates possible
-- **Files**: app/api/cron/check-reminders/route.ts:57-77 + supabase/migrations/022_fix_reminder_race_condition.sql
 
 ## [Previous] - 2026-02-06 19:00
 

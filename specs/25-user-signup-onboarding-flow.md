@@ -3,8 +3,8 @@
 ## Estado
 - Semáforo: `YELLOW`
 - Fase: `in_progress`
-- Next Step: Cerrar gaps e2e y mover a GREEN con evidencia verificable.
-- Updated: 2026-02-12 03:30
+- Next Step: Cerrar gaps e2e del flujo completo (first-contact -> completion -> welcome) y mover a GREEN con evidencia verificable.
+- Updated: 2026-02-12 06:23
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/shared/infra/whatsapp/flows.ts` + `src/modules/webhook/*` + `src/modules/ai/*`
 
@@ -55,6 +55,11 @@ Cuando un usuario nuevo envía su primer mensaje por WhatsApp, disparar un flujo
 - Tools de acción (ej: gastos, recordatorios, agenda) se pueden limitar por policy hasta completar onboarding.
 - Si Flow expira o falla:
   - fallback guiado por chat para capturar `name/email`.
+
+## Implementación reciente (2026-02-12)
+- Mensajes del ciclo de signup (`flow_sent`, `already_in_progress`, `flow_send_failed`) ahora se generan en modo LLM-first con fallback seguro.
+- Mensaje post-registro (`welcome`) ahora se genera en modo LLM-first con personalización por nombre cuando existe.
+- Objetivo: reducir tono robótico y evitar silencio operativo en onboarding.
 
 ## Flujo funcional (alto nivel)
 1. Inbound de WhatsApp.

@@ -16,6 +16,7 @@ import { getSupabaseServerClient } from '../../../../src/shared/infra/db/supabas
 import type { Tables } from '../../../../types/supabase-helpers';
 import { recordCalendarEvent } from '../../../../src/shared/infra/calendar/store';
 import { sendWhatsAppText } from '../../../../src/shared/infra/whatsapp';
+import { generateReminderDeliveryMessage } from '../../../../src/shared/infra/ai/agentic-messaging';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -155,11 +156,11 @@ export async function GET(req: Request): Promise<Response> {
           // ✅ FIX: Mark as 'sent' BEFORE sending to prevent race condition duplicates
           await markReminderStatus(supabase, r.id, 'sent')
 
-          // Format message with emoji and context for better UX
-          const emoji = '🔔'
-          const body = r.description
-            ? `${emoji} Recordatorio: ${r.title}\n\n${r.description}`
-            : `${emoji} Recordatorio: ${r.title}`
+          const body = await generateReminderDeliveryMessage({
+            title: r.title,
+            description: r.description,
+            scheduledTime: r.scheduled_time,
+          })
 
           try {
             await sendWhatsAppText(phone, body)

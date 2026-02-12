@@ -4,7 +4,7 @@
 - Semáforo: `GREEN`
 - Fase: `done`
 - Next Step: Mantener cobertura de regresión y monitoreo operativo.
-- Updated: 2026-02-12 03:30
+- Updated: 2026-02-12 06:23
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/modules/reminders/*`
 
@@ -32,3 +32,7 @@ Gestión de recordatorios y ejecución programada vía cron con entrega al usuar
 
 ## Siguiente incremento
 Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.
+
+## Implementación reciente (2026-02-12)
+- El cuerpo del mensaje de entrega de recordatorio en cron se genera ahora en modo LLM-first con fallback estático.
+- Objetivo: evitar respuestas literales/robóticas al notificar recordatorios.

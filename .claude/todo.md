@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 06:23"
 ---
 
 # Task List
@@ -10,6 +10,7 @@ updated: "2026-02-12 04:14"
 
 - [ ] Keep applying `tracking:compact` after heavy documentation sessions
 - [ ] Cerrar gap E2E de `specs/04-ai-processing-orchestration.md` para mover semáforo a GREEN
+- [ ] Reducir mocking en E2E de reminders para cubrir orquestación real (sin mock de `createProactiveAgent`)
 
 ## Pending
 
@@ -21,6 +22,7 @@ updated: "2026-02-12 04:14"
 ## Completed (Recent)
 
 - [x] Add tracking governance playbook in `docs/tracking-best-practices.md` (2026-02-12 07:55)
+- [x] Migrar mensajes de onboarding/reminders a generación LLM-first con fallback seguro (2026-02-12 06:23)
 - [x] Update `CLAUDE.md` to current architecture and tracking contract (2026-02-12 07:58)
 - [x] Update `AGENTS.md` with source-of-truth and session checklist policy (2026-02-12 08:00)
 - [x] Recover `npm run typecheck` by clearing stale `tsconfig.tsbuildinfo` cache (2026-02-12 08:04)
@@ -39,7 +41,6 @@ updated: "2026-02-12 04:14"
 - [x] Compact `.claude/status.md` with current-state focus (2026-02-07 15:38)
 - [x] Compact `.claude/decisions.md` preserving key ADRs + summary (2026-02-07 15:38)
 - [x] Compact `.claude/CHANGELOG.md` to recent changes + historical summary (2026-02-07 15:38)
-- [x] Update `whatsapp-api-expert` baseline from v23.0 to v24.0 (2026-02-07 15:25)
 
 ## Blocked
 

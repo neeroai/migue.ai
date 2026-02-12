@@ -18,6 +18,7 @@ import { processInputByClass } from './input-orchestrator';
 import { isAgentEventLedgerEnabled } from '../../agent/application/feature-flags';
 import { enqueueAgentEvent } from '../../agent/infra/ledger';
 import { ensureSignupOnFirstContact } from '../../onboarding/application/service';
+import { generateSignupLifecycleMessage } from '../../../shared/infra/ai/agentic-messaging';
 
 /**
  * Background webhook processing (fire-and-forget)
@@ -191,9 +192,10 @@ export async function processWebhookInBackground(
         requestId,
       });
       if (signupGate.reason === 'flow_send_failed') {
+        const fallbackMessage = await generateSignupLifecycleMessage('flow_send_failed')
         await sendWhatsAppText(
           normalized.from,
-          'No pude abrir el formulario de registro. Envíame por mensaje: "Me llamo <tu nombre>, mi email es <tu@email.com>".'
+          fallbackMessage
         ).catch(() => undefined);
         logger.warn('[background] Signup flow send failed, continuing AI turn', {
           requestId,
@@ -203,11 +205,16 @@ export async function processWebhookInBackground(
         });
       }
       if (signupGate.blocked) {
+        const messageType = signupGate.reason === 'already_in_progress' ? 'already_in_progress' : 'flow_sent'
+        const gatedMessage = await generateSignupLifecycleMessage(messageType)
+        await sendWhatsAppText(normalized.from, gatedMessage).catch(() => undefined);
+
         if (signupGate.reason === 'already_in_progress') {
-          await sendWhatsAppText(
-            normalized.from,
-            'Tu registro sigue pendiente. Abre el formulario "Completar registro" para continuar, o envíame: "Me llamo <tu nombre>, mi email es <tu@email.com>".'
-          ).catch(() => undefined);
+          logger.debug('[background] Signup gate reminder sent', {
+            requestId,
+            conversationId,
+            userId,
+          })
         }
         logger.info('[background] Onboarding gate active, skipping AI turn', {
           requestId,

@@ -13,6 +13,7 @@ import { sendWhatsAppRequest } from './http';
 import { sendWhatsAppText } from './messaging';
 import { getSupabaseServerClient } from '../db/supabase';
 import { logger } from '../../observability/logger';
+import { generatePostSignupWelcomeMessage } from '../ai/agentic-messaging';
 import type {
   FlowMessagePayload,
   FlowDataExchangeRequest,
@@ -668,8 +669,7 @@ export async function sendPostSignupWelcome(userId: string): Promise<boolean> {
     typeof user?.name === 'string' && user.name.trim().length > 0
       ? user.name.trim().split(/\s+/)[0]
       : null;
-  const greetingName = firstName ? `, ${firstName}` : '';
-  const body = `Listo${greetingName}. Tu registro quedó completo. Ya puedo ayudarte con recordatorios, gastos, agenda y más. ¿Qué quieres hacer primero?`;
+  const body = await generatePostSignupWelcomeMessage(firstName);
 
   try {
     await sendWhatsAppText(phone, body);

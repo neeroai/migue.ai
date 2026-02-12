@@ -1,13 +1,41 @@
 ---
 title: "Session Log"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 06:23"
 session_id: "tracking-compaction-2026-02-07"
 ---
 
 # Session Log
 
 ## Session - 2026-02-07 15:38
+
+## Active Session - 2026-02-12 06:23
+
+### Context
+
+User requested behavior fixes for conversational quality:
+
+- avoid silent first-contact/onboarding moments
+- reduce robotic reminder E2E/runtime behavior
+- keep responses LLM-first instead of rigid templates
+
+### Operations
+
+| Time | Operation | File | Status |
+|------|-----------|------|--------|
+| 06:10 | Implement | `src/shared/infra/ai/agentic-messaging.ts` | Complete |
+| 06:13 | Integrate | `src/modules/webhook/application/background-processor.ts` | Complete |
+| 06:16 | Integrate | `src/shared/infra/whatsapp/flows.ts` | Complete |
+| 06:18 | Integrate | `app/api/cron/check-reminders/route.ts` | Complete |
+| 06:20 | Validate | `npx jest tests/unit/cron-reminders.test.ts --runInBand` | Complete |
+| 06:21 | Validate | `npx jest tests/unit/whatsapp-flow-post-signup.test.ts --runInBand` | Complete |
+| 06:22 | Validate | `npm run typecheck` | Complete |
+| 06:23 | Document | `specs/07-reminders-cron.md`, `specs/25-user-signup-onboarding-flow.md`, tracking + changelog | Complete |
+
+### Decisions Made
+
+- Runtime user-facing copy for signup lifecycle and reminder delivery now prioritizes LLM-first generation with deterministic fallback.
+- E2E reminder de-mocking remains open as a dedicated follow-up to avoid broad test harness refactor in the same patch.
 
 ## Active Session - 2026-02-12 08:05
 

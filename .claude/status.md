@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 06:23"
 ---
 
 # Project Status
@@ -27,11 +27,13 @@ updated: "2026-02-12 04:14"
 - Enforce tracking updates in CI for pull requests touching critical paths.
 - Operate session start/close with `just resume` and `just close-session`.
 - Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
+- Endurecer tono conversacional LLM-first en onboarding y reminders.
 
 ## Recent Milestones
 
 | Date | Milestone | Status |
 |------|-----------|--------|
+| 2026-02-12 06:23 | Onboarding + reminder delivery moved to LLM-first messaging with fallback | COMPLETE |
 | 2026-02-12 04:12 | `just` instalado y operativo para workflow de continuidad | COMPLETE |
 | 2026-02-12 03:59 | Session continuity system implemented (`just`, handoff, master tracker) | COMPLETE |
 | 2026-02-12 03:13 | CI tracking guardrail added for PRs on critical paths | COMPLETE |

@@ -4,10 +4,35 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 06:23"
 ---
 
 # Architecture Decisions
+
+## ADR-017: LLM-First User-Facing Messaging for Signup Lifecycle and Reminder Delivery
+
+**Date**: 2026-02-12 06:23  
+**Status**: Approved  
+**Deciders**: User request (evitar respuestas robóticas y silencios en onboarding/reminders)
+
+### Decision
+
+- Introduce `src/shared/infra/ai/agentic-messaging.ts` as a centralized LLM-first copy generator with strict fallback.
+- Use this generator in:
+  - onboarding gate responses (`flow_sent`, `already_in_progress`, `flow_send_failed`)
+  - post-signup welcome message
+  - cron reminder delivery text
+- Keep deterministic fallback text for resiliency (timeouts/key missing/provider failure).
+
+### Consequences
+
+**Positive**:
+- More natural user-facing tone aligned with agentic architecture.
+- Reduced rigid/template-like messages in critical lifecycle touchpoints.
+- No operational regression when LLM generation is unavailable.
+
+**Tradeoff**:
+- Slight extra latency and token spend on onboarding/reminder messages.
 
 ## ADR-016: Resume Execution From Master Tracker Priority Queue
 
