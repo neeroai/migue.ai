@@ -138,3 +138,15 @@ export async function generateReminderDeliveryMessage(params: {
       : `Hola, te recuerdo esto: ${params.title}.`,
   })
 }
+
+export async function generateToolConfirmationMessage(params: {
+  userMessage: string
+  toolOutcome: string
+  fallback: string
+}): Promise<string> {
+  return generateAgenticMessage({
+    objective: 'Confirmar ejecución de herramienta con tono humano y contextual',
+    context: `Mensaje del usuario: ${params.userMessage} | Resultado técnico: ${params.toolOutcome}. Debe sonar natural, útil y breve.`,
+    fallback: params.fallback,
+  })
+}

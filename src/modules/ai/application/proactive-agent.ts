@@ -33,6 +33,7 @@ import {
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
 import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
 import type { AgentContextSnapshot } from './agent-context-builder'
+import { generateToolConfirmationMessage } from '../../../shared/infra/ai/agentic-messaging'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -498,11 +499,16 @@ export async function respond(
   // Some providers/flows finish with tool-calls and empty assistant text.
   // Ensure we always return a non-empty user-facing confirmation.
   if (text.trim().length === 0 && toolCallCount > 0) {
-    text = (
+    const fallbackToolMessage = (
       toolResults[toolResults.length - 1] ??
       lastToolOutcomeMessage ??
       'Listo. Ya ejecuté tu solicitud.'
     ).trim()
+    text = await generateToolConfirmationMessage({
+      userMessage,
+      toolOutcome: fallbackToolMessage,
+      fallback: fallbackToolMessage,
+    })
   }
 
   logger.info('[ProactiveAgent] Response generated', {
