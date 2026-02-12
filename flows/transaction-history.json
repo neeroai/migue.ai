@@ -1,0 +1,468 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "FILTER_OPTIONS": [
+      "TRANSACTION_LIST"
+    ],
+    "TRANSACTION_LIST": [
+      "TRANSACTION_DETAIL",
+      "SUCCESS"
+    ],
+    "TRANSACTION_DETAIL": [
+      "TRANSACTION_LIST"
+    ],
+    "SUCCESS": []
+  },
+  "screens": [
+    {
+      "id": "FILTER_OPTIONS",
+      "title": "Historial",
+      "terminal": false,
+      "data": {
+        "date_ranges": {
+          "__example__": [
+            {
+              "id": "7days",
+              "title": "Últimos 7 días"
+            },
+            {
+              "id": "30days",
+              "title": "Últimos 30 días"
+            },
+            {
+              "id": "90days",
+              "title": "Últimos 3 meses"
+            },
+            {
+              "id": "custom",
+              "title": "Rango personalizado"
+            }
+          ],
+          "type": "array"
+        },
+        "transaction_types": {
+          "__example__": [
+            {
+              "id": "all",
+              "title": "Todas"
+            },
+            {
+              "id": "income",
+              "title": "Ingresos"
+            },
+            {
+              "id": "expense",
+              "title": "Egresos"
+            },
+            {
+              "id": "transfer",
+              "title": "Transferencias"
+            }
+          ],
+          "type": "array"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Historial de Movimientos"
+          },
+          {
+            "type": "TextBody",
+            "text": "Selecciona los filtros para ver tus transacciones"
+          },
+          {
+            "type": "Form",
+            "name": "filter_form",
+            "children": [
+              {
+                "type": "Dropdown",
+                "name": "date_range",
+                "data-source": "${data.date_ranges}",
+                "label": "Período",
+                "required": true,
+                "init-value": "30days"
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "name": "type_filter",
+                "data-source": "${data.transaction_types}",
+                "label": "Tipo de transacción",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Ver Movimientos",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "TRANSACTION_LIST"
+                  },
+                  "payload": {
+                    "date_range": "${form.date_range}",
+                    "type_filter": "${form.type_filter}",
+                    "summary": {
+                      "period": "Últimos 30 días",
+                      "total_income": 2500000,
+                      "total_expense": 1800000,
+                      "balance": 700000,
+                      "transaction_count": 45
+                    },
+                    "transactions": [
+                      {
+                        "id": "TXN001",
+                        "date": "2026-02-01",
+                        "time": "14:30",
+                        "type": "expense",
+                        "type_label": "Transferencia enviada",
+                        "description": "A: María García",
+                        "amount": -150000,
+                        "currency": "COP",
+                        "status": "Completada"
+                      },
+                      {
+                        "id": "TXN002",
+                        "date": "2026-02-01",
+                        "time": "10:15",
+                        "type": "income",
+                        "type_label": "Depósito recibido",
+                        "description": "Desde: Bancolombia",
+                        "amount": 500000,
+                        "currency": "COP",
+                        "status": "Completada"
+                      },
+                      {
+                        "id": "TXN003",
+                        "date": "2026-01-30",
+                        "time": "16:45",
+                        "type": "expense",
+                        "type_label": "Retiro",
+                        "description": "A: Davivienda ****5678",
+                        "amount": -200000,
+                        "currency": "COP",
+                        "status": "Completada"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "TRANSACTION_LIST",
+      "title": "Movimientos",
+      "terminal": false,
+      "data": {
+        "date_range": {
+          "type": "string",
+          "__example__": "30days"
+        },
+        "type_filter": {
+          "type": "string",
+          "__example__": "all"
+        },
+        "summary": {
+          "__example__": {
+            "period": "Últimos 30 días",
+            "total_income": 2500000,
+            "total_expense": 1800000,
+            "balance": 700000,
+            "transaction_count": 45
+          },
+          "type": "object"
+        },
+        "transactions": {
+          "__example__": [
+            {
+              "id": "TXN001",
+              "date": "2026-02-01",
+              "time": "14:30",
+              "type": "expense",
+              "type_label": "Transferencia enviada",
+              "description": "A: María García",
+              "amount": -150000,
+              "currency": "COP",
+              "status": "Completada"
+            },
+            {
+              "id": "TXN002",
+              "date": "2026-02-01",
+              "time": "10:15",
+              "type": "income",
+              "type_label": "Depósito recibido",
+              "description": "Desde: Bancolombia",
+              "amount": 500000,
+              "currency": "COP",
+              "status": "Completada"
+            },
+            {
+              "id": "TXN003",
+              "date": "2026-01-30",
+              "time": "16:45",
+              "type": "expense",
+              "type_label": "Retiro",
+              "description": "A: Davivienda ****5678",
+              "amount": -200000,
+              "currency": "COP",
+              "status": "Completada"
+            }
+          ],
+          "type": "array"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "transaction_list_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "${data.summary.period}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Ingresos: $${data.summary.total_income} | Egresos: $${data.summary.total_expense}"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Balance: $${data.summary.balance}"
+              },
+              {
+                "type": "TextCaption",
+                "text": "${data.summary.transaction_count} transacciones"
+              },
+              {
+                "type": "NavigationList",
+                "name": "transaction_items",
+                "on-item-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "TRANSACTION_DETAIL"
+                  },
+                  "payload": {
+                    "transaction_id": "${item.id}"
+                  }
+                },
+                "list-items": "${data.transactions}"
+              },
+              {
+                "type": "Footer",
+                "label": "Cerrar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "SUCCESS"
+                  },
+                  "payload": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "TRANSACTION_DETAIL",
+      "title": "Detalle",
+      "terminal": false,
+      "data": {
+        "transaction_id": {
+          "type": "string",
+          "__example__": "TXN001"
+        },
+        "transaction": {
+          "__example__": {
+            "id": "TXN001",
+            "date": "2026-02-01",
+            "time": "14:30:25",
+            "type": "Transferencia enviada",
+            "status": "Completada",
+            "amount": -150000,
+            "currency": "COP",
+            "fee": 0,
+            "total": -150000,
+            "recipient": "María García",
+            "recipient_bank": "Bancolombia",
+            "recipient_account": "****1234",
+            "reference": "Pago servicios",
+            "receipt_url": "https://cobru.ai/receipt/TXN001"
+          },
+          "type": "object"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "transaction_detail_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Detalle de Transacción"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "${data.transaction.type}"
+              },
+              {
+                "type": "TextHeading",
+                "text": "$${data.transaction.amount} ${data.transaction.currency}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Estado: ${data.transaction.status}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Fecha: ${data.transaction.date} ${data.transaction.time}"
+              },
+              {
+                "type": "TextBody",
+                "text": "ID: ${data.transaction.id}"
+              },
+              {
+                "type": "If",
+                "condition": "${data.transaction.recipient}",
+                "children": [
+                  {
+                    "type": "TextSubheading",
+                    "text": "Destinatario"
+                  },
+                  {
+                    "type": "TextBody",
+                    "text": "${data.transaction.recipient}"
+                  },
+                  {
+                    "type": "TextBody",
+                    "text": "${data.transaction.recipient_bank} - ${data.transaction.recipient_account}"
+                  }
+                ]
+              },
+              {
+                "type": "If",
+                "condition": "${data.transaction.reference}",
+                "children": [
+                  {
+                    "type": "TextBody",
+                    "text": "Referencia: ${data.transaction.reference}"
+                  }
+                ]
+              },
+              {
+                "type": "If",
+                "condition": "${data.transaction.fee > 0}",
+                "children": [
+                  {
+                    "type": "TextBody",
+                    "text": "Comisión: $${data.transaction.fee}"
+                  }
+                ]
+              },
+              {
+                "type": "EmbeddedLink",
+                "text": "Ver comprobante",
+                "url": "${data.transaction.receipt_url}"
+              },
+              {
+                "type": "Footer",
+                "label": "Volver",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "TRANSACTION_LIST"
+                  },
+                  "payload": {
+                    "date_range": "30days",
+                    "type_filter": "all",
+                    "summary": {
+                      "period": "Últimos 30 días",
+                      "total_income": 2500000,
+                      "total_expense": 1800000,
+                      "balance": 700000,
+                      "transaction_count": 45
+                    },
+                    "transactions": [
+                      {
+                        "id": "TXN001",
+                        "date": "2026-02-01",
+                        "time": "14:30",
+                        "type": "expense",
+                        "type_label": "Transferencia enviada",
+                        "description": "A: María García",
+                        "amount": -150000,
+                        "currency": "COP",
+                        "status": "Completada"
+                      },
+                      {
+                        "id": "TXN002",
+                        "date": "2026-02-01",
+                        "time": "10:15",
+                        "type": "income",
+                        "type_label": "Depósito recibido",
+                        "description": "Desde: Bancolombia",
+                        "amount": 500000,
+                        "currency": "COP",
+                        "status": "Completada"
+                      },
+                      {
+                        "id": "TXN003",
+                        "date": "2026-01-30",
+                        "time": "16:45",
+                        "type": "expense",
+                        "type_label": "Retiro",
+                        "description": "A: Davivienda ****5678",
+                        "amount": -200000,
+                        "currency": "COP",
+                        "status": "Completada"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Completado",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "Footer",
+                "label": "Finalizar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "viewed"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,662 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "WELCOME": [
+      "PERSONAL_DATA"
+    ],
+    "PERSONAL_DATA": [
+      "ID_DOCUMENT"
+    ],
+    "ID_DOCUMENT": [
+      "SELFIE"
+    ],
+    "SELFIE": [
+      "ADDRESS_CONFIRM"
+    ],
+    "ADDRESS_CONFIRM": [
+      "REVIEW_SUBMIT"
+    ],
+    "REVIEW_SUBMIT": [
+      "PROCESSING"
+    ],
+    "PROCESSING": [
+      "SUCCESS",
+      "KYC_ERROR"
+    ],
+    "SUCCESS": [],
+    "KYC_ERROR": []
+  },
+  "screens": [
+    {
+      "id": "WELCOME",
+      "title": "Verificación KYC",
+      "terminal": false,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "welcome_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Verificación de Identidad"
+              },
+              {
+                "type": "TextBody",
+                "text": "Para cumplir con las normativas de SEDPE (Superintendencia Financiera), necesitamos verificar tu identidad. Este proceso es seguro y toma solo unos minutos."
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Lo que necesitas:"
+              },
+              {
+                "type": "TextBody",
+                "text": "- Cédula de ciudadanía vigente"
+              },
+              {
+                "type": "TextBody",
+                "text": "- Buena iluminación"
+              },
+              {
+                "type": "TextBody",
+                "text": "- Acceso a la cámara de tu teléfono"
+              },
+              {
+                "type": "Footer",
+                "label": "Comenzar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "PERSONAL_DATA"
+                  },
+                  "payload": {
+                    "doc_types": [
+                      {
+                        "id": "cc",
+                        "title": "Cédula de Ciudadanía"
+                      },
+                      {
+                        "id": "ce",
+                        "title": "Cédula de Extranjería"
+                      },
+                      {
+                        "id": "pasaporte",
+                        "title": "Pasaporte"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PERSONAL_DATA",
+      "title": "Datos Personales",
+      "terminal": false,
+      "data": {
+        "doc_types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "cc",
+              "title": "Cedula de Ciudadania"
+            },
+            {
+              "id": "ce",
+              "title": "Cedula de Extranjeria"
+            },
+            {
+              "id": "pasaporte",
+              "title": "Pasaporte"
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Información Personal"
+          },
+          {
+            "type": "TextBody",
+            "text": "Ingresa los datos de tu documento de identidad."
+          },
+          {
+            "type": "Form",
+            "name": "personal_form",
+            "children": [
+              {
+                "type": "Dropdown",
+                "name": "document_type",
+                "data-source": "${data.doc_types}",
+                "label": "Tipo de documento",
+                "required": true
+              },
+              {
+                "type": "TextInput",
+                "name": "document_number",
+                "label": "Número de documento",
+                "input-type": "text",
+                "required": true,
+                "min-chars": 5,
+                "max-chars": 20
+              },
+              {
+                "type": "TextInput",
+                "name": "full_name",
+                "label": "Nombres",
+                "input-type": "text",
+                "required": true,
+                "min-chars": 2,
+                "max-chars": 100
+              },
+              {
+                "type": "TextInput",
+                "name": "last_name",
+                "label": "Apellidos",
+                "input-type": "text",
+                "required": true,
+                "min-chars": 2,
+                "max-chars": 100
+              },
+              {
+                "type": "DatePicker",
+                "name": "birth_date",
+                "label": "Fecha de nacimiento",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "ID_DOCUMENT"
+                  },
+                  "payload": {
+                    "document_type": "${form.document_type}",
+                    "document_number": "${form.document_number}",
+                    "full_name": "${form.full_name}",
+                    "last_name": "${form.last_name}",
+                    "birth_date": "${form.birth_date}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ID_DOCUMENT",
+      "title": "Documento ID",
+      "terminal": false,
+      "data": {
+        "document_type": {
+          "type": "string",
+          "__example__": "cc"
+        },
+        "document_number": {
+          "type": "string",
+          "__example__": "1234567890"
+        },
+        "full_name": {
+          "type": "string",
+          "__example__": "Juan Carlos"
+        },
+        "last_name": {
+          "type": "string",
+          "__example__": "Perez Garcia"
+        },
+        "birth_date": {
+          "type": "string",
+          "__example__": "1990-01-15"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Foto del Documento"
+          },
+          {
+            "type": "TextBody",
+            "text": "Toma una foto clara de tu documento de identidad. Asegúrate de que se vea bien la foto y la información."
+          },
+          {
+            "type": "Image",
+            "src": "https://cobru.ai/assets/id_example.png",
+            "width": 200,
+            "height": 150,
+            "scale-type": "cover"
+          },
+          {
+            "type": "Form",
+            "name": "document_form",
+            "children": [
+              {
+                "type": "OptIn",
+                "name": "id_document_confirmed",
+                "label": "Confirmo que el documento es legible y vigente",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "SELFIE"
+                  },
+                  "payload": {
+                    "id_document_confirmed": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SELFIE",
+      "title": "Selfie",
+      "terminal": false,
+      "data": {
+        "id_document_confirmed": {
+          "type": "boolean",
+          "__example__": true
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Verificación Facial"
+          },
+          {
+            "type": "TextBody",
+            "text": "Tómate una selfie para verificar que eres el titular del documento. Asegúrate de tener buena iluminación y de que tu rostro sea visible."
+          },
+          {
+            "type": "Image",
+            "src": "https://cobru.ai/assets/selfie_example.png",
+            "width": 200,
+            "height": 200,
+            "scale-type": "cover"
+          },
+          {
+            "type": "Form",
+            "name": "selfie_form",
+            "children": [
+              {
+                "type": "OptIn",
+                "name": "selfie_confirmed",
+                "label": "Confirmo que la selfie cumple requisitos de calidad",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "ADDRESS_CONFIRM"
+                  },
+                  "payload": {
+                    "selfie_confirmed": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ADDRESS_CONFIRM",
+      "title": "Dirección",
+      "terminal": false,
+      "data": {
+        "selfie_confirmed": {
+          "type": "boolean",
+          "__example__": true
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Dirección de Residencia"
+          },
+          {
+            "type": "Form",
+            "name": "address_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "street",
+                "label": "Dirección",
+                "input-type": "text",
+                "required": true,
+                "min-chars": 5,
+                "max-chars": 150,
+                "helper-text": "Ej: Calle 123 # 45-67, Apto 301"
+              },
+              {
+                "type": "TextInput",
+                "name": "city",
+                "label": "Ciudad",
+                "input-type": "text",
+                "required": true,
+                "min-chars": 2,
+                "max-chars": 50
+              },
+              {
+                "type": "TextInput",
+                "name": "state",
+                "label": "Departamento",
+                "input-type": "text",
+                "required": true,
+                "min-chars": 2,
+                "max-chars": 50
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "REVIEW_SUBMIT"
+                  },
+                  "payload": {
+                    "street": "${form.street}",
+                    "city": "${form.city}",
+                    "state": "${form.state}",
+                    "kyc_summary": {
+                      "document_type": "Cédula de Ciudadanía",
+                      "document_number": "1234567890",
+                      "full_name": "Juan Carlos Pérez García",
+                      "address": "Calle 123 # 45-67, Bogotá, Cundinamarca"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW_SUBMIT",
+      "title": "Revisar y Enviar",
+      "terminal": false,
+      "data": {
+        "street": {
+          "type": "string",
+          "__example__": "Calle 123 # 45-67, Apto 301"
+        },
+        "city": {
+          "type": "string",
+          "__example__": "Bogota"
+        },
+        "state": {
+          "type": "string",
+          "__example__": "Cundinamarca"
+        },
+        "kyc_summary": {
+          "type": "object",
+          "properties": {
+            "document_type": {
+              "type": "string"
+            },
+            "document_number": {
+              "type": "string"
+            },
+            "full_name": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "document_type": "Cedula de Ciudadania",
+            "document_number": "1234567890",
+            "full_name": "Juan Carlos Perez Garcia",
+            "address": "Calle 123 # 45-67, Bogota, Cundinamarca"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "review_submit_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Revisar Información"
+              },
+              {
+                "type": "TextBody",
+                "text": "Documento: ${data.kyc_summary.document_type} ${data.kyc_summary.document_number}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Nombre: ${data.kyc_summary.full_name}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Dirección: ${data.kyc_summary.address}"
+              },
+              {
+                "type": "TextCaption",
+                "text": "Al enviar, confirmas que la información es verdadera y autorizas la verificación de identidad según la normativa vigente.",
+                "font-weight": "normal"
+              },
+              {
+                "type": "OptIn",
+                "name": "terms",
+                "label": "Confirmo que los datos son correctos y autorizo la verificación",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Enviar Verificación",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "PROCESSING"
+                  },
+                  "payload": {
+                    "confirmed": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PROCESSING",
+      "title": "Verificando",
+      "terminal": false,
+      "data": {
+        "confirmed": {
+          "__example__": true,
+          "type": "boolean"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Verificando Identidad"
+          },
+          {
+            "type": "TextBody",
+            "text": "Estamos verificando tu información. Este proceso puede tomar hasta 24 horas. Te notificaremos cuando sea aprobada."
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Verificación Completada",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "result": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "verification_id": {
+              "type": "string"
+            },
+            "verified_at": {
+              "type": "string"
+            },
+            "level": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "status": "APPROVED",
+            "verification_id": "KYC987654321",
+            "verified_at": "2026-02-02 16:30",
+            "level": "Nivel 2 - Completo"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Verificación Aprobada"
+              },
+              {
+                "type": "TextBody",
+                "text": "Tu identidad ha sido verificada exitosamente."
+              },
+              {
+                "type": "TextBody",
+                "text": "Nivel: ${data.result.level}"
+              },
+              {
+                "type": "TextBody",
+                "text": "ID: ${data.result.verification_id}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Fecha: ${data.result.verified_at}"
+              },
+              {
+                "type": "Footer",
+                "label": "Finalizar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "verified",
+                    "verification_id": "${data.result.verification_id}",
+                    "level": "${data.result.level}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "KYC_ERROR",
+      "title": "Verificación Pendiente",
+      "terminal": true,
+      "success": false,
+      "data": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "code": "MANUAL_REVIEW",
+            "message": "Tu verificacion requiere revision manual. Nuestro equipo te contactara en las proximas 24 horas."
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "kyc_error_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Verificación en Proceso"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.error.message}"
+              },
+              {
+                "type": "Footer",
+                "label": "Cerrar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "pending_review",
+                    "error_code": "${data.error.code}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "BALANCE_VIEW": [
+      "SUCCESS"
+    ],
+    "SUCCESS": []
+  },
+  "screens": [
+    {
+      "id": "BALANCE_VIEW",
+      "title": "Mi Saldo",
+      "terminal": false,
+      "data": {
+        "account_info": {
+          "type": "object",
+          "properties": {
+            "balance": {
+              "type": "number"
+            },
+            "available_balance": {
+              "type": "number"
+            },
+            "held_balance": {
+              "type": "number"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "account_number": {
+              "type": "string"
+            },
+            "account_holder": {
+              "type": "string"
+            },
+            "last_update": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "balance": 1500000,
+            "available_balance": 1450000,
+            "held_balance": 50000,
+            "currency": "COP",
+            "account_number": "****1234",
+            "account_holder": "Juan Perez",
+            "last_update": "2026-02-12 12:00"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "balance_view_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Mi Cuenta"
+              },
+              {
+                "type": "Image",
+                "src": "https://cobru.ai/assets/wallet_icon.png",
+                "width": 80,
+                "height": 80,
+                "scale-type": "cover"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Saldo Disponible"
+              },
+              {
+                "type": "TextHeading",
+                "text": "$${data.account_info.available_balance} ${data.account_info.currency}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Saldo total: $${data.account_info.balance} ${data.account_info.currency}"
+              },
+              {
+                "type": "TextCaption",
+                "text": "En retención: $${data.account_info.held_balance} ${data.account_info.currency}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Cuenta: ${data.account_info.account_number}"
+              },
+              {
+                "type": "TextCaption",
+                "text": "Actualizado: ${data.account_info.last_update}"
+              },
+              {
+                "type": "Footer",
+                "label": "Cerrar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "SUCCESS"
+                  },
+                  "payload": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Completado",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "Footer",
+                "label": "Finalizar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "viewed"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

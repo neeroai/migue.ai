@@ -1,0 +1,745 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "SELECT_METHOD": [
+      "WITHDRAWAL_DETAILS"
+    ],
+    "WITHDRAWAL_DETAILS": [
+      "SELECT_DESTINATION"
+    ],
+    "SELECT_DESTINATION": [
+      "CONFIRM_WITHDRAWAL"
+    ],
+    "CONFIRM_WITHDRAWAL": [
+      "ENTER_PIN",
+      "WITHDRAWAL_ERROR"
+    ],
+    "ENTER_PIN": [
+      "PROCESSING"
+    ],
+    "PROCESSING": [
+      "SUCCESS",
+      "WITHDRAWAL_ERROR"
+    ],
+    "SUCCESS": [],
+    "WITHDRAWAL_ERROR": []
+  },
+  "screens": [
+    {
+      "id": "SELECT_METHOD",
+      "title": "Método de Retiro",
+      "terminal": false,
+      "data": {
+        "balance": {
+          "__example__": 1500000,
+          "type": "number"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Retirar Dinero"
+          },
+          {
+            "type": "TextBody",
+            "text": "Saldo disponible: $${data.balance}"
+          },
+          {
+            "type": "Form",
+            "name": "method_form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "withdrawal_method",
+                "data-source": [
+                  {
+                    "id": "bank_transfer",
+                    "title": "Transferencia bancaria",
+                    "description": "A cualquier banco colombiano"
+                  },
+                  {
+                    "id": "cash",
+                    "title": "Retiro en efectivo",
+                    "description": "En corresponsales bancarios"
+                  },
+                  {
+                    "id": "nequi",
+                    "title": "Transferir a Nequi",
+                    "description": "Envío directo a Nequi"
+                  },
+                  {
+                    "id": "daviplata",
+                    "title": "Transferir a Daviplata",
+                    "description": "Envío directo a Daviplata"
+                  }
+                ],
+                "label": "Método de retiro",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "WITHDRAWAL_DETAILS"
+                  },
+                  "payload": {
+                    "method": "${form.withdrawal_method}",
+                    "balance": "${data.balance}",
+                    "min_withdrawal": 10000,
+                    "max_withdrawal": 10000000,
+                    "fee": 2500
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "WITHDRAWAL_DETAILS",
+      "title": "Monto y Detalles",
+      "terminal": false,
+      "data": {
+        "balance": {
+          "__example__": 1500000,
+          "type": "number"
+        },
+        "min_withdrawal": {
+          "__example__": 10000,
+          "type": "number"
+        },
+        "max_withdrawal": {
+          "__example__": 10000000,
+          "type": "number"
+        },
+        "fee": {
+          "__example__": 2500,
+          "type": "number"
+        },
+        "method": {
+          "__example__": "bank_transfer",
+          "type": "string"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Detalles del Retiro"
+          },
+          {
+            "type": "TextBody",
+            "text": "Saldo: $${data.balance} | Comisión: $${data.fee}"
+          },
+          {
+            "type": "Form",
+            "name": "amount_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "amount",
+                "label": "Monto a retirar",
+                "input-type": "number",
+                "required": true,
+                "min-chars": 5,
+                "max-chars": 10,
+                "helper-text": "Mínimo: $${data.min_withdrawal} - Máximo: $${data.max_withdrawal}"
+              },
+              {
+                "type": "TextArea",
+                "name": "reason",
+                "label": "Motivo del retiro (opcional)",
+                "required": false,
+                "max-length": 100
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "SELECT_DESTINATION"
+                  },
+                  "payload": {
+                    "amount": "${form.amount}",
+                    "reason": "${form.reason}",
+                    "saved_accounts": [
+                      {
+                        "id": "acc1",
+                        "title": "Bancolombia - Ahorros ****1234"
+                      },
+                      {
+                        "id": "acc2",
+                        "title": "Davivienda - Corriente ****5678"
+                      },
+                      {
+                        "id": "acc3",
+                        "title": "Nequi - 3001234567"
+                      }
+                    ],
+                    "banks": [
+                      {
+                        "id": "bancolombia",
+                        "title": "Bancolombia"
+                      },
+                      {
+                        "id": "davivienda",
+                        "title": "Davivienda"
+                      },
+                      {
+                        "id": "bbva",
+                        "title": "BBVA"
+                      },
+                      {
+                        "id": "banco_bogota",
+                        "title": "Banco de Bogotá"
+                      },
+                      {
+                        "id": "popular",
+                        "title": "Banco Popular"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SELECT_DESTINATION",
+      "title": "Destino",
+      "terminal": false,
+      "data": {
+        "saved_accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "acc1",
+              "title": "Bancolombia - Ahorros ****1234"
+            },
+            {
+              "id": "acc2",
+              "title": "Davivienda - Corriente ****5678"
+            },
+            {
+              "id": "acc3",
+              "title": "Nequi - 3001234567"
+            }
+          ]
+        },
+        "banks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "bancolombia",
+              "title": "Bancolombia"
+            },
+            {
+              "id": "davivienda",
+              "title": "Davivienda"
+            },
+            {
+              "id": "bbva",
+              "title": "BBVA"
+            },
+            {
+              "id": "banco_bogota",
+              "title": "Banco de Bogota"
+            },
+            {
+              "id": "popular",
+              "title": "Banco Popular"
+            }
+          ]
+        },
+        "amount": {
+          "type": "number",
+          "__example__": 500000
+        },
+        "reason": {
+          "type": "string",
+          "__example__": "Retiro servicio"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Seleccionar Destino"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Cuentas guardadas"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "O ingresa una nueva cuenta"
+          },
+          {
+            "type": "Form",
+            "name": "destination_form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "saved_account",
+                "data-source": "${data.saved_accounts}",
+                "label": "Selecciona una cuenta",
+                "required": false
+              },
+              {
+                "type": "Dropdown",
+                "name": "bank",
+                "data-source": "${data.banks}",
+                "label": "Banco",
+                "required": false
+              },
+              {
+                "type": "TextInput",
+                "name": "account_number",
+                "label": "Número de cuenta / Celular",
+                "input-type": "text",
+                "required": false,
+                "min-chars": 5,
+                "max-chars": 20
+              },
+              {
+                "type": "TextInput",
+                "name": "account_holder",
+                "label": "Nombre del titular",
+                "input-type": "text",
+                "required": false,
+                "min-chars": 2,
+                "max-chars": 100
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "name": "account_type",
+                "data-source": [
+                  {
+                    "id": "savings",
+                    "title": "Ahorros"
+                  },
+                  {
+                    "id": "checking",
+                    "title": "Corriente"
+                  },
+                  {
+                    "id": "nequi",
+                    "title": "Nequi"
+                  },
+                  {
+                    "id": "daviplata",
+                    "title": "Daviplata"
+                  }
+                ],
+                "label": "Tipo de cuenta",
+                "required": false
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "CONFIRM_WITHDRAWAL"
+                  },
+                  "payload": {
+                    "destination": {
+                      "bank": "${form.bank}",
+                      "account_number": "${form.account_number}",
+                      "account_holder": "${form.account_holder}",
+                      "account_type": "${form.account_type}"
+                    },
+                    "withdrawal_summary": {
+                      "amount": 500000,
+                      "fee": 2500,
+                      "total": 502500,
+                      "destination": "Bancolombia - ****1234",
+                      "estimated_time": "Inmediato - 24 horas"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONFIRM_WITHDRAWAL",
+      "title": "Confirmar Retiro",
+      "terminal": false,
+      "data": {
+        "withdrawal_summary": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number"
+            },
+            "fee": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "destination": {
+              "type": "string"
+            },
+            "estimated_time": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "amount": 500000,
+            "fee": 2500,
+            "total": 502500,
+            "destination": "Bancolombia - ****1234",
+            "estimated_time": "Inmediato - 24 horas"
+          }
+        },
+        "destination": {
+          "type": "object",
+          "properties": {
+            "bank": {
+              "type": "string"
+            },
+            "account_number": {
+              "type": "string"
+            },
+            "account_holder": {
+              "type": "string"
+            },
+            "account_type": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "bank": "bancolombia",
+            "account_number": "12345678",
+            "account_holder": "Juan Perez",
+            "account_type": "savings"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "confirm_withdrawal_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Confirmar Retiro"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Resumen"
+              },
+              {
+                "type": "TextBody",
+                "text": "Monto: $${data.withdrawal_summary.amount}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Comisión: $${data.withdrawal_summary.fee}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Total a debitar: $${data.withdrawal_summary.total}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Destino: ${data.withdrawal_summary.destination}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Tiempo estimado: ${data.withdrawal_summary.estimated_time}"
+              },
+              {
+                "type": "OptIn",
+                "name": "confirmation",
+                "label": "Confirmo que los datos son correctos y autorizo el retiro",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Confirmar Retiro",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "ENTER_PIN"
+                  },
+                  "payload": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ENTER_PIN",
+      "title": "Verificación",
+      "terminal": false,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Ingresa tu PIN"
+          },
+          {
+            "type": "TextBody",
+            "text": "Por seguridad, ingresa tu PIN de 4 dígitos para autorizar el retiro."
+          },
+          {
+            "type": "Form",
+            "name": "pin_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "pin",
+                "label": "PIN",
+                "input-type": "passcode",
+                "required": true,
+                "min-chars": 4,
+                "max-chars": 4
+              },
+              {
+                "type": "Footer",
+                "label": "Autorizar Retiro",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "PROCESSING"
+                  },
+                  "payload": {
+                    "pin": "${form.pin}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PROCESSING",
+      "title": "Procesando",
+      "terminal": false,
+      "data": {
+        "pin": {
+          "type": "number",
+          "__example__": 1234
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Procesando Retiro"
+          },
+          {
+            "type": "TextBody",
+            "text": "Por favor espera mientras procesamos tu solicitud..."
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Retiro Exitoso",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "receipt": {
+          "type": "object",
+          "properties": {
+            "transaction_id": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "number"
+            },
+            "fee": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "destination": {
+              "type": "string"
+            },
+            "new_balance": {
+              "type": "number"
+            },
+            "timestamp": {
+              "type": "string"
+            },
+            "reference": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "transaction_id": "WTH789456123",
+            "amount": 500000,
+            "fee": 2500,
+            "total": 502500,
+            "destination": "Bancolombia - ****1234",
+            "new_balance": 997500,
+            "timestamp": "2026-02-02 16:00",
+            "reference": "Retiro servicio"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Retiro Exitoso"
+              },
+              {
+                "type": "TextBody",
+                "text": "ID: ${data.receipt.transaction_id}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Monto: $${data.receipt.amount}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Comisión: $${data.receipt.fee}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Total debitado: $${data.receipt.total}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Destino: ${data.receipt.destination}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Nuevo saldo: $${data.receipt.new_balance}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Fecha: ${data.receipt.timestamp}"
+              },
+              {
+                "type": "Footer",
+                "label": "Finalizar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "success",
+                    "transaction_id": "${data.receipt.transaction_id}",
+                    "amount": "${data.receipt.amount}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "WITHDRAWAL_ERROR",
+      "title": "Error",
+      "terminal": true,
+      "success": false,
+      "data": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "code": "INSUFFICIENT_FUNDS",
+            "message": "Saldo insuficiente para realizar el retiro"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "withdrawal_error_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Error en Retiro"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.error.message}"
+              },
+              {
+                "type": "Footer",
+                "label": "Cerrar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "error",
+                    "error_code": "${data.error.code}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,530 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "SELECT_METHOD": [
+      "DEPOSIT_DETAILS",
+      "PAYMENT_INFO"
+    ],
+    "DEPOSIT_DETAILS": [
+      "PAYMENT_INFO"
+    ],
+    "PAYMENT_INFO": [
+      "CONFIRM_DEPOSIT"
+    ],
+    "CONFIRM_DEPOSIT": [
+      "PROCESSING",
+      "DEPOSIT_ERROR"
+    ],
+    "PROCESSING": [
+      "SUCCESS",
+      "DEPOSIT_ERROR"
+    ],
+    "SUCCESS": [],
+    "DEPOSIT_ERROR": []
+  },
+  "screens": [
+    {
+      "id": "SELECT_METHOD",
+      "title": "Método de Depósito",
+      "terminal": false,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Depositar Dinero"
+          },
+          {
+            "type": "TextBody",
+            "text": "Selecciona cómo deseas depositar dinero en tu cuenta"
+          },
+          {
+            "type": "Form",
+            "name": "method_form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "deposit_method",
+                "data-source": [
+                  {
+                    "id": "bank_transfer",
+                    "title": "Transferencia bancaria",
+                    "description": "Desde cualquier banco colombiano"
+                  },
+                  {
+                    "id": "cash",
+                    "title": "Depósito en efectivo",
+                    "description": "En corresponsales bancarios"
+                  },
+                  {
+                    "id": "pse",
+                    "title": "PSE - Pago en línea",
+                    "description": "Pago electrónico seguro"
+                  },
+                  {
+                    "id": "nequi",
+                    "title": "Nequi",
+                    "description": "Transferencia desde Nequi"
+                  }
+                ],
+                "label": "Método de depósito",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "DEPOSIT_DETAILS"
+                  },
+                  "payload": {
+                    "method": "${form.deposit_method}",
+                    "min_deposit": 10000,
+                    "max_deposit": 20000000
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "DEPOSIT_DETAILS",
+      "title": "Detalles del Depósito",
+      "terminal": false,
+      "data": {
+        "method": {
+          "__example__": "bank_transfer",
+          "type": "string"
+        },
+        "min_deposit": {
+          "__example__": 10000,
+          "type": "number"
+        },
+        "max_deposit": {
+          "__example__": 20000000,
+          "type": "number"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Monto a Depositar"
+          },
+          {
+            "type": "Form",
+            "name": "amount_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "amount",
+                "label": "Monto en COP",
+                "input-type": "number",
+                "required": true,
+                "min-chars": 5,
+                "max-chars": 10,
+                "helper-text": "Mínimo: $${data.min_deposit} - Máximo: $${data.max_deposit}"
+              },
+              {
+                "type": "TextArea",
+                "name": "reference",
+                "label": "Referencia/Nota (opcional)",
+                "required": false,
+                "max-length": 50
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "PAYMENT_INFO"
+                  },
+                  "payload": {
+                    "amount": "${form.amount}",
+                    "reference": "${form.reference}",
+                    "payment_details": {
+                      "account_number": "12345678901",
+                      "bank_name": "Bancolombia",
+                      "account_type": "Ahorros",
+                      "account_holder": "COBRU SAS",
+                      "reference_code": "DEP123456"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PAYMENT_INFO",
+      "title": "Información de Pago",
+      "terminal": false,
+      "data": {
+        "amount": {
+          "__example__": 100000,
+          "type": "number"
+        },
+        "reference": {
+          "__example__": "Pago de servicios",
+          "type": "string"
+        },
+        "payment_details": {
+          "type": "object",
+          "properties": {
+            "account_number": {
+              "type": "string"
+            },
+            "bank_name": {
+              "type": "string"
+            },
+            "account_type": {
+              "type": "string"
+            },
+            "account_holder": {
+              "type": "string"
+            },
+            "reference_code": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "account_number": "12345678901",
+            "bank_name": "Bancolombia",
+            "account_type": "Ahorros",
+            "account_holder": "COBRU SAS",
+            "reference_code": "DEP123456"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "payment_info_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Datos para Transferir"
+              },
+              {
+                "type": "TextBody",
+                "text": "Realiza la transferencia usando estos datos:"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Banco"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.payment_details.bank_name}"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Tipo de Cuenta"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.payment_details.account_type}"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Número de Cuenta"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.payment_details.account_number}"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Titular"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.payment_details.account_holder}"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Referencia (importante)"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.payment_details.reference_code}"
+              },
+              {
+                "type": "TextCaption",
+                "text": "Incluye esta referencia en tu transferencia para identificar el depósito",
+                "font-weight": "bold"
+              },
+              {
+                "type": "Footer",
+                "label": "Ya Realicé el Pago",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "CONFIRM_DEPOSIT"
+                  },
+                  "payload": {
+                    "reference_code": "${data.payment_details.reference_code}",
+                    "deposit_summary": {
+                      "amount": "${data.amount}",
+                      "reference_code": "${data.payment_details.reference_code}",
+                      "estimated_time": "5-30 minutos"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONFIRM_DEPOSIT",
+      "title": "Confirmar Depósito",
+      "terminal": false,
+      "data": {
+        "reference_code": {
+          "__example__": "DEP123456",
+          "type": "string"
+        },
+        "deposit_summary": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number"
+            },
+            "reference_code": {
+              "type": "string"
+            },
+            "estimated_time": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "amount": 100000,
+            "reference_code": "DEP123456",
+            "estimated_time": "5-30 minutos"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Confirmar Depósito"
+          },
+          {
+            "type": "TextBody",
+            "text": "Monto declarado: $${data.deposit_summary.amount}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Referencia: ${data.deposit_summary.reference_code}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Tiempo estimado: ${data.deposit_summary.estimated_time}"
+          },
+          {
+            "type": "Form",
+            "name": "confirm_form",
+            "children": [
+              {
+                "type": "OptIn",
+                "name": "confirmation",
+                "label": "Confirmo que realicé la transferencia con el monto y referencia indicados",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Confirmar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "PROCESSING"
+                  },
+                  "payload": {
+                    "confirmed": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PROCESSING",
+      "title": "Procesando",
+      "terminal": false,
+      "data": {
+        "confirmed": {
+          "__example__": true,
+          "type": "boolean"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Verificando Depósito"
+          },
+          {
+            "type": "TextBody",
+            "text": "Estamos verificando tu depósito. Esto puede tomar unos minutos..."
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Depósito Recibido",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "receipt": {
+          "type": "object",
+          "properties": {
+            "transaction_id": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "number"
+            },
+            "new_balance": {
+              "type": "number"
+            },
+            "timestamp": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "transaction_id": "DEP789456123",
+            "amount": 100000,
+            "new_balance": 1500000,
+            "timestamp": "2026-02-02 15:45"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Depósito Exitoso"
+              },
+              {
+                "type": "TextBody",
+                "text": "Hemos recibido tu depósito exitosamente."
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Detalles"
+              },
+              {
+                "type": "TextBody",
+                "text": "ID: ${data.receipt.transaction_id}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Monto: $${data.receipt.amount}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Nuevo saldo: $${data.receipt.new_balance}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Fecha: ${data.receipt.timestamp}"
+              },
+              {
+                "type": "Footer",
+                "label": "Finalizar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "success",
+                    "transaction_id": "${data.receipt.transaction_id}",
+                    "amount": "${data.receipt.amount}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "DEPOSIT_ERROR",
+      "title": "Error",
+      "terminal": true,
+      "success": false,
+      "data": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "code": "DEPOSIT_NOT_FOUND",
+            "message": "No encontramos tu deposito. Verifica la referencia e intenta de nuevo."
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "deposit_error_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Error en Depósito"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.error.message}"
+              },
+              {
+                "type": "Footer",
+                "label": "Cerrar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "error",
+                    "error_code": "${data.error.code}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

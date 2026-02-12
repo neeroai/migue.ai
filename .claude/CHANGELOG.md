@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 04:14"
+updated: "2026-02-12 12:10"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,15 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-12 12:10
+
+- Added `scripts/wa-flows-validate.mjs` for real WhatsApp Flow JSON validation against Meta Graph (`upload assets -> read validation_errors -> optional publish`).
+- Added npm commands:
+  - `flows:validate:meta`
+  - `flows:publish:meta`
+- Updated `flows/README.md`, `docs/whatsapp-flows-meta-validation.md`, and `specs/13-whatsapp-flows.md` to require remote validation before publish.
+- Verified with `node scripts/wa-flows-validate.mjs --help`, `npm run flows:validate`, and `npm run typecheck`.
 
 ### Changed - 2026-02-12 04:14
 

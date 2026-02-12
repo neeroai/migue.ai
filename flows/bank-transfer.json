@@ -1,0 +1,643 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "TRANSFER_AMOUNT": [
+      "SELECT_RECIPIENT"
+    ],
+    "SELECT_RECIPIENT": [
+      "CONFIRM_TRANSFER"
+    ],
+    "CONFIRM_TRANSFER": [
+      "ENTER_PIN"
+    ],
+    "ENTER_PIN": [
+      "PROCESSING",
+      "TRANSFER_ERROR"
+    ],
+    "PROCESSING": [
+      "SUCCESS",
+      "TRANSFER_ERROR"
+    ],
+    "SUCCESS": [],
+    "TRANSFER_ERROR": []
+  },
+  "screens": [
+    {
+      "id": "TRANSFER_AMOUNT",
+      "title": "Monto a Transferir",
+      "terminal": false,
+      "data": {
+        "balance": {
+          "__example__": 1500000,
+          "type": "number"
+        },
+        "currency": {
+          "__example__": "COP",
+          "type": "string"
+        },
+        "min_amount": {
+          "__example__": 1000,
+          "type": "number"
+        },
+        "max_amount": {
+          "__example__": 10000000,
+          "type": "number"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Transferencia"
+          },
+          {
+            "type": "TextBody",
+            "text": "Saldo disponible: ${data.balance} ${data.currency}"
+          },
+          {
+            "type": "Form",
+            "name": "amount_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "amount",
+                "label": "Monto a transferir",
+                "input-type": "number",
+                "required": true,
+                "min-chars": 4,
+                "max-chars": 10,
+                "helper-text": "Mínimo: ${data.min_amount} - Máximo: ${data.max_amount}"
+              },
+              {
+                "type": "TextArea",
+                "name": "description",
+                "label": "Concepto (opcional)",
+                "required": false,
+                "max-length": 100
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "SELECT_RECIPIENT"
+                  },
+                  "payload": {
+                    "amount": "${form.amount}",
+                    "description": "${form.description}",
+                    "recent_contacts": [
+                      {
+                        "id": "1",
+                        "title": "Maria Garcia"
+                      },
+                      {
+                        "id": "2",
+                        "title": "Juan Perez"
+                      },
+                      {
+                        "id": "3",
+                        "title": "Carlos Lopez"
+                      }
+                    ],
+                    "banks": [
+                      {
+                        "id": "bancolombia",
+                        "title": "Bancolombia"
+                      },
+                      {
+                        "id": "davivienda",
+                        "title": "Davivienda"
+                      },
+                      {
+                        "id": "bbva",
+                        "title": "BBVA"
+                      },
+                      {
+                        "id": "nequi",
+                        "title": "Nequi"
+                      },
+                      {
+                        "id": "daviplata",
+                        "title": "Daviplata"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SELECT_RECIPIENT",
+      "title": "Destinatario",
+      "terminal": false,
+      "data": {
+        "amount": {
+          "type": "number",
+          "__example__": 500000
+        },
+        "description": {
+          "type": "string",
+          "__example__": "Pago servicios"
+        },
+        "recent_contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "1",
+              "title": "Maria Garcia"
+            },
+            {
+              "id": "2",
+              "title": "Juan Perez"
+            },
+            {
+              "id": "3",
+              "title": "Carlos Lopez"
+            }
+          ]
+        },
+        "banks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "bancolombia",
+              "title": "Bancolombia"
+            },
+            {
+              "id": "davivienda",
+              "title": "Davivienda"
+            },
+            {
+              "id": "bbva",
+              "title": "BBVA"
+            },
+            {
+              "id": "nequi",
+              "title": "Nequi"
+            },
+            {
+              "id": "daviplata",
+              "title": "Daviplata"
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Seleccionar Destinatario"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Contactos recientes"
+          },
+          {
+            "type": "Form",
+            "name": "recipient_form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "selected_contact",
+                "data-source": "${data.recent_contacts}",
+                "label": "Selecciona un contacto",
+                "required": false
+              },
+              {
+                "type": "Dropdown",
+                "name": "bank",
+                "data-source": "${data.banks}",
+                "label": "Banco",
+                "required": true
+              },
+              {
+                "type": "TextInput",
+                "name": "account_number",
+                "label": "Número de cuenta",
+                "input-type": "number",
+                "required": true,
+                "min-chars": 6,
+                "max-chars": 20
+              },
+              {
+                "type": "TextInput",
+                "name": "account_holder",
+                "label": "Nombre del titular",
+                "input-type": "text",
+                "required": true,
+                "min-chars": 2,
+                "max-chars": 100
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "name": "account_type",
+                "data-source": [
+                  {
+                    "id": "savings",
+                    "title": "Ahorros"
+                  },
+                  {
+                    "id": "checking",
+                    "title": "Corriente"
+                  }
+                ],
+                "label": "Tipo de cuenta",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "CONFIRM_TRANSFER"
+                  },
+                  "payload": {
+                    "recipient": {
+                      "bank": "${form.bank}",
+                      "account_number": "${form.account_number}",
+                      "account_holder": "${form.account_holder}",
+                      "account_type": "${form.account_type}"
+                    },
+                    "transfer_details": {
+                      "amount": 500000,
+                      "currency": "COP",
+                      "recipient_name": "María García",
+                      "recipient_bank": "Bancolombia",
+                      "recipient_account": "****1234",
+                      "fee": 0,
+                      "total": 500000
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONFIRM_TRANSFER",
+      "title": "Confirmar Transferencia",
+      "terminal": false,
+      "data": {
+        "recipient": {
+          "type": "object",
+          "properties": {
+            "bank": {
+              "type": "string"
+            },
+            "account_number": {
+              "type": "string"
+            },
+            "account_holder": {
+              "type": "string"
+            },
+            "account_type": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "bank": "bancolombia",
+            "account_number": "1234567890",
+            "account_holder": "Maria Garcia",
+            "account_type": "savings"
+          }
+        },
+        "transfer_details": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "recipient_name": {
+              "type": "string"
+            },
+            "recipient_bank": {
+              "type": "string"
+            },
+            "recipient_account": {
+              "type": "string"
+            },
+            "fee": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            }
+          },
+          "__example__": {
+            "amount": 500000,
+            "currency": "COP",
+            "recipient_name": "Maria Garcia",
+            "recipient_bank": "Bancolombia",
+            "recipient_account": "****1234",
+            "fee": 0,
+            "total": 500000
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "confirm_transfer_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Confirmar Datos"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Resumen de la transferencia"
+              },
+              {
+                "type": "TextBody",
+                "text": "Monto: ${data.transfer_details.amount} ${data.transfer_details.currency}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Destinatario: ${data.transfer_details.recipient_name}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Banco: ${data.transfer_details.recipient_bank}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Cuenta: ${data.transfer_details.recipient_account}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Comisión: ${data.transfer_details.fee} ${data.transfer_details.currency}"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Total a debitar: ${data.transfer_details.total} ${data.transfer_details.currency}"
+              },
+              {
+                "type": "Footer",
+                "label": "Confirmar y Transferir",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "ENTER_PIN"
+                  },
+                  "payload": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ENTER_PIN",
+      "title": "Verificación",
+      "terminal": false,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Ingresa tu PIN"
+          },
+          {
+            "type": "TextBody",
+            "text": "Por seguridad, ingresa tu PIN de 4 dígitos para autorizar la transferencia."
+          },
+          {
+            "type": "Form",
+            "name": "pin_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "pin",
+                "label": "PIN",
+                "input-type": "passcode",
+                "required": true,
+                "min-chars": 4,
+                "max-chars": 4
+              },
+              {
+                "type": "Footer",
+                "label": "Autorizar Transferencia",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "PROCESSING"
+                  },
+                  "payload": {
+                    "pin": "${form.pin}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PROCESSING",
+      "title": "Procesando",
+      "terminal": false,
+      "data": {
+        "pin": {
+          "type": "number",
+          "__example__": 1234
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Procesando Transferencia"
+          },
+          {
+            "type": "TextBody",
+            "text": "Por favor espera mientras procesamos tu transferencia..."
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Transferencia Exitosa",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "receipt": {
+          "type": "object",
+          "properties": {
+            "transaction_id": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "number"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "recipient": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "string"
+            },
+            "reference": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "transaction_id": "TXN123456789",
+            "amount": 500000,
+            "currency": "COP",
+            "recipient": "Maria Garcia",
+            "timestamp": "2026-02-02 14:30",
+            "reference": "Pago servicios"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Transferencia Exitosa"
+              },
+              {
+                "type": "TextBody",
+                "text": "ID: ${data.receipt.transaction_id}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Monto: ${data.receipt.amount} ${data.receipt.currency}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Destinatario: ${data.receipt.recipient}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Fecha: ${data.receipt.timestamp}"
+              },
+              {
+                "type": "TextBody",
+                "text": "Referencia: ${data.receipt.reference}"
+              },
+              {
+                "type": "Footer",
+                "label": "Finalizar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "success",
+                    "transaction_id": "${data.receipt.transaction_id}",
+                    "amount": "${data.receipt.amount}",
+                    "recipient": "${data.receipt.recipient}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "TRANSFER_ERROR",
+      "title": "Error",
+      "terminal": true,
+      "success": false,
+      "data": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "__example__": {
+            "code": "INSUFFICIENT_FUNDS",
+            "message": "Saldo insuficiente para realizar la transferencia"
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "transfer_error_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Error en Transferencia"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.error.message}"
+              },
+              {
+                "type": "Footer",
+                "label": "Cerrar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "error",
+                    "error_code": "${data.error.code}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

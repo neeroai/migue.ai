@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 11:20"
+updated: "2026-02-12 12:10"
 scope: "project"
 ---
 
@@ -14,13 +14,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-07 16:41
+## [Unreleased] - 2026-02-12 12:10
+
+### Added - Real Meta Flow JSON Validation
+- Added `scripts/wa-flows-validate.mjs` to validate WhatsApp Flow JSON against Meta Graph API (remote), not only local structure checks.
+- The command uploads the JSON asset to a target `FLOW_ID`, reads `validation_errors`, and optionally executes publish.
+- Added npm scripts:
+  - `flows:validate:meta`
+  - `flows:publish:meta`
+- Added runbook `docs/whatsapp-flows-meta-validation.md` and updated `flows/README.md` with real validation workflow.
+- Updated `specs/13-whatsapp-flows.md` to include remote validation evidence before publish.
 
 ### Changed - Flow Testing Mode
 - Added `src/modules/flow-testing/application/service.ts` with keyword commands (`flow test <nombre>`) to trigger WhatsApp Flows for QA.
 - Each supported flow is sent with mock `initialData` payload when required for first-screen placeholders.
 - Integrated command interception in `src/modules/webhook/application/background-processor.ts` before onboarding gate and AI orchestration.
-- Added unit coverage in `tests/unit/flow-testing-service.test.ts` and validated full unit suite.
+- Removed env dependency for test flow IDs/toggle; private QA mode now uses hardcoded flow mapping, and blocks `flow test signup`.
 ### Changed - Agentic Messaging (Onboarding + Reminders)
 - Added `src/shared/infra/ai/agentic-messaging.ts` to generate WhatsApp-ready copy with LLM-first behavior and safe fallback.
 - Updated onboarding gate messages in `src/modules/webhook/application/background-processor.ts`:
@@ -161,18 +170,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Database: conversations index improves user conversation query performance
 - Tests: 254 passing, 26 skipped (all green)
 - TypeScript: AI SDK tool() type errors persist (documented with @ts-ignore, runtime works)
-
-### Rationale
-- WhatsApp message IDs (wamid format) are base64-encoded and can exceed 64 characters (observed: 68 chars)
-- Production error (22001): "value too long for type character varying(64)" blocked message persistence
-- VARCHAR(255) provides safe margin for current and future WhatsApp message ID formats
-- Repeated conversation history fetches caused unnecessary DB load
-- Memory vector search on every message added embedding + search overhead
-- Budget status called frequently but rarely changes between requests
-- Missing maxDuration exports risk unexpected Edge Runtime timeouts
-- conversations table queries on user_id+created_at needed index support
-- Cache with TTL provides balance between freshness and performance
-- Bounded cache size (1000 conversation entries, 500 memory entries) prevents memory leaks
 
 ## [Previous] - 2026-02-06 16:30
 

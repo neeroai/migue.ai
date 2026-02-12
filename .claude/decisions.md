@@ -4,10 +4,35 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 11:20"
+updated: "2026-02-12 12:10"
 ---
 
 # Architecture Decisions
+
+## ADR-019: Real Meta Validation Gate for Flow JSON
+
+**Date**: 2026-02-12 12:10  
+**Status**: Approved  
+**Deciders**: User request (validar `.json` con validador real de Meta, no solo estructura local)
+
+### Decision
+
+- Keep `npm run flows:validate` as local structural lint only.
+- Add `scripts/wa-flows-validate.mjs` and npm commands:
+  - `flows:validate:meta`
+  - `flows:publish:meta`
+- Enforce release flow where Flow JSON must pass Graph-side validation (`validation_errors`) before publish.
+
+### Consequences
+
+**Positive**:
+- Validation now depends on real Meta parser/runtime rules.
+- Lower risk of false confidence from local-only checks.
+- Reproducible CLI workflow for QA and release.
+
+**Tradeoff**:
+- Requires valid Graph token/permissions and network access.
+- Validation errors now depend on external platform availability.
 
 ## ADR-018: Keyword-Gated Flow QA Mode with Mock Payloads
 
@@ -26,8 +51,10 @@ updated: "2026-02-12 11:20"
 **Positive**:
 - Fast QA path to validate screen routing and placeholders for all flow variants.
 - No impact on normal conversations unless explicit command is sent.
+- No additional environment variables are required for private QA usage.
 
 **Tradeoff**:
+- Flow IDs are hardcoded in code and must be updated by deploy if they change.
 - Requires Meta-published `flow_id` alignment for each test flow.
 
 ## ADR-017: LLM-First User-Facing Messaging for Signup Lifecycle and Reminder Delivery
@@ -218,16 +245,6 @@ Tracking files in `.claude` were within hard limits but too accumulative for fas
 **Tradeoff**:
 - Deep historical detail moves out of tracking files when needed.
 
-## ADR-009: WhatsApp Skill Baseline Upgrade to v24.0
-
-**Date**: 2026-02-07 15:25  
-**Status**: Approved
-
-### Decision
-
-- Update `whatsapp-api-expert` skill baseline from v23.0 to v24.0.
-- Keep compatibility guidance for repositories still pinned to older versions.
-
 ## Historical ADR Summary (ADR-001 to ADR-008)
 
 - ADR-001: Introduced mandatory tracking files in `.claude`.
@@ -235,6 +252,7 @@ Tracking files in `.claude` were within hard limits but too accumulative for fas
 - ADR-004: Documented WhatsApp API constraints for implementation safety.
 - ADR-005/006/007: Iterated CLAUDE.md strategy to reduce redundancy.
 - ADR-008: Standardized AI Gateway routing with Gemini fallback.
+- ADR-009: Updated `whatsapp-api-expert` skill baseline from v23.0 to v24.0.
 
 ## Maintenance Rule
 

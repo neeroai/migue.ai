@@ -1,7 +1,7 @@
 ---
 title: "Session Log"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 11:20"
+updated: "2026-02-12 12:10"
 session_id: "tracking-compaction-2026-02-07"
 ---
 
@@ -24,11 +24,17 @@ User requested keyword-triggered WhatsApp Flow testing so QA can open each flow 
 | 11:13 | Validate | `tests/unit/flow-testing-service.test.ts` | Complete |
 | 11:15 | Validate | `npm run typecheck` | Complete |
 | 11:16 | Validate | `npm run test:unit` | Complete |
+| 11:22 | Refine | `src/modules/flow-testing/application/service.ts` | Complete |
+| 11:24 | Validate | `npx jest tests/unit/flow-testing-service.test.ts` + `npm run typecheck` | Complete |
+| 11:50 | Implement | `scripts/wa-flows-validate.mjs` + `package.json` scripts (`flows:validate:meta`, `flows:publish:meta`) | Complete |
+| 11:57 | Document | `flows/README.md`, `docs/whatsapp-flows-meta-validation.md`, `specs/13-whatsapp-flows.md` | Complete |
+| 12:02 | Validate | `node scripts/wa-flows-validate.mjs --help` + `npm run flows:validate` + `npm run typecheck` | Complete |
 
 ### Decisions Made
 
 - Flow testing commands are intercepted before onboarding gate and AI orchestration to guarantee deterministic QA behavior.
 - Activation is environment-driven (`FLOW_TEST_MODE_ENABLED`) with safe default off in production unless explicitly enabled.
+- Flow JSON release gate now distinguishes local lint (`flows:validate`) from real Meta validation/publish (`flows:validate:meta`, `flows:publish:meta`).
 
 ## Active Session - 2026-02-12 06:23
 

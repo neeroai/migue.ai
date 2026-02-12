@@ -1,0 +1,112 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "AUTH_SCREEN": [
+      "SUCCESS"
+    ],
+    "SUCCESS": []
+  },
+  "screens": [
+    {
+      "id": "AUTH_SCREEN",
+      "title": "Autenticación",
+      "terminal": false,
+      "data": {
+        "pin_label": {
+          "__example__": "PIN (4 digitos)",
+          "type": "string"
+        },
+        "helper_text": {
+          "__example__": "Por seguridad, ingresa tu PIN",
+          "type": "string"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Verificación de Identidad"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.helper_text}"
+          },
+          {
+            "type": "Form",
+            "name": "auth_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "pin",
+                "label": "PIN (4 digitos)",
+                "input-type": "passcode",
+                "required": true,
+                "min-chars": 4,
+                "max-chars": 4,
+                "helper-text": "4 dígitos numéricos"
+              },
+              {
+                "type": "Footer",
+                "label": "Verificar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "SUCCESS"
+                  },
+                  "payload": {
+                    "pin": "${form.pin}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUCCESS",
+      "title": "Verificado",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "pin": {
+          "__example__": 1234,
+          "type": "number"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "success_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Autenticación Exitosa"
+              },
+              {
+                "type": "TextBody",
+                "text": "Tu identidad ha sido verificada correctamente."
+              },
+              {
+                "type": "Footer",
+                "label": "Continuar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "status": "authenticated",
+                    "pin": "${data.pin}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

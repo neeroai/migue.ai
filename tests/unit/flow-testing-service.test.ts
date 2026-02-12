@@ -13,13 +13,12 @@ import { __testables, tryHandleFlowTestingCommand } from '../../src/modules/flow
 describe('flow testing service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    delete process.env.FLOW_TEST_MODE_ENABLED;
     delete process.env.FLOW_TEST_TRANSFER_ID;
     process.env.NODE_ENV = 'test';
   });
 
   it('parses flow test command aliases', () => {
-    expect(__testables.parseFlowKeyword('flow test transfer')).toEqual({
+    expect(__testables.parseFlowKeyword('flow transferencia')).toEqual({
       flowKey: 'transfer',
       wantsHelp: false,
     });
@@ -47,7 +46,7 @@ describe('flow testing service', () => {
     expect(sendFlowMock).not.toHaveBeenCalled();
     expect(sendWhatsAppTextMock).toHaveBeenCalledWith(
       '+573001112233',
-      expect.stringContaining('Disponibles: auth, signup, transfer')
+      expect.stringContaining('Disponibles: auth, transfer')
     );
   });
 
@@ -57,7 +56,7 @@ describe('flow testing service', () => {
 
     const handled = await tryHandleFlowTestingCommand({
       phoneNumber: '+573001112233',
-      content: 'flow test transfer',
+      content: 'flow transferencia',
       userId: 'u1',
       requestId: 'r1',
       conversationId: 'c1',
@@ -66,7 +65,7 @@ describe('flow testing service', () => {
     expect(handled).toBe(true);
     expect(sendFlowMock).toHaveBeenCalledWith(
       '+573001112233',
-      'bank-transfer',
+      '1225081546379282',
       expect.any(String),
       expect.any(String),
       expect.objectContaining({
@@ -85,17 +84,21 @@ describe('flow testing service', () => {
     );
   });
 
-  it('respects explicit disable flag', async () => {
-    process.env.FLOW_TEST_MODE_ENABLED = 'false';
+
+  it('blocks signup flow command in test mode', async () => {
+    sendWhatsAppTextMock.mockResolvedValue('wamid.text');
 
     const handled = await tryHandleFlowTestingCommand({
       phoneNumber: '+573001112233',
-      content: 'flow test transfer',
+      content: 'flow signup',
     });
 
-    expect(handled).toBe(false);
+    expect(handled).toBe(true);
     expect(sendFlowMock).not.toHaveBeenCalled();
-    expect(sendWhatsAppTextMock).not.toHaveBeenCalled();
+    expect(sendWhatsAppTextMock).toHaveBeenCalledWith(
+      '+573001112233',
+      expect.stringContaining('signup solo corre en onboarding real')
+    );
   });
 
   it('returns handled with guidance when flow sending fails', async () => {

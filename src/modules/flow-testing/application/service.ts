@@ -3,7 +3,6 @@ import { logger } from '../../../shared/observability/logger';
 
 type SupportedFlowKey =
   | 'auth'
-  | 'signup'
   | 'transfer'
   | 'deposit'
   | 'withdrawal'
@@ -26,10 +25,6 @@ const FLOW_ALIASES: Record<string, SupportedFlowKey> = {
   autenticacion: 'auth',
   pin: 'auth',
 
-  signup: 'signup',
-  registro: 'signup',
-  onboarding: 'signup',
-
   transfer: 'transfer',
   transferencia: 'transfer',
 
@@ -51,6 +46,8 @@ const FLOW_ALIASES: Record<string, SupportedFlowKey> = {
   movimientos: 'history',
 };
 
+const BLOCKED_FLOW_ALIASES = new Set(['signup', 'registro', 'onboarding']);
+
 function normalizeToken(value: string): string {
   return value
     .trim()
@@ -59,34 +56,19 @@ function normalizeToken(value: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
-function isFlowTestingEnabled(): boolean {
-  const configured = process.env.FLOW_TEST_MODE_ENABLED?.trim().toLowerCase();
-  if (configured === 'true') return true;
-  if (configured === 'false') return false;
-  return process.env.NODE_ENV !== 'production';
-}
+// Hardcoded on purpose: private QA flows without extra env configuration.
+const FLOW_TEST_IDS: Record<SupportedFlowKey, string> = {
+  auth: '909795558106175',
+  transfer: '1225081546379282',
+  deposit: '1436369834555180',
+  withdrawal: '26051347737886658',
+  kyc: '1604339393935363',
+  balance: '1989322701981707',
+  history: 'transaction-history',
+};
 
 function getFlowId(key: SupportedFlowKey): string {
-  switch (key) {
-    case 'auth':
-      return process.env.FLOW_TEST_AUTH_ID?.trim() || 'auth-pin';
-    case 'signup':
-      return process.env.FLOW_TEST_SIGNUP_ID?.trim() || process.env.SIGNUP_FLOW_ID?.trim() || 'user-signup';
-    case 'transfer':
-      return process.env.FLOW_TEST_TRANSFER_ID?.trim() || 'bank-transfer';
-    case 'deposit':
-      return process.env.FLOW_TEST_DEPOSIT_ID?.trim() || 'deposit';
-    case 'withdrawal':
-      return process.env.FLOW_TEST_WITHDRAWAL_ID?.trim() || 'withdrawal';
-    case 'kyc':
-      return process.env.FLOW_TEST_KYC_ID?.trim() || 'kyc-verification';
-    case 'balance':
-      return process.env.FLOW_TEST_BALANCE_ID?.trim() || 'balance-check';
-    case 'history':
-      return process.env.FLOW_TEST_HISTORY_ID?.trim() || 'transaction-history';
-    default:
-      return key;
-  }
+  return FLOW_TEST_IDS[key];
 }
 
 function buildFlowConfig(key: SupportedFlowKey): FlowTestConfig {
@@ -105,15 +87,6 @@ function buildFlowConfig(key: SupportedFlowKey): FlowTestConfig {
           pin_label: 'Ingresa tu PIN de 4 digitos',
           helper_text: 'Modo prueba con datos mock.',
         },
-      };
-    case 'signup':
-      return {
-        key,
-        id: flowId,
-        label: 'Registro usuario',
-        cta: 'Probar Registro',
-        body: 'Flow de prueba: registro de usuario con datos mock.',
-        initialScreen: 'WELCOME',
       };
     case 'transfer':
       return {
@@ -212,6 +185,22 @@ function buildFlowConfig(key: SupportedFlowKey): FlowTestConfig {
   }
 }
 
+function extractRequestedFlowAlias(content: string): string | null {
+  const normalized = normalizeToken(content);
+  const compact = normalized.replace(/\s+/g, ' ').trim();
+
+  const direct = compact.match(/^(?:flow|flujo)\s+([a-z0-9_-]+)$/);
+  if (direct?.[1]) return direct[1];
+
+  const legacy = compact.match(/^(?:flow|flujo)\s+(?:test|prueba|testing)\s+([a-z0-9_-]+)$/);
+  if (legacy?.[1]) return legacy[1];
+
+  const reverse = compact.match(/^(?:test|prueba|testing)\s+(?:flow|flujo)\s+([a-z0-9_-]+)$/);
+  if (reverse?.[1]) return reverse[1];
+
+  return null;
+}
+
 function parseFlowKeyword(content: string): { flowKey: SupportedFlowKey | null; wantsHelp: boolean } {
   const normalized = normalizeToken(content);
   const compact = normalized.replace(/\s+/g, ' ').trim();
@@ -221,14 +210,9 @@ function parseFlowKeyword(content: string): { flowKey: SupportedFlowKey | null; 
     return { flowKey: null, wantsHelp: true };
   }
 
-  const match = compact.match(/^(?:flow|flujo)\s+(?:test|prueba|testing)\s+([a-z0-9_-]+)$/);
-  if (match?.[1]) {
-    return { flowKey: FLOW_ALIASES[match[1]] ?? null, wantsHelp: false };
-  }
-
-  const reverseMatch = compact.match(/^(?:test|prueba|testing)\s+(?:flow|flujo)\s+([a-z0-9_-]+)$/);
-  if (reverseMatch?.[1]) {
-    return { flowKey: FLOW_ALIASES[reverseMatch[1]] ?? null, wantsHelp: false };
+  const alias = extractRequestedFlowAlias(content);
+  if (alias) {
+    return { flowKey: FLOW_ALIASES[alias] ?? null, wantsHelp: false };
   }
 
   return { flowKey: null, wantsHelp: false };
@@ -237,9 +221,9 @@ function parseFlowKeyword(content: string): { flowKey: SupportedFlowKey | null; 
 async function sendHelpMessage(phoneNumber: string): Promise<void> {
   const help = [
     'Modo pruebas de flows activo.',
-    'Usa: flow test <nombre>.',
-    'Disponibles: auth, signup, transfer, deposit, withdrawal, kyc, balance, history.',
-    'Ejemplo: flow test transfer',
+    'Usa: flow <nombre>.',
+    'Disponibles: auth, transfer, deposit, withdrawal, kyc, balance, history.',
+    'Ejemplo: flow transferencia',
   ].join('\n');
 
   await sendWhatsAppText(phoneNumber, help);
@@ -252,8 +236,16 @@ export async function tryHandleFlowTestingCommand(params: {
   requestId?: string;
   conversationId?: string;
 }): Promise<boolean> {
-  if (!isFlowTestingEnabled()) return false;
   if (!params.content) return false;
+
+  const requestedAlias = extractRequestedFlowAlias(params.content);
+  if (requestedAlias && BLOCKED_FLOW_ALIASES.has(requestedAlias)) {
+    await sendWhatsAppText(
+      params.phoneNumber,
+      'El flow de signup solo corre en onboarding real y no esta habilitado en modo test.'
+    );
+    return true;
+  }
 
   const { flowKey, wantsHelp } = parseFlowKeyword(params.content);
   if (!flowKey && !wantsHelp) return false;
@@ -318,5 +310,5 @@ export async function tryHandleFlowTestingCommand(params: {
 export const __testables = {
   parseFlowKeyword,
   buildFlowConfig,
-  isFlowTestingEnabled,
+  extractRequestedFlowAlias,
 };

@@ -44,7 +44,10 @@
     "diagnose:cron": "npx tsx scripts/diagnose-cron-jobs.ts",
     "wa:webhook:status": "node scripts/wa-webhook-override.mjs status",
     "wa:webhook:set": "node scripts/wa-webhook-override.mjs set",
-    "wa:webhook:reset": "node scripts/wa-webhook-override.mjs reset"
+    "wa:webhook:reset": "node scripts/wa-webhook-override.mjs reset",
+    "flows:validate": "node scripts/validate-flow-jsons.mjs",
+    "flows:validate:meta": "node scripts/wa-flows-validate.mjs",
+    "flows:publish:meta": "node scripts/wa-flows-validate.mjs --publish"
   },
   "keywords": [],
   "author": "",

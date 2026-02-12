@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 11:20"
+updated: "2026-02-12 12:10"
 ---
 
 # Task List
@@ -22,6 +22,7 @@ updated: "2026-02-12 11:20"
 ## Completed (Recent)
 
 - [x] Implement keyword-triggered Flow QA mode (`flow test <name>`) with mock payloads in webhook pipeline (2026-02-12 11:20)
+- [x] Add real Meta Flow JSON validation/publish CLI (`scripts/wa-flows-validate.mjs`) plus docs/commands (2026-02-12 12:10)
 - [x] Add tracking governance playbook in `docs/tracking-best-practices.md` (2026-02-12 07:55)
 - [x] Migrar mensajes de onboarding/reminders a generación LLM-first con fallback seguro (2026-02-12 06:23)
 - [x] Update `CLAUDE.md` to current architecture and tracking contract (2026-02-12 07:58)
@@ -40,7 +41,6 @@ updated: "2026-02-12 11:20"
 - [x] Implement stricter `check:tracking` limits and anti-accumulation rules (2026-02-07 15:37)
 - [x] Compact `.claude/session.md` with resumable format (2026-02-07 15:38)
 - [x] Compact `.claude/status.md` with current-state focus (2026-02-07 15:38)
-- [x] Compact `.claude/decisions.md` preserving key ADRs + summary (2026-02-07 15:38)
 
 ## Blocked
 

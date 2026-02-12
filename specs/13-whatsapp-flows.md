@@ -25,10 +25,11 @@ Soporte de flows interactivos con validación y manejo de callbacks.
 - Typecheck en verde.
 - Tests unit/integration relevantes de la feature.
 - Logs estructurados en entorno real.
+- Validación remota de JSON contra Meta Graph (`flows:validate:meta`) antes de publish.
 
 ## Riesgos y gaps
 - Completar e2e faltantes por feature.
 - Consolidar dashboards/alertas externas donde aplique.
 
 ## Siguiente incremento
-Alinear implementación restante a la ruta principal LLM-first y cerrar `YELLOW -> GREEN`.
+Cerrar validación e2e con evidencia de `flows:validate:meta` + publish controlado en entorno QA para mover `YELLOW -> GREEN`.
