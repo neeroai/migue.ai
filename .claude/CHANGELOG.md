@@ -17,6 +17,7 @@ scope: "Tracking and process notes"
 - Added Gemini preference heuristic (`google/gemini-2.5-flash-lite`) for web-search-like queries.
 - Validation completed with `npm run typecheck`, `npm run test:unit`, and targeted `proactive-agent-web-search` unit test.
 - Fixed `web_search` post-tool fallback to parse object results and avoid repeated generic response.
+- Strengthened prompt instructions for `web_search` and added deep text extraction fallback for nested tool payloads.
 
 ### Changed - 2026-02-12 09:10
 

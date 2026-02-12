@@ -124,7 +124,8 @@ NEVER use generic template responses
 ALWAYS use tools IMMEDIATELY when trigger words detected (recuérdame, agenda, gasté, etc.)
 ALWAYS read conversation history before responding
 ALWAYS respond to the specific message, not a generic intent
-ALWAYS confirm actions with "Listo!" after executing tools
+ALWAYS confirm actions with "Listo!" after transactional tools (recordatorios, agenda, gastos)
+NEVER respond only "Listo" after web_search; include concrete findings
 YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses - USE IT!
 
 You are an agent - continue the conversation naturally until the user's need is completely resolved.`
@@ -138,7 +139,7 @@ Usa herramientas SOLO cuando el usuario lo necesite claramente:
 - schedule_meeting: agenda / programa / cita
 - track_expense: gasté / pagué / compré / costó
 - web_search: cuando pidan información actual, noticias recientes, comparación o verificación en internet
-Si usas una herramienta, confirma con "Listo!".`
+Si usas web_search, entrega hallazgos concretos, no respondas solo "Listo!".`
 
 /**
  * Generate system prompt with current time context
@@ -226,6 +227,40 @@ function looksLikeWebSearchQuery(text: string): boolean {
 }
 
 function extractToolResultText(result: unknown): string | null {
+  function deepPickText(value: unknown, depth = 0): string | null {
+    if (depth > 4 || value == null) return null
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      return trimmed.length > 0 ? trimmed : null
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = deepPickText(item, depth + 1)
+        if (found) return found
+      }
+      return null
+    }
+
+    if (typeof value === 'object') {
+      const obj = value as Record<string, unknown>
+      const priorityKeys = ['answer', 'summary', 'snippet', 'content', 'text', 'description', 'title']
+      for (const key of priorityKeys) {
+        if (key in obj) {
+          const found = deepPickText(obj[key], depth + 1)
+          if (found) return found
+        }
+      }
+      for (const key of Object.keys(obj)) {
+        const found = deepPickText(obj[key], depth + 1)
+        if (found) return found
+      }
+    }
+
+    return null
+  }
+
   if (typeof result === 'string') {
     const trimmed = result.trim()
     return trimmed.length > 0 ? trimmed : null
@@ -237,9 +272,8 @@ function extractToolResultText(result: unknown): string | null {
   const directCandidates = ['answer', 'summary', 'content', 'text']
   for (const key of directCandidates) {
     const value = asRecord[key]
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim()
-    }
+    const found = deepPickText(value)
+    if (found) return found
   }
 
   const results = asRecord.results
@@ -247,21 +281,12 @@ function extractToolResultText(result: unknown): string | null {
     const first = results[0]
     if (first && typeof first === 'object') {
       const firstRecord = first as Record<string, unknown>
-      const snippet =
-        (typeof firstRecord.snippet === 'string' && firstRecord.snippet.trim().length > 0
-          ? firstRecord.snippet.trim()
-          : null) ??
-        (typeof firstRecord.content === 'string' && firstRecord.content.trim().length > 0
-          ? firstRecord.content.trim()
-          : null) ??
-        (typeof firstRecord.title === 'string' && firstRecord.title.trim().length > 0
-          ? firstRecord.title.trim()
-          : null)
+      const snippet = deepPickText(firstRecord)
       if (snippet) return snippet
     }
   }
 
-  return null
+  return deepPickText(result)
 }
 
 /**
@@ -570,7 +595,9 @@ export async function respond(
     text = (
       toolResults[toolResults.length - 1] ??
       lastToolOutcomeMessage ??
-      'Listo. Ya ejecuté tu solicitud.'
+      (looksLikeWebSearchQuery(userMessage)
+        ? 'Hice la búsqueda, pero no pude extraer resultados útiles. ¿Quieres que lo intente de nuevo con otro enfoque?'
+        : 'Listo. Ya ejecuté tu solicitud.')
     ).trim()
   }
 

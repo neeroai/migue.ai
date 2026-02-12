@@ -10,11 +10,11 @@ scope: "project"
 # CHANGELOG
 ## [Unreleased] - 2026-02-07 16:41
 ### Added - Web Search Tool Runtime
-- Added spec `specs/27-web-search-tool-runtime.md` and completed runtime implementation of `web_search` in `/Users/mercadeo/.codex/worktrees/ba70/migue.ai/src/modules/ai/application/proactive-agent.ts` via AI Gateway.
-- Added `WEB_SEARCH_ENABLED` support in env/runtime flags and updated tests in `/Users/mercadeo/.codex/worktrees/ba70/migue.ai/tests/unit/runtime-flags.test.ts` and `/Users/mercadeo/.codex/worktrees/ba70/migue.ai/tests/unit/tool-governance.test.ts`.
+- Added spec `specs/27-web-search-tool-runtime.md`, implemented `web_search` via AI Gateway, and added `WEB_SEARCH_ENABLED` support with updated unit tests.
 - Added focused test `/Users/mercadeo/.codex/worktrees/ba70/migue.ai/tests/unit/proactive-agent-web-search.test.ts` to validate web-search activation and Gemini preference path.
 - Web-search-like turns now prefer `google/gemini-2.5-flash-lite` with OpenAI fallback.
 - Fixed fallback handling when `web_search` returns object payloads: agent now extracts summary text and avoids repeated generic confirmation.
+- Strengthened web-search prompt behavior (avoid "Listo" only) and deep fallback parsing for nested tool payloads.
 
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
