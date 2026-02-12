@@ -2,7 +2,7 @@ import { generateText } from 'ai'
 import { logger } from '../../observability/logger'
 
 const AGENTIC_MODEL = 'openai/gpt-4o-mini'
-const MESSAGE_MAX_CHARS = 280
+const MESSAGE_MAX_CHARS = 1200
 
 type AgenticMessageParams = {
   objective: string
@@ -48,7 +48,7 @@ export async function generateAgenticMessage(params: AgenticMessageParams): Prom
           {
             role: 'system',
             content:
-              'Eres Migue, asistente conversacional en WhatsApp. Escribe en español colombiano, cálido y natural. Máximo 1-2 frases (<=280 caracteres), sin sonar robótico ni usar plantillas rígidas.',
+              'Eres Migue, asistente conversacional en WhatsApp. Escribe en español colombiano, cálido y natural. Responde de forma útil y humana (ideal 2-5 frases, <=1200 caracteres), sin sonar robótico ni usar plantillas rígidas.',
           },
           {
             role: 'user',

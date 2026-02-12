@@ -35,6 +35,8 @@ import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
 import type { AgentContextSnapshot } from './agent-context-builder'
 import { generateToolConfirmationMessage } from '../../../shared/infra/ai/agentic-messaging'
 
+const WHATSAPP_TEXT_SOFT_LIMIT = 1200
+
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
   year: 'numeric',
@@ -101,7 +103,7 @@ Eres Migue, un asistente personal conversacional en WhatsApp. Tu objetivo es man
 # OUTPUT FORMAT
 - Language: Spanish (Colombia)
 - Tone: Warm, friendly, professional
-- Length: 1-2 sentences (max 280 characters)
+- Length: concisa pero completa (ideal 2-5 frases, max 1200 caracteres)
 - Emojis: Occasional (for confirmations, money, errors)
 - Structure: Direct answer → optional context/help offer
 
@@ -125,7 +127,7 @@ YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses 
 
 You are an agent - continue the conversation naturally until the user's need is completely resolved.`
 
-const SYSTEM_PROMPT_SHORT = `Eres Migue, asistente personal en WhatsApp. Responde en español colombiano, cálido y conciso (1-2 frases, max 280 caracteres). Evita repetir saludos.
+const SYSTEM_PROMPT_SHORT = `Eres Migue, asistente personal en WhatsApp. Responde en español colombiano, cálido y conciso (ideal 2-5 frases, max 1200 caracteres). Evita repetir saludos.
 Tienes acceso al historial de la conversación en los mensajes.
 NUNCA digas frases como "no tengo acceso al historial", "no puedo ver mensajes anteriores" o "no tengo contexto".
 Si hay historial, úsalo para continuar con contexto; si hay poco historial, pide precisión sin negar acceso.
@@ -484,9 +486,9 @@ export async function respond(
   const outputCost = (outputTokens / 1_000_000) * providerConfig.costPer1MTokens.output
   const totalCost = inputCost + outputCost
 
-  // Enforce WhatsApp-friendly length
-  if (text.length > 280) {
-    text = text.slice(0, 277).trimEnd() + '...'
+  // Enforce WhatsApp-friendly soft limit
+  if (text.length > WHATSAPP_TEXT_SOFT_LIMIT) {
+    text = text.slice(0, WHATSAPP_TEXT_SOFT_LIMIT - 3).trimEnd() + '...'
   }
 
   // Count tool calls
@@ -586,8 +588,8 @@ export async function respond(
       hasAnyContext,
       profileSummary ? `Lo que sé de ti: ${profileSummary}.` : ''
     )
-    if (text.length > 280) {
-      text = text.slice(0, 277).trimEnd() + '...'
+    if (text.length > WHATSAPP_TEXT_SOFT_LIMIT) {
+      text = text.slice(0, WHATSAPP_TEXT_SOFT_LIMIT - 3).trimEnd() + '...'
     }
   }
 
