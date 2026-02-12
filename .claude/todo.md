@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 08:05"
+updated: "2026-02-12 03:15"
 ---
 
 # Task List
@@ -16,7 +16,6 @@ updated: "2026-02-12 08:05"
 - [ ] Validate SLA thresholds in production (`TEXT_SIMPLE` p95, typing start, rich timeout rate)
 - [ ] Add integration test for `toolIntentDetected` from image/document flow
 - [ ] Define PII redaction policy for `ID_FORM` visual class
-- [ ] Add PR template checklist usage to team routine (enforce in reviews)
 
 ## Completed (Recent)
 
@@ -25,6 +24,8 @@ updated: "2026-02-12 08:05"
 - [x] Update `AGENTS.md` with source-of-truth and session checklist policy (2026-02-12 08:00)
 - [x] Recover `npm run typecheck` by clearing stale `tsconfig.tsbuildinfo` cache (2026-02-12 08:04)
 - [x] Add `.github/pull_request_template.md` tracking checklist (2026-02-12 08:05)
+- [x] Rebase and push tracking governance commit to `origin/main` (2026-02-12 03:12)
+- [x] Add PR CI guardrail for tracking updates on critical paths (2026-02-12 03:13)
 - [x] Replace local OCR with multimodal vision pipeline (`vision-pipeline`) (2026-02-07 16:41)
 - [x] Add SDD spec `specs/17-general-image-processing.md` (2026-02-07 16:36)
 - [x] Remove `tesseract.js` dependency (2026-02-07 16:40)

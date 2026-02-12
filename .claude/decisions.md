@@ -4,10 +4,35 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 08:05"
+updated: "2026-02-12 03:15"
 ---
 
 # Architecture Decisions
+
+## ADR-014: CI Guardrail for Tracking Updates on Critical PR Changes
+
+**Date**: 2026-02-12 03:13  
+**Status**: Approved  
+**Deciders**: User request ("procedamos")
+
+### Decision
+
+- Add `tracking-guardrail` job in `.github/workflows/ci.yml`.
+- On pull requests, if files under `app/api/`, `src/modules/`, or `supabase/migrations/` change, require updates in at least one tracking/changelog file:
+  - `.claude/session.md`
+  - `.claude/status.md`
+  - `.claude/todo.md`
+  - `.claude/decisions.md`
+  - `CHANGELOG.md`
+
+### Consequences
+
+**Positive**:
+- Reduces drift between implementation and tracking artifacts.
+- Makes tracking updates enforceable at review time.
+
+**Tradeoff**:
+- PRs with critical changes now have stricter documentation expectations.
 
 ## ADR-013: Tracking Governance Contract + PR Checklist
 

@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 08:05"
+updated: "2026-02-12 03:15"
 ---
 
 # Project Status
@@ -22,11 +22,14 @@ updated: "2026-02-12 08:05"
 - Avoid duplicate reporting across `.claude/*` files.
 - Preserve only recent operational detail.
 - Apply PR checklist to enforce tracking updates per behavior change.
+- Enforce tracking updates in CI for pull requests touching critical paths.
 
 ## Recent Milestones
 
 | Date | Milestone | Status |
 |------|-----------|--------|
+| 2026-02-12 03:13 | CI tracking guardrail added for PRs on critical paths | COMPLETE |
+| 2026-02-12 03:12 | Governance commit rebased and pushed to `origin/main` | COMPLETE |
 | 2026-02-12 08:05 | Tracking governance playbook added in `docs/` | COMPLETE |
 | 2026-02-12 08:05 | `CLAUDE.md` + `AGENTS.md` aligned to tracking contract | COMPLETE |
 | 2026-02-12 08:04 | Typecheck recovered after clearing `tsconfig.tsbuildinfo` cache | COMPLETE |

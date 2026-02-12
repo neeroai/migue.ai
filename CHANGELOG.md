@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
-- Updated `CLAUDE.md` to current modular architecture (`app/api`, `src/modules`, `src/shared`) and tracking contract.
+- Updated `CLAUDE.md`/`AGENTS.md`, PR template, and CI guardrail to enforce tracking updates on critical PR changes.
 
 ### Fixed - Typecheck Hygiene
 - Resolved stale generated type error by clearing `tsconfig.tsbuildinfo` and re-running `npm run typecheck`.

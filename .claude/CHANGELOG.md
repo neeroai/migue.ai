@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 08:05"
+updated: "2026-02-12 03:15"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,11 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-12 03:13
+
+- Rebased and pushed tracking governance commit to `origin/main`.
+- Added PR-only CI guardrail in `.github/workflows/ci.yml` to require tracking/changelog updates on critical path changes.
 
 ### Changed - 2026-02-12 08:05
 
