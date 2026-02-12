@@ -226,6 +226,68 @@ function looksLikeWebSearchQuery(text: string): boolean {
   return /busca|investiga|internet|web|google|ultima|ultimas|hoy|reciente|noticia|tendencia|compar|vs|precio|cotizacion|benchmark|fuente|verifica/.test(normalized)
 }
 
+function getModelMessageText(message: ModelMessage): string {
+  const content = (message as any)?.content
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => {
+        if (typeof part === 'string') return part
+        if (part && typeof part.text === 'string') return part.text
+        return ''
+      })
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+  }
+  return ''
+}
+
+function isRetryAffirmation(text: string): boolean {
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+  return /^(si|s|ok|dale|claro|hagamoslo|hazlo|de una|intentalo de nuevo|intentalo|otra vez|de nuevo)$/.test(normalized)
+}
+
+function resolveWebSearchRetryContext(userMessage: string, history: ModelMessage[]): {
+  shouldRetrySearch: boolean
+  previousSearchQuery?: string
+} {
+  if (!isRetryAffirmation(userMessage)) {
+    return { shouldRetrySearch: false }
+  }
+
+  let sawSearchFailurePrompt = false
+  for (let index = history.length - 1; index >= 0; index--) {
+    const message = history[index] as any
+    const role = message?.role
+    const text = getModelMessageText(message)
+    const normalized = text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+
+    if (!sawSearchFailurePrompt && role === 'assistant') {
+      if (/hice la busqueda, pero no pude extraer resultados utiles|quieres que lo intente de nuevo/.test(normalized)) {
+        sawSearchFailurePrompt = true
+      }
+      continue
+    }
+
+    if (sawSearchFailurePrompt && role === 'user' && looksLikeWebSearchQuery(text)) {
+      return {
+        shouldRetrySearch: true,
+        previousSearchQuery: text.trim(),
+      }
+    }
+  }
+
+  return { shouldRetrySearch: false }
+}
+
 function extractToolResultText(result: unknown): string | null {
   function deepPickText(value: unknown, depth = 0): string | null {
     if (depth > 4 || value == null) return null
@@ -330,6 +392,10 @@ export async function respond(
   const hasAnyContext = context?.agentContext?.hasAnyContext ?? history.length > 0
 
   const useShortPrompt = userMessage.length < 120
+  const webSearchRetryContext = resolveWebSearchRetryContext(userMessage, history)
+  const effectiveUserMessage = webSearchRetryContext.shouldRetrySearch && webSearchRetryContext.previousSearchQuery
+    ? `${userMessage}\n\nContexto: El usuario confirmó reintentar la búsqueda web previa sobre "${webSearchRetryContext.previousSearchQuery}". Debes ejecutar web_search y responder con hallazgos concretos.`
+    : userMessage
   const recallQuestion = isMemoryRecallQuestion(userMessage)
   const recallGuard = recallQuestion
     ? '\n\n# MEMORY CONTRACT\nSi el usuario pregunta por historial/memoria, responde con lo que sí tienes de conversación/perfil/memoria. No digas que no tienes acceso al historial cuando sí hay contexto.'
@@ -341,13 +407,13 @@ export async function respond(
   const messages: ModelMessage[] = [
     { role: 'system', content: systemPrompt },
     ...trimmedHistory,
-    { role: 'user', content: userMessage },
+    { role: 'user', content: effectiveUserMessage },
   ]
 
   // Intelligent model selection
   const hasTools = toolsEnabled
-  const complexity = analyzeComplexity(userMessage, trimmedHistory.length, hasTools)
-  const estimatedTokenCount = estimateTokens(userMessage, trimmedHistory.length)
+  const complexity = analyzeComplexity(effectiveUserMessage, trimmedHistory.length, hasTools)
+  const estimatedTokenCount = estimateTokens(effectiveUserMessage, trimmedHistory.length)
   const budgetStatus = getBudgetStatus()
 
   const primarySelection = selectModel({
@@ -382,7 +448,8 @@ export async function respond(
     fallbackSelection.estimatedCost
   )
 
-  const preferGeminiForWebSearch = webSearchEnabled && looksLikeWebSearchQuery(userMessage)
+  const preferGeminiForWebSearch =
+    webSearchEnabled && (looksLikeWebSearchQuery(userMessage) || webSearchRetryContext.shouldRetrySearch)
   const primaryModel = preferGeminiForWebSearch
     ? models.gemini.primary
     : primarySelection.modelName
@@ -595,7 +662,7 @@ export async function respond(
     text = (
       toolResults[toolResults.length - 1] ??
       lastToolOutcomeMessage ??
-      (looksLikeWebSearchQuery(userMessage)
+      (looksLikeWebSearchQuery(userMessage) || webSearchRetryContext.shouldRetrySearch
         ? 'Hice la búsqueda, pero no pude extraer resultados útiles. ¿Quieres que lo intente de nuevo con otro enfoque?'
         : 'Listo. Ya ejecuté tu solicitud.')
     ).trim()

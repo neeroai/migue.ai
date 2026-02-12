@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:08"
+updated: "2026-02-12 12:22"
 ---
 
 # Task List
@@ -20,7 +20,6 @@ updated: "2026-02-12 12:08"
 
 ## Completed (Recent)
 
-- [x] Update `AGENTS.md` with source-of-truth and session checklist policy (2026-02-12 08:00)
 - [x] Recover `npm run typecheck` by clearing stale `tsconfig.tsbuildinfo` cache (2026-02-12 08:04)
 - [x] Add `.github/pull_request_template.md` tracking checklist (2026-02-12 08:05)
 - [x] Rebase and push tracking governance commit to `origin/main` (2026-02-12 03:12)
@@ -40,6 +39,7 @@ updated: "2026-02-12 12:08"
 - [x] Implementar `web_search` con `WEB_SEARCH_ENABLED` + preferencia `gemini-2.5-flash-lite` + validación `typecheck`/`test:unit` (2026-02-12 11:10)
 - [x] Corregir fallback repetitivo de `web_search` cuando el tool result llega como objeto (2026-02-12 11:53)
 - [x] Endurecer prompt y fallback parser para evitar respuestas vacías/genéricas tras `web_search` (2026-02-12 12:08)
+- [x] Cubrir flujo de reintento `"si"` tras fallo de `web_search` con contexto de búsqueda previa (2026-02-12 12:22)
 
 ## Blocked
 

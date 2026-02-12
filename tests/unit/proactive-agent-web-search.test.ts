@@ -96,4 +96,34 @@ describe('proactive-agent web search routing', () => {
     const response = await respond('busca en internet la programacion de los carnavales', 'u1', [])
     expect(response.text).toContain('Programación preliminar')
   })
+
+  it('retries web search context when user confirms with "si" after failed search', async () => {
+    process.env.WEB_SEARCH_ENABLED = 'true'
+    mockGenerateText.mockResolvedValueOnce({
+      text: '   ',
+      usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 },
+      finishReason: 'tool-calls',
+      steps: [{ toolCalls: [{ toolName: 'web_search' }], toolResults: [] }],
+      providerMetadata: {
+        gateway: { model: 'google/gemini-2.5-flash-lite' },
+      },
+    })
+
+    const history: any[] = [
+      { role: 'user', content: 'busca la programación de hoy en barranquilla de eventos del carnaval' },
+      {
+        role: 'assistant',
+        content: 'Hice la búsqueda, pero no pude extraer resultados útiles. ¿Quieres que lo intente de nuevo con otro enfoque?',
+      },
+    ]
+
+    const response = await respond('si', 'u1', history as any)
+    const params = mockGenerateText.mock.calls[0]?.[0] as any
+    const lastUserContent = params.messages[params.messages.length - 1]?.content as string
+
+    expect(params.model).toBe('google/gemini-2.5-flash-lite')
+    expect(lastUserContent).toContain('reintentar la búsqueda web previa')
+    expect(lastUserContent).toContain('barranquilla')
+    expect(response.text).toContain('Hice la búsqueda')
+  })
 })

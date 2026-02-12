@@ -18,6 +18,7 @@ scope: "Tracking and process notes"
 - Validation completed with `npm run typecheck`, `npm run test:unit`, and targeted `proactive-agent-web-search` unit test.
 - Fixed `web_search` post-tool fallback to parse object results and avoid repeated generic response.
 - Strengthened prompt instructions for `web_search` and added deep text extraction fallback for nested tool payloads.
+- Added retry-context handling for short confirmations (e.g. "si") after failed `web_search`.
 
 ### Changed - 2026-02-12 09:10
 

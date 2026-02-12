@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 12:08"
+updated: "2026-02-12 12:22"
 ---
 
 # Project Status
@@ -29,6 +29,7 @@ updated: "2026-02-12 12:08"
 - Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
 - Monitorear adopción y costo de `web_search` (feature flag `WEB_SEARCH_ENABLED`) tras activación gradual.
 - Verificar en producción que respuestas post-`web_search` incluyan contenido (sin fallback genérico repetitivo).
+- Verificar en producción el flujo de confirmación de reintento (`"si"`) para búsqueda web fallida previa.
 
 ## Recent Milestones
 
