@@ -1,7 +1,7 @@
 ---
 title: "Session Log"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 18:56"
+updated: "2026-02-12 20:11"
 session_id: "tracking-compaction-2026-02-07"
 ---
 
@@ -57,40 +57,3 @@ User requested keyword-triggered WhatsApp Flow testing so QA can open each flow 
 
 - When a task closes, keep only current and recent sessions in full detail.
 - Convert older detailed sections into 5-10 bullet summaries.
-
-## Active Session - 2026-02-12 18:51
-
-### Context
-
-User confirmed proceeding after Flow test isolation, reporting that current flow commands were not returning a user response.
-
-### Operations
-
-| Time | Operation | File | Status |
-|------|-----------|------|--------|
-| 18:47 | Fix | `src/modules/flow-testing/application/service.ts` | Complete |
-| 18:49 | Validate | `npx jest tests/unit/flow-testing-service.test.ts --runInBand` | Complete |
-| 18:50 | Validate | `npm run test:unit:flows` | Complete |
-
-### Decisions Made
-
-- Flow test command path now handles `sendFlow` exceptions and always replies with guidance instead of failing silently.
-
-## Active Session - 2026-02-12 18:56
-
-### Context
-
-User requested to isolate flows completely because they were adding friction and normal behavior was required.
-
-### Operations
-
-| Time | Operation | File | Status |
-|------|-----------|------|--------|
-| 18:53 | Implement | `src/modules/flow-testing/application/service.ts` (`FLOW_TEST_MODE_ENABLED` gate default off) | Complete |
-| 18:54 | Validate | `tests/unit/flow-testing-service.test.ts` (added disabled-mode case) | Complete |
-| 18:55 | Document | `.env.example` (flag guidance) | Complete |
-| 18:56 | Validate | `npm run test:unit:flows` | Complete |
-
-### Decisions Made
-
-- Flow test keyword interception is now opt-in via `FLOW_TEST_MODE_ENABLED=true`; default behavior no longer intercepts `flow ...` commands.

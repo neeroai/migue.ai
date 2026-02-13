@@ -55,6 +55,10 @@ const envSchema = z
   LEGACY_ROUTING_ENABLED: z.string().optional(),
   SIGNUP_FLOW_ENABLED: z.string().optional(),
   SIGNUP_FLOW_ID: z.string().optional(),
+  SOUL_ENABLED: z.string().optional(),
+  SOUL_STYLE: z.string().optional(),
+  SOUL_LOCAL_STYLE_ENABLED: z.string().optional(),
+  SOUL_STRICT_GUARDRAILS: z.string().optional(),
 
   // Cron Authentication
   CRON_SECRET: z.string().min(16).optional(),

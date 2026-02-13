@@ -10,6 +10,12 @@ export const SLA_METRICS = {
   MEMORY_WRITE_COUNT: 'memory.write_count',
   MEMORY_HIT_RATIO: 'memory.hit_ratio',
   PROFILE_HIT_RATIO: 'memory.profile_hit_ratio',
+  SOUL_PROFILE_UPDATES_COUNT: 'soul.profile_updates_count',
+  SOUL_PERSONALIZATION_HIT_RATIO: 'soul.personalization_hit_ratio',
+  SOUL_LOCALE_DETECTION_HIT_RATIO: 'soul.locale_detection_hit_ratio',
+  SOUL_LOCALE_CONFIDENCE_AVG: 'soul.locale_confidence_avg',
+  SOUL_EMOJI_USAGE_AVG: 'soul.emoji_usage_avg',
+  SOUL_ROBOTIC_REWRITE_COUNT: 'soul.robotic_rewrite_count',
 } as const
 
 export type SlaMetricName = typeof SLA_METRICS[keyof typeof SLA_METRICS]

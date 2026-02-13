@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 18:56"
+updated: "2026-02-12 20:11"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,13 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-12 20:10
+
+- Added SOUL runtime layer (`SOUL.md` + `soul-composer`) and integrated it in `proactive-agent`.
+- Added city-local style resolver (Barranquilla/Bogotá/Medellín) with confidence threshold and fallback to base style.
+- Added anti-robot + emoji cap guardrails and persisted locale learning signals in `memory_profile.goals.soul_v1`.
+- Added metrics `soul.*` for personalization/locale observability and unit tests for composer/resolver/policy.
 
 ### Changed - 2026-02-12 18:25
 

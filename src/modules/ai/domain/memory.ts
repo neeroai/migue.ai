@@ -35,6 +35,12 @@ export type MemoryProfile = {
   updated_at: string
 }
 
+type SoulSignals = {
+  city?: string
+  cityConfidence?: number
+  styleVariant?: string
+}
+
 const memoryCache = new Map<string, { results: MemorySearchResult[]; timestamp: number }>()
 const profileCache = new Map<string, { profile: MemoryProfile | null; timestamp: number }>()
 const MEMORY_CACHE_TTL_MS = 300_000 // 5 minutes
@@ -243,6 +249,44 @@ export async function upsertMemoryProfile(
   }
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
+
+/**
+ * Merges SOUL learning signals into memory_profile.goals.soul_v1.
+ * Keeps existing goals keys and prior soul fields.
+ */
+export async function upsertSoulSignals(userId: string, signals: SoulSignals): Promise<void> {
+  try {
+    const profile = await getMemoryProfile(userId)
+    const currentGoals = asRecord(profile?.goals)
+    const currentSoul = asRecord(currentGoals.soul_v1)
+
+    const mergedSoul: Record<string, unknown> = {
+      ...currentSoul,
+      ...(signals.city ? { last_detected_city: signals.city } : {}),
+      ...(typeof signals.cityConfidence === 'number'
+        ? { city_confidence: Number(signals.cityConfidence.toFixed(2)) }
+        : {}),
+      ...(signals.styleVariant ? { style_variant: signals.styleVariant } : {}),
+      updated_at: new Date().toISOString(),
+    }
+
+    await upsertMemoryProfile(userId, {
+      goals: {
+        ...currentGoals,
+        soul_v1: mergedSoul,
+      },
+    })
+  } catch (error: any) {
+    logger.error('[MemoryProfile] upsertSoulSignals error', error, {
+      metadata: { userId },
+    })
+  }
+}
+
 /**
  * Extract stable profile updates from explicit user preferences.
  */
@@ -287,6 +331,13 @@ export function buildMemoryProfileSummary(profile: MemoryProfile | null): string
   if (profile.language_preference === 'es') parts.push('prefieres hablar en español')
   if (profile.tone_preference) parts.push(`prefieres tono ${profile.tone_preference}`)
   if (profile.timezone) parts.push(`tu zona horaria es ${profile.timezone}`)
+  const soulSignals = asRecord(asRecord(profile.goals).soul_v1)
+  if (typeof soulSignals.last_detected_city === 'string') {
+    parts.push(`sueles estar en ${soulSignals.last_detected_city}`)
+  }
+  if (typeof soulSignals.style_variant === 'string') {
+    parts.push(`te funciona estilo ${soulSignals.style_variant}`)
+  }
   return parts.join(', ')
 }
 

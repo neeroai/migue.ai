@@ -34,6 +34,15 @@ import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metric
 import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
 import type { AgentContextSnapshot } from './agent-context-builder'
 import { generateToolConfirmationMessage } from '../../../shared/infra/ai/agentic-messaging'
+import { composeSoulSystemPrompt } from './soul-composer'
+import { resolveLocaleStyle } from './locale-style-resolver'
+import {
+  enforceEmojiLimit,
+  isSoulEnabled,
+  isSoulStrictGuardrailsEnabled,
+  resolveEmojiLimit,
+  rewriteRoboticFallback,
+} from './soul-policy'
 
 const WHATSAPP_TEXT_SOFT_LIMIT = 1200
 
@@ -48,118 +57,19 @@ const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   hour12: false,
 })
 
-const SYSTEM_PROMPT_BASE = `# ROLE AND OBJECTIVE
-Eres Migue, un asistente personal conversacional en WhatsApp. Tu objetivo es mantener conversaciones naturales, cálidas y útiles en español colombiano, usando herramientas solo cuando el usuario lo necesite claramente.
-
-# RESPONSE RULES (Critical)
-1. **Read conversation history FIRST** - Adapta tu respuesta al contexto completo
-2. **Never repeat responses** - Si ya saludaste, NO saludes de nuevo
-3. **Be conversational** - Responde como un amigo cercano, NO como un bot
-4. **Be concise** - 1-2 frases máximo (ideal para WhatsApp)
-5. **Use tools automatically** - Cuando sea obvio (crear recordatorio, agendar, etc.)
-
-# INSTRUCTIONS - Conversation Flow
-
-## Initial Contact
-- First greeting: "¡Hola! ¿Cómo estás?" (warm, simple)
-- Follow-up: "¿Qué tal?" or "¿En qué te ayudo?" (NO templates genéricos)
-- NEVER say: "¡Hola de nuevo! Estoy aquí para ayudarte" (too robotic)
-
-## Ongoing Conversation
-1. Check conversation history for context
-2. Identify user intent from current message + history
-3. If casual chat → respond naturally and briefly
-4. If action needed → use appropriate tool + confirm
-5. Continue until user's need is resolved
-
-## Anti-Repetition Protocol
-- IF already greeted → don't greet again
-- IF similar question → acknowledge and build on previous answer
-- IF conversation stale → ask engaging follow-up question
-
-# AVAILABLE TOOLS (MANDATORY - use immediately when triggers detected)
-
-## create_reminder MANDATORY WHEN TRIGGERS DETECTED
-**Triggers**: "recuérdame", "recordarme", "no olvides", "avísame", "tengo que", "debo", "me recuerdas"
-**Action**: YOU MUST call create_reminder tool immediately. DO NOT ask for confirmation. DO NOT say you can't do it.
-**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
-**Example**: User: "recuérdame comprar pan mañana 8am" → [create_reminder] → "Listo! Te recordaré mañana a las 8am"
-**WRONG**: "Lo siento, no puedo establecer recordatorios" NEVER SAY THIS
-
-## schedule_meeting MANDATORY WHEN TRIGGERS DETECTED
-**Triggers**: "agenda", "agendar", "reserva", "reservar", "programa", "programar", "reunión", "cita"
-**Action**: YOU MUST call schedule_meeting tool immediately. DO NOT ask for confirmation.
-**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
-**Example**: User: "agenda reunión con Juan viernes 3pm" → [schedule_meeting] → "Perfecto! Agendé reunión con Juan el viernes a las 3pm"
-**WRONG**: "Lo siento, no puedo agendar" NEVER SAY THIS
-
-## track_expense MANDATORY WHEN TRIGGERS DETECTED
-**Triggers**: "gasté", "pagué", "compré", "costó", "salió", "me gasté"
-**Action**: YOU MUST call track_expense tool immediately. DO NOT ask for confirmation.
-**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
-**Example**: User: "gasté 50mil en mercado" → [track_expense] → "Listo! Registré $50,000 en Mercado"
-**WRONG**: "Lo siento, no puedo registrar gastos" NEVER SAY THIS
-
-# OUTPUT FORMAT
-- Language: Spanish (Colombia)
-- Tone: Warm, friendly, professional
-- Length: concisa pero completa (ideal 2-5 frases, max 1200 caracteres)
-- Emojis: Occasional (for confirmations, money, errors)
-- Structure: Direct answer → optional context/help offer
-
-# CONTEXT AWARENESS
-- You have access to conversation history in the messages array
-- Use it to avoid repetition and maintain context
-- Reference previous messages when relevant
-- Build on the conversation naturally
-
-# CRITICAL REMINDERS
-NEVER say: "no puedo crear recordatorios", "no puedo establecer", "no tengo acceso a"
-NEVER say: "¡Estoy aquí para ayudarte!" or generic phrases
-NEVER repeat the same greeting twice in a conversation
-NEVER refuse to use a tool when trigger words are detected
-NEVER use generic template responses
-ALWAYS use tools IMMEDIATELY when trigger words detected (recuérdame, agenda, gasté, etc.)
-ALWAYS read conversation history before responding
-ALWAYS respond to the specific message, not a generic intent
-ALWAYS confirm actions with "Listo!" after executing tools
-YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses - USE IT!
-
-You are an agent - continue the conversation naturally until the user's need is completely resolved.`
-
-const SYSTEM_PROMPT_SHORT = `Eres Migue, asistente personal en WhatsApp. Responde en español colombiano, cálido y conciso (ideal 2-5 frases, max 1200 caracteres). Evita repetir saludos.
-Tienes acceso al historial de la conversación en los mensajes.
-NUNCA digas frases como "no tengo acceso al historial", "no puedo ver mensajes anteriores" o "no tengo contexto".
-Si hay historial, úsalo para continuar con contexto; si hay poco historial, pide precisión sin negar acceso.
-Usa herramientas SOLO cuando el usuario lo necesite claramente:
-- create_reminder: recuérdame / no olvides / avísame
-- schedule_meeting: agenda / programa / cita
-- track_expense: gasté / pagué / compré / costó
-Si usas una herramienta, confirma con "Listo!".`
-
-/**
- * Generate system prompt with current time context
- * CRITICAL: Time context enables GPT to calculate "en 5 minutos", "mañana", etc.
- */
-function generateSystemPrompt(isShort: boolean): string {
-  const now = new Date()
-  const nowISO = now.toISOString()
-  const nowBogota = BOGOTA_FORMATTER.format(now)
-
-  const timeContext = `# CURRENT TIME CONTEXT (CRITICAL for tool calling)
-Current time (UTC): ${nowISO}
-Current time (Bogotá, Colombia): ${nowBogota} (America/Bogota, UTC-5)
-
-When user says:
-- "en X minutos" → Add X minutes to current time
-- "en X horas" → Add X hours to current time
-- "mañana a las Xam/pm" → Tomorrow at specified time
-- "el [día] a las X" → Specified day at specified time
-
-ALWAYS use Colombia timezone (America/Bogota, UTC-5) for datetimeIso.
-Format: YYYY-MM-DDTHH:MM:SS-05:00`
-
-  return `${timeContext}\n\n${isShort ? SYSTEM_PROMPT_SHORT : SYSTEM_PROMPT_BASE}`
+function messageContentToText(content: ModelMessage['content']): string {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return ''
+  return content
+    .map((part) => {
+      if (!part || typeof part !== 'object') return ''
+      if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
+        return part.text
+      }
+      return ''
+    })
+    .filter(Boolean)
+    .join(' ')
 }
 
 /**
@@ -246,6 +156,7 @@ export async function respond(
     storeMemory,
     extractProfileUpdates,
     upsertMemoryProfile,
+    upsertSoulSignals,
   } = await import('../domain/memory')
 
   const memoryContext = context?.agentContext?.memoryContext ?? ''
@@ -254,12 +165,27 @@ export async function respond(
 
   const useShortPrompt = userMessage.length < 120
   const recallQuestion = isMemoryRecallQuestion(userMessage)
-  const recallGuard = recallQuestion
-    ? '\n\n# MEMORY CONTRACT\nSi el usuario pregunta por historial/memoria, responde con lo que sí tienes de conversación/perfil/memoria. No digas que no tienes acceso al historial cuando sí hay contexto.'
-    : ''
-  const systemPrompt = generateSystemPrompt(useShortPrompt) + memoryContext + recallGuard
-
   const trimmedHistory = context?.agentContext?.modelHistory ?? history.slice(-readPolicy.historyLimit)
+  const historySnippets = trimmedHistory
+    .map((message) => messageContentToText(message.content))
+    .filter((snippet) => snippet.trim().length > 0)
+    .slice(-8)
+  const localeStyle = resolveLocaleStyle({
+    userMessage,
+    historySnippets,
+  })
+  const now = new Date()
+  const systemPrompt = composeSoulSystemPrompt({
+    pathway,
+    userMessage,
+    useShortPrompt,
+    memoryContext,
+    recallQuestion,
+    profileSummary,
+    localeStyle,
+    nowIsoUtc: now.toISOString(),
+    nowBogotaText: BOGOTA_FORMATTER.format(now),
+  })
 
   const messages: ModelMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -582,15 +508,85 @@ export async function respond(
     })
   }
 
+  emitSlaMetric(SLA_METRICS.SOUL_LOCALE_CONFIDENCE_AVG, {
+    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+    userId,
+    value: localeStyle.confidence,
+    messageType: 'text',
+    pathway,
+    extra: { city: localeStyle.city, variant: localeStyle.variant },
+  })
+  emitSlaMetric(SLA_METRICS.SOUL_LOCALE_DETECTION_HIT_RATIO, {
+    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+    userId,
+    value: localeStyle.city === 'unknown' ? 0 : 1,
+    messageType: 'text',
+    pathway,
+  })
+  emitSlaMetric(SLA_METRICS.SOUL_PERSONALIZATION_HIT_RATIO, {
+    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+    userId,
+    value: (hasAnyContext || localeStyle.city !== 'unknown' || profileSummary.length > 0) ? 1 : 0,
+    messageType: 'text',
+    pathway,
+  })
+
+  if (localeStyle.city !== 'unknown' && localeStyle.confidence >= 0.72) {
+    void upsertSoulSignals(userId, {
+      city: localeStyle.city,
+      cityConfidence: localeStyle.confidence,
+      styleVariant: localeStyle.variant,
+    }).then(() => {
+      emitSlaMetric(SLA_METRICS.SOUL_PROFILE_UPDATES_COUNT, {
+        ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+        userId,
+        value: 1,
+        messageType: 'text',
+        pathway,
+        extra: { write_type: 'soul_locale' },
+      })
+    })
+  }
+
   if (recallQuestion) {
     text = sanitizeMemoryContractResponse(
       text,
       hasAnyContext,
       profileSummary ? `Lo que sé de ti: ${profileSummary}.` : ''
     )
-    if (text.length > WHATSAPP_TEXT_SOFT_LIMIT) {
-      text = text.slice(0, WHATSAPP_TEXT_SOFT_LIMIT - 3).trimEnd() + '...'
+  }
+
+  if (isSoulEnabled()) {
+    if (isSoulStrictGuardrailsEnabled()) {
+      const rewritten = rewriteRoboticFallback(text)
+      if (rewritten !== text) {
+        emitSlaMetric(SLA_METRICS.SOUL_ROBOTIC_REWRITE_COUNT, {
+          ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+          userId,
+          value: 1,
+          messageType: 'text',
+          pathway,
+        })
+      }
+      text = rewritten
     }
+
+    const emojiLimit = resolveEmojiLimit(localeStyle.emojiPolicy)
+    const emojiCapped = enforceEmojiLimit(text, emojiLimit)
+    if (emojiCapped !== text) {
+      emitSlaMetric(SLA_METRICS.SOUL_EMOJI_USAGE_AVG, {
+        ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
+        userId,
+        value: emojiLimit,
+        messageType: 'text',
+        pathway,
+      })
+    }
+    text = emojiCapped
+  }
+
+  if (text.length > WHATSAPP_TEXT_SOFT_LIMIT) {
+    text = text.slice(0, WHATSAPP_TEXT_SOFT_LIMIT - 3).trimEnd() + '...'
   }
 
   return {

@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 18:56"
+updated: "2026-02-12 20:10"
 scope: "project"
 ---
 
@@ -14,14 +14,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-12 18:56
+## [Unreleased] - 2026-02-12 20:10
+### Added - SOUL Personalization Runtime
+- Added `SOUL.md` + composable SOUL prompt runtime (`soul-composer`) with city-local adaptation (Barranquilla/Bogotá/Medellín), anti-robot guardrails, emoji caps, `soul.*` metrics, and persistence of SOUL signals in `memory_profile.goals.soul_v1` with unit coverage.
 
 ### Changed - Flow Test Isolation
 - Isolated Flow-focused unit tests from the default unit runner to reduce noise while debugging non-flow response paths.
 - `test:unit` now excludes the 4 flow suites (`flow-testing-service`, `whatsapp-flow-crypto`, `whatsapp-flow-post-signup`, `whatsapp-signup-flow-data-exchange`).
 - Added scripts: `test:unit:flows` (flows only) and `test:unit:all` (full unit suite).
-- `pre-deploy` now runs both `test:unit` and `test:unit:flows` to preserve release coverage.
-- Flow test command handling now catches `sendFlow` exceptions and returns user guidance text (no silent failure).
+- `pre-deploy` now runs both `test:unit` and `test:unit:flows`; flow test command handling now catches `sendFlow` exceptions and returns user guidance text.
 - Flow test command interception is now disabled by default and only enabled with `FLOW_TEST_MODE_ENABLED=true`.
 
 ### Changed - Proactive Messaging Cadence
@@ -235,5 +236,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Impact
 - Codebase: -470 lines
-- Complexity: Single AI system (was: 2 parallel)
 - Tests: 254 passing, 26 skipped

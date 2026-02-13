@@ -4,10 +4,33 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 18:56"
+updated: "2026-02-12 20:11"
 ---
 
 # Architecture Decisions
+
+## ADR-022: SOUL Runtime + City-Local Style Inference
+
+**Date**: 2026-02-12 20:10  
+**Status**: Approved  
+**Deciders**: User request (humanización urgente + personalización local)
+
+### Decision
+
+- Introduce SOUL composition layer (`SOUL.md` + `soul-composer`) in proactive runtime.
+- Replace monolithic system prompt assembly with composable sections: identity, policy, memory/profile, local style, turn directive.
+- Add city-local style inference (Barranquilla/Bogotá/Medellín) from conversation evidence with confidence gating.
+- Enforce anti-robot guardrails and emoji caps before final outbound text.
+- Persist locale learning signals in `memory_profile.goals.soul_v1`.
+
+### Consequences
+
+**Positive**:
+- More human, user-centric responses with persistent personalization.
+- Safer local-language adaptation through confidence threshold + fallback.
+
+**Tradeoff**:
+- Additional runtime complexity and metric surface (`soul.*`) to monitor.
 
 ## ADR-021: Isolate Flow Unit Tests From Default Unit Pipeline
 
@@ -233,31 +256,6 @@ updated: "2026-02-12 18:56"
 
 **Tradeoff**:
 - Slightly higher PR overhead due to mandatory checklist updates.
-
-## ADR-012: Replace Local OCR With Multimodal Vision Pipeline
-
-**Date**: 2026-02-07 16:41  
-**Status**: Approved  
-**Deciders**: User request ("procedamos con la migracion completa")
-
-### Decision
-
-- Remove `tesseract.js` OCR path for `image/document`.
-- Add `vision-pipeline` with:
-  - lightweight class detection
-  - multimodal extraction/response in one call
-  - optional delegation to tool-intent text pathway
-- Keep existing rich-input timeout and progress messaging in orchestrator.
-
-### Consequences
-
-**Positive**:
-- Better quality for non-document images.
-- Better deploy/runtime compatibility by avoiding local OCR runtime variance.
-- Cleaner architecture for future multimodal extensions.
-
-**Tradeoff**:
-- Cost depends on multimodal token usage.
 
 ## Historical ADR Summary (ADR-001 to ADR-008)
 
