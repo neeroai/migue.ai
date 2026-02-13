@@ -13,8 +13,21 @@ import { __testables, tryHandleFlowTestingCommand } from '../../src/modules/flow
 describe('flow testing service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    delete process.env.FLOW_TEST_TRANSFER_ID;
+    process.env.FLOW_TEST_MODE_ENABLED = 'true';
     process.env.NODE_ENV = 'test';
+  });
+
+  it('does not intercept commands when flow test mode is disabled', async () => {
+    process.env.FLOW_TEST_MODE_ENABLED = 'false';
+
+    const handled = await tryHandleFlowTestingCommand({
+      phoneNumber: '+573001112233',
+      content: 'flow transferencia',
+    });
+
+    expect(handled).toBe(false);
+    expect(sendFlowMock).not.toHaveBeenCalled();
+    expect(sendWhatsAppTextMock).not.toHaveBeenCalled();
   });
 
   it('parses flow test command aliases', () => {
@@ -108,6 +121,22 @@ describe('flow testing service', () => {
     const handled = await tryHandleFlowTestingCommand({
       phoneNumber: '+573001112233',
       content: 'flow test balance',
+    });
+
+    expect(handled).toBe(true);
+    expect(sendWhatsAppTextMock).toHaveBeenCalledWith(
+      '+573001112233',
+      expect.stringContaining('No pude enviar el flow de prueba')
+    );
+  });
+
+  it('returns handled with guidance when flow sending throws', async () => {
+    sendFlowMock.mockRejectedValue(new Error('Meta API timeout'));
+    sendWhatsAppTextMock.mockResolvedValue('wamid.text');
+
+    const handled = await tryHandleFlowTestingCommand({
+      phoneNumber: '+573001112233',
+      content: 'flow test transfer',
     });
 
     expect(handled).toBe(true);

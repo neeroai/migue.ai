@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 14:51"
+updated: "2026-02-12 18:56"
 scope: "project"
 ---
 
@@ -14,7 +14,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-12 14:51
+## [Unreleased] - 2026-02-12 18:56
+
+### Changed - Flow Test Isolation
+- Isolated Flow-focused unit tests from the default unit runner to reduce noise while debugging non-flow response paths.
+- `test:unit` now excludes the 4 flow suites (`flow-testing-service`, `whatsapp-flow-crypto`, `whatsapp-flow-post-signup`, `whatsapp-signup-flow-data-exchange`).
+- Added scripts: `test:unit:flows` (flows only) and `test:unit:all` (full unit suite).
+- `pre-deploy` now runs both `test:unit` and `test:unit:flows` to preserve release coverage.
+- Flow test command handling now catches `sendFlow` exceptions and returns user guidance text (no silent failure).
+- Flow test command interception is now disabled by default and only enabled with `FLOW_TEST_MODE_ENABLED=true`.
 
 ### Changed - Proactive Messaging Cadence
 - Increased proactive intensity: min interval 2h, daily cap 6 messages, plus 20h proactive horizon and hourly maintain-windows cron (Bogota business hours), with health metadata aligned.
@@ -69,22 +77,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `scripts/compact-tracking-files.mjs` and `npm run tracking:compact` to automate future compaction.
 
 ### Changed - Skills
-- Updated `codex-skills/claude-migrated/whatsapp-api-expert` baseline from WhatsApp Business API `v23.0` to `v24.0`.
-- Added skill-level version policy: default `v24.0`, explicit compatibility handling when repository code is pinned to older API versions.
-- No runtime/API client migration was performed in application code in this change.
+- Updated `whatsapp-api-expert` skill baseline to WhatsApp Business API `v24.0`, with explicit compatibility guidance when runtime code is pinned to older versions (no runtime client migration).
 
 ### Changed - Architecture
-- **AI Gateway mandatory**: Models now use Gateway strings (`openai/gpt-4o-mini`, `google/gemini-2.5-flash-lite`) with Gateway fallback.
-- **Claude removed**: Anthropic provider eliminated; Gemini is fallback.
-- **Gateway health checks**: Require `AI_GATEWAY_API_KEY` or OIDC; OpenAI key only for Whisper.
+- AI Gateway mandatory (`openai/gpt-4o-mini`, `google/gemini-2.5-flash-lite`), Claude/Anthropic removed, and health checks aligned to Gateway auth (`AI_GATEWAY_API_KEY`/OIDC) while keeping OpenAI key only for Whisper.
 
 ### Changed - Text Pipeline Efficiency
-- Cold-start budget hydration blocks only when needed.
-- Conversation history cache invalidation on inbound/outbound writes.
-- Tools only passed when triggers detected.
-- Short prompt for short messages.
-- History trimmed by char budget; trivial-message early exit.
-- Max tokens + temperature tuned for non-tool messages; 280-char cap.
+- Cold-start budget hydration no longer blocks unnecessarily; conversation/memory flow and tool routing are now conditional.
+- Prompting optimized with short-message path, char-budgeted history trimming, and non-tool token/temperature caps.
 
 ### Added - Debugging
 - `scripts/debug-text-flow.ts` local CLI for text flow + Gateway metadata logging.

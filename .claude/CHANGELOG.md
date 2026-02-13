@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 14:51"
+updated: "2026-02-12 18:56"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,20 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-12 18:25
+
+- Isolated Flow-related unit tests from default unit pipeline:
+  - `test:unit` now excludes Flow suites
+  - added `test:unit:flows` (isolated execution)
+  - added `test:unit:all` (full unit suite)
+- Updated `pre-deploy` to run both `test:unit` and `test:unit:flows`.
+- Validated with:
+  - `npm run test:unit -- --runInBand`
+  - `npm run test:unit:flows`
+  - `npm run test:unit:all -- --runInBand`
+- Hardened flow testing command error path: `sendFlow` exceptions now return guidance text instead of silent failure.
+- Flow testing interception is now opt-in (`FLOW_TEST_MODE_ENABLED=true`), disabled by default to avoid friction in normal chat behavior.
 
 ### Changed - 2026-02-12 14:51
 

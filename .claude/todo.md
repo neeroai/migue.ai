@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 14:51"
+updated: "2026-02-12 18:56"
 ---
 
 # Task List
@@ -22,6 +22,8 @@ updated: "2026-02-12 14:51"
 ## Completed (Recent)
 
 - [x] Intensificar proactividad del agente: cron horario, intervalo 2h, tope diario 6 y horizonte 20h (2026-02-12 14:51)
+- [x] Aislar tests de WhatsApp Flows (`test:unit:flows`) y agregar fallback de respuesta cuando `sendFlow` falla/lanza excepción (2026-02-12 18:51)
+- [x] Aislar modo de comandos Flow en runtime normal con feature flag opt-in (`FLOW_TEST_MODE_ENABLED`) (2026-02-12 18:56)
 
 - [x] Implement keyword-triggered Flow QA mode (`flow test <name>`) with mock payloads in webhook pipeline (2026-02-12 11:20)
 - [x] Add real Meta Flow JSON validation/publish CLI (`scripts/wa-flows-validate.mjs`) plus docs/commands (2026-02-12 12:10)
@@ -40,8 +42,6 @@ updated: "2026-02-12 14:51"
 - [x] Remove `tesseract.js` dependency (2026-02-07 16:40)
 - [x] Close v24 runtime migration task as not planned (keep runtime in v23) (2026-02-07 15:49)
 - [x] Add `scripts/compact-tracking-files.mjs` and `npm run tracking:compact` (2026-02-07 15:43)
-- [x] Implement stricter `check:tracking` limits and anti-accumulation rules (2026-02-07 15:37)
-- [x] Compact `.claude/session.md` with resumable format (2026-02-07 15:38)
 
 ## Blocked
 

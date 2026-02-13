@@ -56,6 +56,15 @@ function normalizeToken(value: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+function parseBoolEnv(value: string | undefined): boolean {
+  if (!value) return false;
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+}
+
+function isFlowTestingEnabled(): boolean {
+  return parseBoolEnv(process.env.FLOW_TEST_MODE_ENABLED);
+}
+
 // Hardcoded on purpose: private QA flows without extra env configuration.
 const FLOW_TEST_IDS: Record<SupportedFlowKey, string> = {
   auth: '909795558106175',
@@ -236,6 +245,7 @@ export async function tryHandleFlowTestingCommand(params: {
   requestId?: string;
   conversationId?: string;
 }): Promise<boolean> {
+  if (!isFlowTestingEnabled()) return false;
   if (!params.content) return false;
 
   const requestedAlias = extractRequestedFlowAlias(params.content);
@@ -270,13 +280,27 @@ export async function tryHandleFlowTestingCommand(params: {
     expiresInMinutes: 120,
   };
 
-  const messageId = await sendFlow(
-    params.phoneNumber,
-    flow.id,
-    flow.cta,
-    flow.body,
-    flowOptions
-  );
+  let messageId: string | null = null;
+  try {
+    messageId = await sendFlow(
+      params.phoneNumber,
+      flow.id,
+      flow.cta,
+      flow.body,
+      flowOptions
+    );
+  } catch (error) {
+    logger.warn('[flow-testing] Exception while sending testing flow', {
+      ...(params.requestId ? { requestId: params.requestId } : {}),
+      ...(params.conversationId ? { conversationId: params.conversationId } : {}),
+      ...(params.userId ? { userId: params.userId } : {}),
+      metadata: {
+        flowKey,
+        flowId: flow.id,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      },
+    });
+  }
 
   if (!messageId) {
     logger.warn('[flow-testing] Failed to send testing flow', {
@@ -311,4 +335,6 @@ export const __testables = {
   parseFlowKeyword,
   buildFlowConfig,
   extractRequestedFlowAlias,
+  parseBoolEnv,
+  isFlowTestingEnabled,
 };

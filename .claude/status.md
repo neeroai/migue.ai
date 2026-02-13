@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 14:51"
+updated: "2026-02-12 18:56"
 ---
 
 # Project Status
@@ -10,7 +10,7 @@ updated: "2026-02-12 14:51"
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests (last known) | 264 passing | 240+ | OK |
+| Tests (last known) | 343 passing | 240+ | OK |
 | AI Gateway migration | Complete | Required | OK |
 | Tracking governance docs | Implemented | Required | OK |
 | Session continuity system | Implemented (`just` + master tracker) | Required | OK |
@@ -31,12 +31,16 @@ updated: "2026-02-12 14:51"
 - Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
 - Endurecer tono conversacional LLM-first en onboarding y reminders.
 - Intensificar proactividad del cron de mantenimiento (cadencia y volumen con guardrails de negocio).
+- Aislar suite de Flow tests para depuración rápida sin perder cobertura en pre-deploy.
+- Endurecer manejo de errores en envío de Flow tests para evitar silencios al usuario.
+- Mantener modo normal por defecto: Flow test commands quedan aislados detrás de `FLOW_TEST_MODE_ENABLED=true`.
 
 ## Recent Milestones
 
 | Date | Milestone | Status |
 |------|-----------|--------|
 | 2026-02-12 06:23 | Onboarding + reminder delivery moved to LLM-first messaging with fallback | COMPLETE |
+| 2026-02-12 18:25 | Unit tests de Flows aislados en script dedicado + pre-deploy conserva cobertura completa | COMPLETE |
 | 2026-02-12 04:12 | `just` instalado y operativo para workflow de continuidad | COMPLETE |
 | 2026-02-12 03:59 | Session continuity system implemented (`just`, handoff, master tracker) | COMPLETE |
 | 2026-02-12 03:13 | CI tracking guardrail added for PRs on critical paths | COMPLETE |

@@ -4,10 +4,40 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 14:51"
+updated: "2026-02-12 18:56"
 ---
 
 # Architecture Decisions
+
+## ADR-021: Isolate Flow Unit Tests From Default Unit Pipeline
+
+**Date**: 2026-02-12 18:25  
+**Status**: Approved  
+**Deciders**: User request ("aisla los tests flows")
+
+### Decision
+
+- Update `package.json` scripts:
+  - `test:unit` excludes flow-focused suites:
+    - `flow-testing-service.test.ts`
+    - `whatsapp-flow-crypto.test.ts`
+    - `whatsapp-flow-post-signup.test.ts`
+    - `whatsapp-signup-flow-data-exchange.test.ts`
+  - Add `test:unit:flows` to run Flow suites in isolation.
+  - Add `test:unit:all` to preserve one-command full unit execution.
+- Update `pre-deploy` to run both `test:unit` and `test:unit:flows`.
+- In `flow-testing` command handler, treat `sendFlow` exceptions the same as null-send and return a user guidance message.
+- Keep flow testing fully isolated from normal runtime by requiring `FLOW_TEST_MODE_ENABLED=true` to intercept flow test keywords.
+
+### Consequences
+
+**Positive**:
+- Faster and cleaner feedback loop when debugging non-flow behavior.
+- Flow tests remain available and explicit for focused validation.
+- Release gate still covers both test groups.
+
+**Tradeoff**:
+- Developers must choose the right script (`test:unit` vs `test:unit:flows`) during local debugging.
 
 ## ADR-020: Intensify Proactive Messaging Cadence for Window Maintenance
 
@@ -229,37 +259,6 @@ updated: "2026-02-12 14:51"
 **Tradeoff**:
 - Cost depends on multimodal token usage.
 
-## ADR-010: Tracking Files Compact-First Policy
-
-**Date**: 2026-02-07 15:38  
-**Status**: Approved  
-**Deciders**: User request + implementation validation
-
-### Context
-
-Tracking files in `.claude` were within hard limits but too accumulative for fast session resume.
-
-### Decision
-
-- Adopt compact-first policy: keep recent details, summarize older content.
-- Tighten size limits in `scripts/check-tracking-files.mjs`.
-- Add anti-accumulation checks:
-  - max detailed sessions in `session.md`
-  - max completed items in `todo.md`
-  - max full ADR entries in `decisions.md`
-  - max dated detailed entries in `.claude/CHANGELOG.md`
-- Update `AGENTS.md` with explicit compaction rules.
-
-### Consequences
-
-**Positive**:
-- Faster restart context for future sessions.
-- Less duplication across tracking files.
-- Automated guardrails prevent growth drift.
-
-**Tradeoff**:
-- Deep historical detail moves out of tracking files when needed.
-
 ## Historical ADR Summary (ADR-001 to ADR-008)
 
 - ADR-001: Introduced mandatory tracking files in `.claude`.
@@ -272,4 +271,3 @@ Tracking files in `.claude` were within hard limits but too accumulative for fas
 ## Maintenance Rule
 
 When ADR count approaches the guardrail, collapse older full ADRs into this historical summary block.
-
