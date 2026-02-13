@@ -4,7 +4,7 @@
 - Semáforo: `GREEN`
 - Fase: `done`
 - Next Step: Monitorear uso/costo/latencia y ajustar heurística de ruteo web si hace falta.
-- Updated: 2026-02-12 12:37
+- Updated: 2026-02-12 21:03
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/modules/ai/application/proactive-agent.ts` + `src/modules/ai/application/tool-governance.ts`
 
@@ -34,13 +34,14 @@ Permitir que Migue consulte internet en tiempo real cuando el LLM detecte necesi
 - Activación elegida: automática por LLM (mejor UX conversacional).
 - Formato de salida elegido: resumen (sin forzar enlaces visibles).
 - Rollout elegido: feature flag `WEB_SEARCH_ENABLED`.
+- Activación por defecto elegida: `ON` en runtime (`undefined => true`) con kill-switch explícito.
 
 Tradeoff principal:
 - Menos complejidad y mayor compatibilidad inmediata vs. menor control fino que una integración dedicada de motor de búsqueda externo.
 
 ## Contratos e interfaces (propuestos)
 - Env:
-  - `WEB_SEARCH_ENABLED?: string` (`true|1|yes|on` habilita, resto deshabilita).
+  - `WEB_SEARCH_ENABLED?: string` (`undefined` o `true|1|yes|on` habilita; `false|0|no|off` deshabilita).
 - Runtime flags:
   - `isWebSearchEnabled(): boolean` en `src/modules/ai/application/runtime-flags.ts`.
 - Tool catalog/policy:
@@ -97,6 +98,7 @@ Tradeoff principal:
   - `npx jest tests/unit/proactive-agent-web-search.test.ts --runInBand`
 
 ## Hotfix aplicado post-validación
+- Se activó `web_search` por defecto en runtime (`isWebSearchEnabled` retorna `true` cuando el env var no está definido) y se documentó `WEB_SEARCH_ENABLED=false` como kill-switch.
 - Se corrigió fallback de respuesta para resultados de tool no-string (payload objeto en `web_search`).
 - Se configuró `maxSteps: 3` cuando hay tools para permitir que el modelo produzca respuesta final después del tool call.
 - Se reforzó prompt para `web_search` (evitar respuesta solo "Listo") y parser profundo para payloads anidados.

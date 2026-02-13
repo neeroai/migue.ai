@@ -4,7 +4,7 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-13 02:03"
+updated: "2026-02-13 02:37"
 ---
 
 # Architecture Decisions
@@ -238,4 +238,4 @@ When ADR count approaches the guardrail, collapse older full ADRs into this hist
 
 ## 2026-02-13 Operational Note
 
-- No new architecture decision. This change only strengthens inline JSDoc/headers in `proactive-agent` for maintainability.
+- Updated rollout posture for `web_search`: runtime default is now ON; `WEB_SEARCH_ENABLED=false` is the explicit kill-switch.

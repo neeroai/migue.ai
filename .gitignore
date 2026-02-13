@@ -223,7 +223,7 @@ out/
 *.tar.gz
 .archive/
 .backup/
-#docs-global/
+docs-global
 
 # Documentation (selective tracking)
 docs/*
@@ -238,4 +238,3 @@ scripts/
 !scripts/
 scripts/*
 !scripts/check-tracking-files.mjs
-!scripts/compact-tracking-files.mjs

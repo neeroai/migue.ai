@@ -13,10 +13,13 @@ export function isLegacyRoutingEnabled(): boolean {
 
 /**
  * Enables web search tool exposure in agent runtime.
- * Default false for gradual rollout.
+ * Default true to keep live internet retrieval enabled.
+ * Set WEB_SEARCH_ENABLED=false to disable quickly.
  */
 export function isWebSearchEnabled(): boolean {
-  return parseBoolEnv(process.env.WEB_SEARCH_ENABLED)
+  const rawValue = process.env.WEB_SEARCH_ENABLED
+  if (rawValue === undefined) return true
+  return parseBoolEnv(rawValue)
 }
 
 export const _testOnly = {

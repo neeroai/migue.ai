@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-13 02:03"
+updated: "2026-02-13 02:37"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,12 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-13 02:36
+
+- `web_search` ahora se activa por defecto en runtime (`isWebSearchEnabled`: `undefined => true`).
+- Se mantiene `WEB_SEARCH_ENABLED=false` como kill-switch operativo.
+- `.env.example` actualizado para reflejar activación por defecto.
 
 ### Changed - 2026-02-12 11:15
 

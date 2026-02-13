@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-13 11:08"
+updated: "2026-02-13 02:36"
 ---
 
 # Project Status
@@ -27,7 +27,7 @@ updated: "2026-02-13 11:08"
 - Enforce tracking updates in CI for pull requests touching critical paths.
 - Operate session start/close with `just resume` and `just close-session`.
 - Retomar ejecución funcional por `master-tracker` iniciando con specs `YELLOW` prioritarias.
-- Monitorear adopción y costo de `web_search` (feature flag `WEB_SEARCH_ENABLED`) tras activación gradual.
+- Monitorear adopción y costo de `web_search` con activación por defecto + kill-switch (`WEB_SEARCH_ENABLED=false`).
 - Verificar en producción que respuestas post-`web_search` incluyan contenido (sin fallback genérico repetitivo).
 - Verificar en producción el flujo de confirmación de reintento (`"si"`) para búsqueda web fallida previa.
 - Verificar en producción síntesis LLM post-tool (sin payload crudo) y fallback sin tools ante error de `web_search`.
@@ -42,6 +42,7 @@ updated: "2026-02-13 11:08"
 | 2026-02-12 03:12 | Governance commit rebased and pushed to `origin/main` | COMPLETE |
 | 2026-02-12 08:05 | Tracking governance playbook added in `docs/` | COMPLETE |
 | 2026-02-12 13:02 | `web_search` ahora sintetiza siempre vía LLM y recupera sin tools ante fallo | COMPLETE |
+| 2026-02-13 02:36 | `web_search` activado por defecto en runtime con kill-switch explícito | COMPLETE |
 | 2026-02-13 11:08 | Headers/JSDoc reforzados en flujo `web_search` para mantenibilidad operativa | COMPLETE |
 | 2026-02-12 08:05 | `CLAUDE.md` + `AGENTS.md` aligned to tracking contract | COMPLETE |
 | 2026-02-12 08:04 | Typecheck recovered after clearing `tsconfig.tsbuildinfo` cache | COMPLETE |

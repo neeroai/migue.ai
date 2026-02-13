@@ -4,11 +4,14 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-13 11:08"
+updated: "2026-02-13 02:36"
 scope: "project"
 ---
 # CHANGELOG
-## [Unreleased] - 2026-02-07 16:41
+## [Unreleased] - 2026-02-13 02:36
+### Changed - Web Search Default Activation
+- `web_search` quedó habilitado por defecto en runtime (`src/modules/ai/application/runtime-flags.ts`), manteniendo `WEB_SEARCH_ENABLED=false` como kill-switch para rollback rápido.
+- `.env.example` actualizado para documentar la activación por defecto.
 ### Added - Web Search Tool Runtime
 - Added spec `specs/27-web-search-tool-runtime.md`, implemented `web_search` via AI Gateway, and added `WEB_SEARCH_ENABLED` support with updated unit tests.
 - Fixed fallback handling for object/nested `web_search` payloads and strengthened prompt behavior to avoid "Listo" only responses.
@@ -16,7 +19,6 @@ scope: "project"
 - Fixed SDK result parsing for gateway tools by reading `toolResults[].output` shape.
 - Enforced post-tool LLM synthesis and resilient no-tools retry fallback so users never receive raw tool payloads or generic transport errors.
 - Added detailed JSDoc headers for web-search helper paths in `proactive-agent` to improve long-term maintainability.
-
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
 - Updated `CLAUDE.md`/`AGENTS.md`, `just` continuity commands, master tracker generation, PR template, and CI/pre-commit guardrails.

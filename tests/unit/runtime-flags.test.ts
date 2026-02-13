@@ -32,6 +32,9 @@ describe('runtime flags', () => {
     process.env.WEB_SEARCH_ENABLED = 'false'
     expect(isWebSearchEnabled()).toBe(false)
 
+    delete process.env.WEB_SEARCH_ENABLED
+    expect(isWebSearchEnabled()).toBe(true)
+
     if (prev === undefined) delete process.env.WEB_SEARCH_ENABLED
     else process.env.WEB_SEARCH_ENABLED = prev
   })
