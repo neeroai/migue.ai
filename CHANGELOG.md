@@ -4,60 +4,22 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 20:42"
+updated: "2026-02-13 11:08"
 scope: "project"
 ---
-
 # CHANGELOG
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-
-## [Unreleased] - 2026-02-12 20:42
-### Changed - SOUL Fallback Humanization
-- Added `buildHumanFallbackResponse(userMessage, toolCalls)` to generate warmer deterministic replies when AI text is empty.
-- Replaced static fallback text in `src/modules/ai/application/agent-turn-orchestrator.ts` and `src/modules/ai/application/proactive-agent.ts`.
-- Strengthened SOUL prompt contract in `src/modules/ai/application/soul-composer.ts` to avoid generic closers and respond more naturally to social/emotional openers.
-- Updated unit tests in `tests/unit/soul-policy.test.ts` and `tests/unit/agent-turn-orchestrator.test.ts`.
-
-### Added - SOUL Personalization Runtime
-- Added `SOUL.md` + composable SOUL prompt runtime (`soul-composer`) with city-local adaptation (Barranquilla/Bogotá/Medellín), anti-robot guardrails, emoji caps, `soul.*` metrics, and persistence of SOUL signals in `memory_profile.goals.soul_v1` with unit coverage.
-
-### Changed - Flow Test Isolation
-- Isolated Flow-focused unit tests from the default unit runner to reduce noise while debugging non-flow response paths.
-- `test:unit` now excludes the 4 flow suites (`flow-testing-service`, `whatsapp-flow-crypto`, `whatsapp-flow-post-signup`, `whatsapp-signup-flow-data-exchange`).
-- Added scripts: `test:unit:flows` (flows only) and `test:unit:all` (full unit suite).
-- `pre-deploy` now runs both `test:unit` and `test:unit:flows`; flow test command handling now catches `sendFlow` exceptions and returns user guidance text.
-- Flow test command interception is now disabled by default and only enabled with `FLOW_TEST_MODE_ENABLED=true`.
-
-### Changed - Proactive Messaging Cadence
-- Increased proactive intensity: min interval 2h, daily cap 6 messages, plus 20h proactive horizon and hourly maintain-windows cron (Bogota business hours), with health metadata aligned.
-
-### Added - Real Meta Flow JSON Validation
-- Added `scripts/wa-flows-validate.mjs` to validate WhatsApp Flow JSON against Meta Graph API (remote), not only local structure checks.
-- The command uploads the JSON asset to a target `FLOW_ID`, reads `validation_errors`, and optionally executes publish.
-- Added npm scripts: `flows:validate:meta` and `flows:publish:meta`.
-- Added runbook `docs/whatsapp-flows-meta-validation.md` and updated `flows/README.md` with real validation workflow.
-- Updated `specs/13-whatsapp-flows.md` to include remote validation evidence before publish.
-
-### Changed - Flow Testing Mode
-- Added `src/modules/flow-testing/application/service.ts` with keyword commands (`flow test <nombre>`) to trigger WhatsApp Flows for QA.
-- Each supported flow is sent with mock `initialData` payload when required for first-screen placeholders.
-- Integrated command interception in `src/modules/webhook/application/background-processor.ts` before onboarding gate and AI orchestration.
-- Removed env dependency for test flow IDs/toggle; private QA mode now uses hardcoded flow mapping, and blocks `flow test signup`.
-### Changed - Agentic Messaging (Onboarding + Reminders)
-- Added `src/shared/infra/ai/agentic-messaging.ts` to generate WhatsApp-ready copy with LLM-first behavior and safe fallback.
-- Updated onboarding gate messages in `src/modules/webhook/application/background-processor.ts` (`flow_sent`, `already_in_progress`, `flow_send_failed`) to use agentic messaging.
-- Updated post-signup welcome in `src/shared/infra/whatsapp/flows.ts` to use LLM-first personalized welcome text.
-- Updated reminder cron delivery text in `app/api/cron/check-reminders/route.ts` to use LLM-first reminder phrasing.
+## [Unreleased] - 2026-02-07 16:41
+### Added - Web Search Tool Runtime
+- Added spec `specs/27-web-search-tool-runtime.md`, implemented `web_search` via AI Gateway, and added `WEB_SEARCH_ENABLED` support with updated unit tests.
+- Fixed fallback handling for object/nested `web_search` payloads and strengthened prompt behavior to avoid "Listo" only responses.
+- Added retry-context handling so confirmations like `"si"` reattempt prior web-search topic instead of generic fallback.
+- Fixed SDK result parsing for gateway tools by reading `toolResults[].output` shape.
+- Enforced post-tool LLM synthesis and resilient no-tools retry fallback so users never receive raw tool payloads or generic transport errors.
+- Added detailed JSDoc headers for web-search helper paths in `proactive-agent` to improve long-term maintainability.
 
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
 - Updated `CLAUDE.md`/`AGENTS.md`, `just` continuity commands, master tracker generation, PR template, and CI/pre-commit guardrails.
-
-### Fixed - Typecheck Hygiene
-- Resolved stale generated type error by clearing `tsconfig.tsbuildinfo` and re-running `npm run typecheck`.
 
 ### Changed - Multimodal Image/Document Pipeline
 - Replaced `tesseract.js` OCR flow with new `vision-pipeline` in `src/modules/ai/application/vision-pipeline.ts`.
@@ -72,20 +34,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed - Tracking Policy
 - Tightened `check:tracking` size limits to enforce compact operational logs.
 - Added anti-accumulation checks in `scripts/check-tracking-files.mjs`:
-- Added anti-accumulation checks in `scripts/check-tracking-files.mjs` for max detailed sessions, completed tasks, ADR blocks, and internal changelog dated sections.
+  - max detailed sessions in `.claude/session.md`
+  - max completed tasks in `.claude/todo.md`
+  - max full ADR blocks in `.claude/decisions.md`
+  - max detailed dated sections in `.claude/CHANGELOG.md`
 - Updated `AGENTS.md` with explicit compact-first tracking rules and retention guidance.
 - Compacted `.claude` tracking files to prioritize resume context over historical accumulation.
 - Added `scripts/compact-tracking-files.mjs` and `npm run tracking:compact` to automate future compaction.
 
 ### Changed - Skills
-- Updated `whatsapp-api-expert` skill baseline to WhatsApp Business API `v24.0`, with explicit compatibility guidance when runtime code is pinned to older versions (no runtime client migration).
+- Updated `codex-skills/claude-migrated/whatsapp-api-expert` baseline from WhatsApp Business API `v23.0` to `v24.0`.
+- Added skill-level version policy: default `v24.0`, explicit compatibility handling when repository code is pinned to older API versions.
+- No runtime/API client migration was performed in application code in this change.
 
 ### Changed - Architecture
-- AI Gateway mandatory (`openai/gpt-4o-mini`, `google/gemini-2.5-flash-lite`), Claude/Anthropic removed, and health checks aligned to Gateway auth (`AI_GATEWAY_API_KEY`/OIDC) while keeping OpenAI key only for Whisper.
+- **AI Gateway mandatory**: Models now use Gateway strings (`openai/gpt-4o-mini`, `google/gemini-2.5-flash-lite`) with Gateway fallback.
+- **Claude removed**: Anthropic provider eliminated; Gemini is fallback.
+- **Gateway health checks**: Require `AI_GATEWAY_API_KEY` or OIDC; OpenAI key only for Whisper.
 
 ### Changed - Text Pipeline Efficiency
-- Cold-start budget hydration no longer blocks unnecessarily; conversation/memory flow and tool routing are now conditional.
-- Prompting optimized with short-message path, char-budgeted history trimming, and non-tool token/temperature caps.
+- Cold-start budget hydration blocks only when needed.
+- Conversation history cache invalidation on inbound/outbound writes.
+- Tools only passed when triggers detected.
+- Short prompt for short messages.
+- History trimmed by char budget; trivial-message early exit.
+- Max tokens + temperature tuned for non-tool messages; 280-char cap.
 
 ### Added - Debugging
 - `scripts/debug-text-flow.ts` local CLI for text flow + Gateway metadata logging.
@@ -130,6 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - P0.1: void getCostTracker().ensureHydrated() - Fire-and-forget prevents blocking 2 sequential DB queries
 - P0.2: if (!isToolMessage) searchMemories() - Lazy loading skips embedding + pgvector search for reminders/expenses/scheduling
 - Database: Indexes already optimal (idx_openai_usage_user_date_utc composite index, usage_date_utc generated column)
+- Edge Runtime: Tesseract already lazy-loaded, imports optimized
 - Tests: 254 passing, TypeScript strict mode passing
 
 ### Rationale
@@ -138,6 +112,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Tool messages (reminders, expenses, scheduling) don't need conversational context - skip memory
 - getBudgetStatus() already cached 30s with cache invalidation on trackUsage() - no further optimization needed
 - Database queries already use optimal indexes - no schema changes required
+
+### Reminder Race Condition Details
+- **Problem**: Cron runs every 5min (2:35, 2:40, 2:45). All 3 executions fetched same pending reminder
+- **Timeline**:
+  1. Execution 1 (2:35): SELECT pending reminders
+  2. Execution 2 (2:40): SELECT pending reminders (same rows)
+  3. Execution 3 (2:45): SELECT pending reminders (same rows)
+  4. All 3 mark as 'sent' and send WhatsApp message = 3 duplicates
+- **Fix**: PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED` locks fetched rows, skips already-locked rows
+- **Result**: Each cron execution gets different reminders, no duplicates possible
+- **Files**: app/api/cron/check-reminders/route.ts:57-77 + supabase/migrations/022_fix_reminder_race_condition.sql
 
 ## [Previous] - 2026-02-06 19:00
 
@@ -174,6 +159,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Database: conversations index improves user conversation query performance
 - Tests: 254 passing, 26 skipped (all green)
 - TypeScript: AI SDK tool() type errors persist (documented with @ts-ignore, runtime works)
+
+### Rationale
+- WhatsApp message IDs (wamid format) are base64-encoded and can exceed 64 characters (observed: 68 chars)
+- Production error (22001): "value too long for type character varying(64)" blocked message persistence
+- VARCHAR(255) provides safe margin for current and future WhatsApp message ID formats
+- Repeated conversation history fetches caused unnecessary DB load
+- Memory vector search on every message added embedding + search overhead
+- Budget status called frequently but rarely changes between requests
+- Missing maxDuration exports risk unexpected Edge Runtime timeouts
+- conversations table queries on user_id+created_at needed index support
+- Cache with TTL provides balance between freshness and performance
+- Bounded cache size (1000 conversation entries, 500 memory entries) prevents memory leaks
 
 ## [Previous] - 2026-02-06 16:30
 
@@ -236,4 +233,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Impact
 - Codebase: -470 lines
+- Complexity: Single AI system (was: 2 parallel)
 - Tests: 254 passing, 26 skipped

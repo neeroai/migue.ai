@@ -4,186 +4,52 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 20:43"
+updated: "2026-02-13 02:03"
 ---
 
 # Architecture Decisions
 
-## ADR-023: Deterministic Human Fallback for Empty SOUL/Text Responses
+## ADR-018: Web Search Runtime Shipped With Gemini Preference
 
-**Date**: 2026-02-12 20:42  
+**Date**: 2026-02-12 11:15  
 **Status**: Approved  
-**Deciders**: User feedback (chat todavía suena robótico en aperturas sociales)
+**Deciders**: User request ("procedamos e implementemos esa spec con gemini-2.5-flash-lite")
 
 ### Decision
 
-- Add `buildHumanFallbackResponse(userMessage, toolCalls)` in `soul-policy`.
-- Replace static fallback (`Listo...`) in both:
-  - `agent-turn-orchestrator` response normalization
-  - `proactive-agent` empty-text tool confirmation fallback
-- Expand SOUL prompt policy to discourage generic closers and require warmer response for social openers.
+- Enable `web_search` tool wiring in `proactive-agent` via AI Gateway built-in tool.
+- Gate exposure with `WEB_SEARCH_ENABLED`.
+- Prefer `google/gemini-2.5-flash-lite` for turns that look like web-search queries, with `openai/gpt-4o-mini` fallback.
 
 ### Consequences
 
 **Positive**:
-- Reduces robotic outputs when model returns empty/low-signal text.
-- Better continuity with user tone in greetings and social prompts.
+- Controlled rollout and rollback via env flag.
+- Lower expected cost for web-search-heavy turns while preserving provider fallback.
 
 **Tradeoff**:
-- Fallback copy now includes heuristics by regex; needs later calibration with real transcripts.
+- Web-search intent heuristic for model preference may need tuning based on production logs.
 
-## ADR-022: SOUL Runtime + City-Local Style Inference
+## ADR-017: Web Search Runtime via AI Gateway + Feature Flag
 
-**Date**: 2026-02-12 20:10  
+**Date**: 2026-02-12 09:10  
 **Status**: Approved  
-**Deciders**: User request (humanización urgente + personalización local)
+**Deciders**: User request ("investigacion ... tool con la que pueda buscar en internet ... creemos la nueva spec")
 
 ### Decision
 
-- Introduce SOUL composition layer (`SOUL.md` + `soul-composer`) in proactive runtime.
-- Replace monolithic system prompt assembly with composable sections: identity, policy, memory/profile, local style, turn directive.
-- Add city-local style inference (Barranquilla/Bogotá/Medellín) from conversation evidence with confidence gating.
-- Enforce anti-robot guardrails and emoji caps before final outbound text.
-- Persist locale learning signals in `memory_profile.goals.soul_v1`.
+- Add SDD spec `specs/27-web-search-tool-runtime.md` before implementation.
+- Implement `web_search` via AI Gateway-compatible tool path to keep current multimodel runtime unchanged.
+- Ship behind `WEB_SEARCH_ENABLED` to control rollout and rollback.
 
 ### Consequences
 
 **Positive**:
-- More human, user-centric responses with persistent personalization.
-- Safer local-language adaptation through confidence threshold + fallback.
+- Minimum integration friction with existing `ai@6` + gateway model strings.
+- Controlled rollout without hard architecture switch.
 
 **Tradeoff**:
-- Additional runtime complexity and metric surface (`soul.*`) to monitor.
-
-## ADR-021: Isolate Flow Unit Tests From Default Unit Pipeline
-
-**Date**: 2026-02-12 18:25  
-**Status**: Approved  
-**Deciders**: User request ("aisla los tests flows")
-
-### Decision
-
-- Update `package.json` scripts:
-  - `test:unit` excludes flow-focused suites:
-    - `flow-testing-service.test.ts`
-    - `whatsapp-flow-crypto.test.ts`
-    - `whatsapp-flow-post-signup.test.ts`
-    - `whatsapp-signup-flow-data-exchange.test.ts`
-  - Add `test:unit:flows` to run Flow suites in isolation.
-  - Add `test:unit:all` to preserve one-command full unit execution.
-- Update `pre-deploy` to run both `test:unit` and `test:unit:flows`.
-- In `flow-testing` command handler, treat `sendFlow` exceptions the same as null-send and return a user guidance message.
-- Keep flow testing fully isolated from normal runtime by requiring `FLOW_TEST_MODE_ENABLED=true` to intercept flow test keywords.
-
-### Consequences
-
-**Positive**:
-- Faster and cleaner feedback loop when debugging non-flow behavior.
-- Flow tests remain available and explicit for focused validation.
-- Release gate still covers both test groups.
-
-**Tradeoff**:
-- Developers must choose the right script (`test:unit` vs `test:unit:flows`) during local debugging.
-
-## ADR-020: Intensify Proactive Messaging Cadence for Window Maintenance
-
-**Date**: 2026-02-12 14:51  
-**Status**: Approved  
-**Deciders**: User request ("aumentar la proactividad del agente")
-
-### Decision
-
-- Increase proactive frequency guardrails in src/modules/messaging-window/application/service.ts:
-  - MIN_INTERVAL_HOURS: 4 -> 2
-  - MAX_PROACTIVE_PER_DAY: 4 -> 6
-- Increase proactive targeting horizon in app/api/cron/maintain-windows/route.ts:
-  - findWindowsNearExpiration(20) via PROACTIVE_SCAN_HOURS = 20
-- Increase cron execution frequency in vercel.json:
-  - /api/cron/maintain-windows: 0 0,12-23 * * * (hourly during Bogota business window)
-- Update health endpoint schedule metadata in app/api/cron/health/route.ts to reflect hourly cadence.
-
-### Consequences
-
-**Positive**:
-- More frequent and earlier proactive touchpoints.
-- Better chance to keep conversations active before the 24h window closes.
-
-**Tradeoff**:
-- Higher outbound volume and token cost.
-- Higher user-fatigue risk mitigated by existing checks (business hours, user activity, daily cap, min interval).
-
-## ADR-019: Real Meta Validation Gate for Flow JSON
-
-**Date**: 2026-02-12 12:10  
-**Status**: Approved  
-**Deciders**: User request (validar `.json` con validador real de Meta, no solo estructura local)
-
-### Decision
-
-- Keep `npm run flows:validate` as local structural lint only.
-- Add `scripts/wa-flows-validate.mjs` and npm commands:
-  - `flows:validate:meta`
-  - `flows:publish:meta`
-- Enforce release flow where Flow JSON must pass Graph-side validation (`validation_errors`) before publish.
-
-### Consequences
-
-**Positive**:
-- Validation now depends on real Meta parser/runtime rules.
-- Lower risk of false confidence from local-only checks.
-- Reproducible CLI workflow for QA and release.
-
-**Tradeoff**:
-- Requires valid Graph token/permissions and network access.
-- Validation errors now depend on external platform availability.
-
-## ADR-018: Keyword-Gated Flow QA Mode with Mock Payloads
-
-**Date**: 2026-02-12 11:20  
-**Status**: Approved  
-**Deciders**: User request (probar todos los flows por palabra clave)
-
-### Decision
-
-- Add `src/modules/flow-testing/application/service.ts` to parse commands like `flow test transfer` and send corresponding WhatsApp Flow with `initialData` mock payloads.
-- Integrate command handler into `src/modules/webhook/application/background-processor.ts` before onboarding gate and normal AI orchestration.
-- Keep behavior environment-gated via `FLOW_TEST_MODE_ENABLED` (default enabled outside production, disabled in production unless explicit override).
-
-### Consequences
-
-**Positive**:
-- Fast QA path to validate screen routing and placeholders for all flow variants.
-- No impact on normal conversations unless explicit command is sent.
-- No additional environment variables are required for private QA usage.
-
-**Tradeoff**:
-- Flow IDs are hardcoded in code and must be updated by deploy if they change.
-- Requires Meta-published `flow_id` alignment for each test flow.
-
-## ADR-017: LLM-First User-Facing Messaging for Signup Lifecycle and Reminder Delivery
-
-**Date**: 2026-02-12 06:23  
-**Status**: Approved  
-**Deciders**: User request (evitar respuestas robóticas y silencios en onboarding/reminders)
-
-### Decision
-
-- Introduce `src/shared/infra/ai/agentic-messaging.ts` as a centralized LLM-first copy generator with strict fallback.
-- Use this generator in:
-  - onboarding gate responses (`flow_sent`, `already_in_progress`, `flow_send_failed`)
-  - post-signup welcome message
-  - cron reminder delivery text
-- Keep deterministic fallback text for resiliency (timeouts/key missing/provider failure).
-
-### Consequences
-
-**Positive**:
-- More natural user-facing tone aligned with agentic architecture.
-- Reduced rigid/template-like messages in critical lifecycle touchpoints.
-- No operational regression when LLM generation is unavailable.
-
-**Tradeoff**:
-- Slight extra latency and token spend on onboarding/reminder messages.
+- Depends on gateway tool behavior and quotas; deep custom ranking is deferred.
 
 ## ADR-016: Resume Execution From Master Tracker Priority Queue
 
@@ -255,6 +121,109 @@ updated: "2026-02-12 20:43"
 **Tradeoff**:
 - PRs with critical changes now have stricter documentation expectations.
 
+## ADR-013: Tracking Governance Contract + PR Checklist
+
+**Date**: 2026-02-12 08:05  
+**Status**: Approved  
+**Deciders**: User request ("procedamos e implementemos")
+
+### Decision
+
+- Add central tracking operations guide: `docs/tracking-best-practices.md`.
+- Align `CLAUDE.md` and `AGENTS.md` with:
+  - single-source responsibility by tracking file
+  - session lifecycle (start/during/close)
+  - minimum evidence standard per entry
+- Add PR template checklist in `.github/pull_request_template.md` to enforce tracking updates in behavior-changing PRs.
+
+### Consequences
+
+**Positive**:
+- Better continuity between sessions.
+- Lower drift across tracking files.
+- Clearer review gate for operational documentation quality.
+
+**Tradeoff**:
+- Slightly higher PR overhead due to mandatory checklist updates.
+
+## ADR-012: Replace Local OCR With Multimodal Vision Pipeline
+
+**Date**: 2026-02-07 16:41  
+**Status**: Approved  
+**Deciders**: User request ("procedamos con la migracion completa")
+
+### Decision
+
+- Remove `tesseract.js` OCR path for `image/document`.
+- Add `vision-pipeline` with:
+  - lightweight class detection
+  - multimodal extraction/response in one call
+  - optional delegation to tool-intent text pathway
+- Keep existing rich-input timeout and progress messaging in orchestrator.
+
+### Consequences
+
+**Positive**:
+- Better quality for non-document images.
+- Better deploy/runtime compatibility by avoiding local OCR runtime variance.
+- Cleaner architecture for future multimodal extensions.
+
+**Tradeoff**:
+- Cost depends on multimodal token usage.
+
+## ADR-011: Automated Tracking Compaction Command
+
+**Date**: 2026-02-07 15:43  
+**Status**: Approved  
+**Deciders**: User request ("procedamos")
+
+### Decision
+
+- Add `scripts/compact-tracking-files.mjs` to compact `.claude` tracking files automatically.
+- Add `npm run tracking:compact` to standardize compaction execution.
+- Keep compaction idempotent and compatible with `npm run check:tracking`.
+
+## ADR-010: Tracking Files Compact-First Policy
+
+**Date**: 2026-02-07 15:38  
+**Status**: Approved  
+**Deciders**: User request + implementation validation
+
+### Context
+
+Tracking files in `.claude` were within hard limits but too accumulative for fast session resume.
+
+### Decision
+
+- Adopt compact-first policy: keep recent details, summarize older content.
+- Tighten size limits in `scripts/check-tracking-files.mjs`.
+- Add anti-accumulation checks:
+  - max detailed sessions in `session.md`
+  - max completed items in `todo.md`
+  - max full ADR entries in `decisions.md`
+  - max dated detailed entries in `.claude/CHANGELOG.md`
+- Update `AGENTS.md` with explicit compaction rules.
+
+### Consequences
+
+**Positive**:
+- Faster restart context for future sessions.
+- Less duplication across tracking files.
+- Automated guardrails prevent growth drift.
+
+**Tradeoff**:
+- Deep historical detail moves out of tracking files when needed.
+
+## ADR-009: WhatsApp Skill Baseline Upgrade to v24.0
+
+**Date**: 2026-02-07 15:25  
+**Status**: Approved
+
+### Decision
+
+- Update `whatsapp-api-expert` skill baseline from v23.0 to v24.0.
+- Keep compatibility guidance for repositories still pinned to older versions.
+
 ## Historical ADR Summary (ADR-001 to ADR-008)
 
 - ADR-001: Introduced mandatory tracking files in `.claude`.
@@ -262,8 +231,11 @@ updated: "2026-02-12 20:43"
 - ADR-004: Documented WhatsApp API constraints for implementation safety.
 - ADR-005/006/007: Iterated CLAUDE.md strategy to reduce redundancy.
 - ADR-008: Standardized AI Gateway routing with Gemini fallback.
-- ADR-009: Updated `whatsapp-api-expert` skill baseline from v23.0 to v24.0.
 
 ## Maintenance Rule
 
 When ADR count approaches the guardrail, collapse older full ADRs into this historical summary block.
+
+## 2026-02-13 Operational Note
+
+- No new architecture decision. This change only strengthens inline JSDoc/headers in `proactive-agent` for maintainability.

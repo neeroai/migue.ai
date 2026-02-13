@@ -25,6 +25,14 @@ describe('tool governance policy', () => {
     expect(result.decision).toBe('allow')
   })
 
+  it('allows web_search by default as low-risk tool', () => {
+    const result = evaluateToolPolicy('web_search', {
+      userId: 'u1',
+      pathway: 'text_fast_path',
+    })
+    expect(result.decision).toBe('allow')
+  })
+
   it('denies outbound messaging when destination is not allowlisted', () => {
     const result = evaluateToolPolicy('send_whatsapp_message', {
       userId: 'u1',

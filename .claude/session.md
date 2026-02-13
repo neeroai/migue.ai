@@ -1,41 +1,39 @@
 ---
 title: "Session Log"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 20:43"
+updated: "2026-02-13 02:03"
 session_id: "tracking-compaction-2026-02-07"
 ---
 
 # Session Log
 
-## Active Session - 2026-02-12 11:20
+## Active Session - 2026-02-12 09:10
 
 ### Context
 
-User requested keyword-triggered WhatsApp Flow testing so QA can open each flow with mock data and verify all screens end-to-end.
+User requested to run discovery for internet search capability and create the new spec first, before implementation.
 
 ### Operations
 
 | Time | Operation | File | Status |
 |------|-----------|------|--------|
-| 11:05 | Implement | `src/modules/flow-testing/application/service.ts` | Complete |
-| 11:10 | Integrate | `src/modules/webhook/application/background-processor.ts` | Complete |
-| 11:13 | Validate | `tests/unit/flow-testing-service.test.ts` | Complete |
-| 11:15 | Validate | `npm run typecheck` | Complete |
-| 11:16 | Validate | `npm run test:unit` | Complete |
-| 11:22 | Refine | `src/modules/flow-testing/application/service.ts` | Complete |
-| 11:24 | Validate | `npx jest tests/unit/flow-testing-service.test.ts` + `npm run typecheck` | Complete |
-| 11:50 | Implement | `scripts/wa-flows-validate.mjs` + `package.json` scripts (`flows:validate:meta`, `flows:publish:meta`) | Complete |
-| 11:57 | Document | `flows/README.md`, `docs/whatsapp-flows-meta-validation.md`, `specs/13-whatsapp-flows.md` | Complete |
-| 12:02 | Validate | `node scripts/wa-flows-validate.mjs --help` + `npm run flows:validate` + `npm run typecheck` | Complete |
-| 20:34 | Implement | `src/modules/ai/application/{soul-policy,agent-turn-orchestrator,proactive-agent,soul-composer}.ts` | Complete |
-| 20:39 | Validate | `npx jest tests/unit/soul-policy.test.ts tests/unit/agent-turn-orchestrator.test.ts tests/unit/soul-composer.test.ts --runInBand` | Complete |
-| 20:41 | Validate | `npm run typecheck` | Complete |
+| 09:02 | Research | `src/modules/ai/application/*`, `specs/*`, official docs | Complete |
+| 09:10 | Create | `specs/27-web-search-tool-runtime.md` | Complete |
+| 09:10 | Update | `specs/00-inventario-general.md` | Complete |
+| 11:06 | Implement | `web_search` runtime + env flags + Gemini preference | Complete |
+| 11:09 | Validate | `npm run typecheck` | Complete |
+| 11:10 | Validate | `npm run test:unit` | Complete |
+| 11:24 | Validate | `npx jest tests/unit/proactive-agent-web-search.test.ts` | Complete |
+| 11:53 | Fix | `web_search` fallback text for object tool results + maxSteps | Complete |
+| 12:08 | Fix | prompt + deep fallback parsing to avoid repeated "Listo" in web_search | Complete |
+| 12:22 | Validate | retry flow `"si"` after failed web_search via unit test | Complete |
+| 12:37 | Audit/Fix | AI SDK tool result shape mismatch (`output` vs `result`) in web_search fallback | Complete |
+| 11:05 | Document | JSDoc headers for `web_search` helpers/synthesis path in proactive agent | Complete |
 
 ### Decisions Made
 
-- Flow testing commands are intercepted before onboarding gate and AI orchestration to guarantee deterministic QA behavior.
-- Activation is environment-driven (`FLOW_TEST_MODE_ENABLED`) with safe default off in production unless explicitly enabled.
-- Flow JSON release gate now distinguishes local lint (`flows:validate`) from real Meta validation/publish (`flows:validate:meta`, `flows:publish:meta`).
+- Choose AI Gateway-based `web_search` tool for compatibility with current runtime.
+- Keep activation under `WEB_SEARCH_ENABLED` feature flag for gradual rollout.
 
 ## Session - 2026-02-07 15:38
 

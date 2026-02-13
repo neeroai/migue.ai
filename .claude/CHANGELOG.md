@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 20:43"
+updated: "2026-02-13 02:03"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -10,59 +10,23 @@ scope: "Tracking and process notes"
 
 ## [Unreleased]
 
-### Changed - 2026-02-12 20:42
+### Changed - 2026-02-12 11:15
 
-- Added `buildHumanFallbackResponse` in `src/modules/ai/application/soul-policy.ts` to avoid robotic empty fallbacks.
-- Replaced static "Listo..." fallbacks in:
-  - `src/modules/ai/application/agent-turn-orchestrator.ts`
-  - `src/modules/ai/application/proactive-agent.ts`
-- Strengthened SOUL prompt policy in `src/modules/ai/application/soul-composer.ts`:
-  - explicit anti-generic guidance
-  - explicit handling for social/emotional openers
-  - stronger local cues by city.
-- Added/updated tests:
-  - `tests/unit/soul-policy.test.ts`
-  - `tests/unit/agent-turn-orchestrator.test.ts`
-  - validated `tests/unit/soul-composer.test.ts`.
+- Implemented `web_search` runtime wiring in `src/modules/ai/application/proactive-agent.ts` using AI Gateway built-in tool exposure.
+- Added feature flag support (`WEB_SEARCH_ENABLED`) in env/runtime flags/types and `.env.example`.
+- Added Gemini preference heuristic (`google/gemini-2.5-flash-lite`) for web-search-like queries.
+- Validation completed with `npm run typecheck`, `npm run test:unit`, and targeted `proactive-agent-web-search` unit test.
+- Fixed `web_search` post-tool fallback to parse object results and avoid repeated generic response.
+- Strengthened prompt instructions for `web_search` and added deep text extraction fallback for nested tool payloads.
+- Added retry-context handling for short confirmations (e.g. "si") after failed `web_search`.
+- Fixed root cause in SDK parsing: tool outputs for gateway searches are read from `toolResults[].output` (not only `result`).
+- Added JSDoc headers for web-search detection/retry/result-extraction/synthesis helpers in `proactive-agent` to improve maintainability and handoff clarity.
 
-### Changed - 2026-02-12 20:10
+### Changed - 2026-02-12 09:10
 
-- Added SOUL runtime layer (`SOUL.md` + `soul-composer`) and integrated it in `proactive-agent`.
-- Added city-local style resolver (Barranquilla/Bogotá/Medellín) with confidence threshold and fallback to base style.
-- Added anti-robot + emoji cap guardrails and persisted locale learning signals in `memory_profile.goals.soul_v1`.
-- Added metrics `soul.*` for personalization/locale observability and unit tests for composer/resolver/policy.
-
-### Changed - 2026-02-12 18:25
-
-- Isolated Flow-related unit tests from default unit pipeline:
-  - `test:unit` now excludes Flow suites
-  - added `test:unit:flows` (isolated execution)
-  - added `test:unit:all` (full unit suite)
-- Updated `pre-deploy` to run both `test:unit` and `test:unit:flows`.
-- Validated with:
-  - `npm run test:unit -- --runInBand`
-  - `npm run test:unit:flows`
-  - `npm run test:unit:all -- --runInBand`
-- Hardened flow testing command error path: `sendFlow` exceptions now return guidance text instead of silent failure.
-- Flow testing interception is now opt-in (`FLOW_TEST_MODE_ENABLED=true`), disabled by default to avoid friction in normal chat behavior.
-
-### Changed - 2026-02-12 14:51
-
-- Intensified proactive messaging cadence for window maintenance:
-  - MIN_INTERVAL_HOURS changed from 4 to 2
-  - MAX_PROACTIVE_PER_DAY changed from 4 to 6
-  - maintain-windows now scans a 20h proactive horizon
-  - cron schedule changed to hourly during Bogota business hours (UTC: 0,12-23)
-- Updated health endpoint schedule metadata to match the new hourly cron cadence.
-
-### Changed - 2026-02-12 12:10
-
-- Added `scripts/wa-flows-validate.mjs` for real WhatsApp Flow JSON validation against Meta Graph (`upload assets -> read validation_errors -> optional publish`).
-- Added npm commands:
-  - `flows:validate:meta`
-  - `flows:publish:meta`
-- Updated `flows/README.md`, `docs/whatsapp-flows-meta-validation.md`, and `specs/13-whatsapp-flows.md` to require remote validation before publish.
-- Verified with `node scripts/wa-flows-validate.mjs --help`, `npm run flows:validate`, and `npm run typecheck`.
+- Added SDD spec `specs/27-web-search-tool-runtime.md` for internet search tool integration (`web_search`) using AI Gateway and rollout by feature flag.
+- Updated `specs/00-inventario-general.md` with new feature row `27 - Web Search Tool Runtime`.
+- Updated tracking artifacts (`session`, `status`, `todo`, `decisions`) to reflect discovery and spec-first phase.
 
 ### Changed - 2026-02-12 04:14
 
@@ -125,3 +89,9 @@ scope: "Tracking and process notes"
 - Multiple broad documentation sessions were logged in detail.
 - Internal changelog became too verbose for operational use.
 - Current policy shifts this file to concise operational deltas only.
+
+### Changed - 2026-02-12 13:02
+
+- Updated `src/modules/ai/application/proactive-agent.ts` to force LLM synthesis after tool calls with empty assistant text.
+- Added resilient retry path: if primary generation fails with tools, re-run one pass without tools.
+- Added/updated tests in `tests/unit/proactive-agent-web-search.test.ts` for synthesis and no-tools recovery behavior.

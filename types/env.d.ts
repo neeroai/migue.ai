@@ -19,6 +19,7 @@ declare namespace NodeJS {
     LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
     AGENT_EVENT_LEDGER_ENABLED?: string;
     LEGACY_ROUTING_ENABLED?: string;
+    WEB_SEARCH_ENABLED?: string;
     SIGNUP_FLOW_ENABLED?: string;
     SIGNUP_FLOW_ID?: string;
   }

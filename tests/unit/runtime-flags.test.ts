@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import { _testOnly, isLegacyRoutingEnabled } from '../../src/modules/ai/application/runtime-flags'
+import { _testOnly, isLegacyRoutingEnabled, isWebSearchEnabled } from '../../src/modules/ai/application/runtime-flags'
 
 describe('runtime flags', () => {
   it('parses boolean env values', () => {
@@ -21,5 +21,18 @@ describe('runtime flags', () => {
 
     if (prev === undefined) delete process.env.LEGACY_ROUTING_ENABLED
     else process.env.LEGACY_ROUTING_ENABLED = prev
+  })
+
+  it('reads WEB_SEARCH_ENABLED from env', () => {
+    const prev = process.env.WEB_SEARCH_ENABLED
+
+    process.env.WEB_SEARCH_ENABLED = 'true'
+    expect(isWebSearchEnabled()).toBe(true)
+
+    process.env.WEB_SEARCH_ENABLED = 'false'
+    expect(isWebSearchEnabled()).toBe(false)
+
+    if (prev === undefined) delete process.env.WEB_SEARCH_ENABLED
+    else process.env.WEB_SEARCH_ENABLED = prev
   })
 })

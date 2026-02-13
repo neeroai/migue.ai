@@ -39,6 +39,7 @@
 | 23 | Observability And E2E Readiness | YELLOW | `src/shared/observability/*` + `tests/integration/*` | E2E base + runbook |
 | 24 | LLM-First Multimodel Runtime | GREEN | `src/modules/ai/*` | Runtime LLM-first y flujo rich input validados en producción |
 | 25 | User Signup Onboarding Flow | YELLOW | `src/shared/infra/whatsapp/flows.ts` + `src/modules/webhook/*` | MVP definido para captura `name+email` |
+| 27 | Web Search Tool Runtime | GREEN | `src/modules/ai/application/proactive-agent.ts` + `src/modules/ai/application/tool-governance.ts` | Tool web_search activa por flag con preferencia Gemini para consultas web |
 
 ## Referencias obligatorias
 - `architecture.md`

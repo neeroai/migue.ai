@@ -4,10 +4,10 @@
  * @module lib/ai
  * @exports respond, createProactiveAgent
  * @date 2026-02-01 15:20
- * @updated 2026-02-01 15:20
+ * @updated 2026-02-13 11:05
  */
 
-import { generateText, tool } from 'ai'
+import { gateway, generateText, tool } from 'ai'
 import type { ModelMessage } from 'ai'
 import { z } from 'zod'
 import { MODEL_CATALOG, models } from '../domain/providers'
@@ -31,21 +31,9 @@ import {
   type TextPathway,
 } from './memory-policy'
 import { emitSlaMetric, SLA_METRICS } from '../../../shared/observability/metrics'
-import { executeGovernedTool, type ToolPolicyContext } from './tool-governance'
+import { executeGovernedTool, evaluateToolPolicy, type ToolPolicyContext } from './tool-governance'
 import type { AgentContextSnapshot } from './agent-context-builder'
-import { generateToolConfirmationMessage } from '../../../shared/infra/ai/agentic-messaging'
-import { composeSoulSystemPrompt } from './soul-composer'
-import { resolveLocaleStyle } from './locale-style-resolver'
-import {
-  buildHumanFallbackResponse,
-  enforceEmojiLimit,
-  isSoulEnabled,
-  isSoulStrictGuardrailsEnabled,
-  resolveEmojiLimit,
-  rewriteRoboticFallback,
-} from './soul-policy'
-
-const WHATSAPP_TEXT_SOFT_LIMIT = 1200
+import { isWebSearchEnabled } from './runtime-flags'
 
 const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
@@ -58,19 +46,124 @@ const BOGOTA_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   hour12: false,
 })
 
-function messageContentToText(content: ModelMessage['content']): string {
-  if (typeof content === 'string') return content
-  if (!Array.isArray(content)) return ''
-  return content
-    .map((part) => {
-      if (!part || typeof part !== 'object') return ''
-      if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
-        return part.text
-      }
-      return ''
-    })
-    .filter(Boolean)
-    .join(' ')
+const SYSTEM_PROMPT_BASE = `# ROLE AND OBJECTIVE
+Eres Migue, un asistente personal conversacional en WhatsApp. Tu objetivo es mantener conversaciones naturales, cálidas y útiles en español colombiano, usando herramientas solo cuando el usuario lo necesite claramente.
+
+# RESPONSE RULES (Critical)
+1. **Read conversation history FIRST** - Adapta tu respuesta al contexto completo
+2. **Never repeat responses** - Si ya saludaste, NO saludes de nuevo
+3. **Be conversational** - Responde como un amigo cercano, NO como un bot
+4. **Be concise** - 1-2 frases máximo (ideal para WhatsApp)
+5. **Use tools automatically** - Cuando sea obvio (crear recordatorio, agendar, etc.)
+
+# INSTRUCTIONS - Conversation Flow
+
+## Initial Contact
+- First greeting: "¡Hola! ¿Cómo estás?" (warm, simple)
+- Follow-up: "¿Qué tal?" or "¿En qué te ayudo?" (NO templates genéricos)
+- NEVER say: "¡Hola de nuevo! Estoy aquí para ayudarte" (too robotic)
+
+## Ongoing Conversation
+1. Check conversation history for context
+2. Identify user intent from current message + history
+3. If casual chat → respond naturally and briefly
+4. If action needed → use appropriate tool + confirm
+5. Continue until user's need is resolved
+
+## Anti-Repetition Protocol
+- IF already greeted → don't greet again
+- IF similar question → acknowledge and build on previous answer
+- IF conversation stale → ask engaging follow-up question
+
+# AVAILABLE TOOLS (MANDATORY - use immediately when triggers detected)
+
+## create_reminder MANDATORY WHEN TRIGGERS DETECTED
+**Triggers**: "recuérdame", "recordarme", "no olvides", "avísame", "tengo que", "debo", "me recuerdas"
+**Action**: YOU MUST call create_reminder tool immediately. DO NOT ask for confirmation. DO NOT say you can't do it.
+**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
+**Example**: User: "recuérdame comprar pan mañana 8am" → [create_reminder] → "Listo! Te recordaré mañana a las 8am"
+**WRONG**: "Lo siento, no puedo establecer recordatorios" NEVER SAY THIS
+
+## schedule_meeting MANDATORY WHEN TRIGGERS DETECTED
+**Triggers**: "agenda", "agendar", "reserva", "reservar", "programa", "programar", "reunión", "cita"
+**Action**: YOU MUST call schedule_meeting tool immediately. DO NOT ask for confirmation.
+**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
+**Example**: User: "agenda reunión con Juan viernes 3pm" → [schedule_meeting] → "Perfecto! Agendé reunión con Juan el viernes a las 3pm"
+**WRONG**: "Lo siento, no puedo agendar" NEVER SAY THIS
+
+## track_expense MANDATORY WHEN TRIGGERS DETECTED
+**Triggers**: "gasté", "pagué", "compré", "costó", "salió", "me gasté"
+**Action**: YOU MUST call track_expense tool immediately. DO NOT ask for confirmation.
+**CRITICAL**: If user says ANY trigger word, you MUST use this tool. No exceptions.
+**Example**: User: "gasté 50mil en mercado" → [track_expense] → "Listo! Registré $50,000 en Mercado"
+**WRONG**: "Lo siento, no puedo registrar gastos" NEVER SAY THIS
+
+## web_search WHEN INFORMATION REQUIRES INTERNET
+**Use when**: user asks for latest/current info, recent news, comparisons, or explicit verification on the web.
+**Action**: Use web_search and then answer with a concise summary for WhatsApp.
+
+# OUTPUT FORMAT
+- Language: Spanish (Colombia)
+- Tone: Warm, friendly, professional
+- Length: 1-2 sentences (max 280 characters)
+- Emojis: Occasional (for confirmations, money, errors)
+- Structure: Direct answer → optional context/help offer
+
+# CONTEXT AWARENESS
+- You have access to conversation history in the messages array
+- Use it to avoid repetition and maintain context
+- Reference previous messages when relevant
+- Build on the conversation naturally
+
+# CRITICAL REMINDERS
+NEVER say: "no puedo crear recordatorios", "no puedo establecer", "no tengo acceso a"
+NEVER say: "¡Estoy aquí para ayudarte!" or generic phrases
+NEVER repeat the same greeting twice in a conversation
+NEVER refuse to use a tool when trigger words are detected
+NEVER use generic template responses
+ALWAYS use tools IMMEDIATELY when trigger words detected (recuérdame, agenda, gasté, etc.)
+ALWAYS read conversation history before responding
+ALWAYS respond to the specific message, not a generic intent
+ALWAYS confirm actions with "Listo!" after transactional tools (recordatorios, agenda, gastos)
+NEVER respond only "Listo" after web_search; include concrete findings
+YOU HAVE THE ABILITY to create reminders, schedule meetings, and track expenses - USE IT!
+
+You are an agent - continue the conversation naturally until the user's need is completely resolved.`
+
+const SYSTEM_PROMPT_SHORT = `Eres Migue, asistente personal en WhatsApp. Responde en español colombiano, cálido y conciso (1-2 frases, max 280 caracteres). Evita repetir saludos.
+Tienes acceso al historial de la conversación en los mensajes.
+NUNCA digas frases como "no tengo acceso al historial", "no puedo ver mensajes anteriores" o "no tengo contexto".
+Si hay historial, úsalo para continuar con contexto; si hay poco historial, pide precisión sin negar acceso.
+Usa herramientas SOLO cuando el usuario lo necesite claramente:
+- create_reminder: recuérdame / no olvides / avísame
+- schedule_meeting: agenda / programa / cita
+- track_expense: gasté / pagué / compré / costó
+- web_search: cuando pidan información actual, noticias recientes, comparación o verificación en internet
+Si usas web_search, entrega hallazgos concretos, no respondas solo "Listo!".`
+
+/**
+ * Generate system prompt with current time context
+ * CRITICAL: Time context enables GPT to calculate "en 5 minutos", "mañana", etc.
+ */
+function generateSystemPrompt(isShort: boolean): string {
+  const now = new Date()
+  const nowISO = now.toISOString()
+  const nowBogota = BOGOTA_FORMATTER.format(now)
+
+  const timeContext = `# CURRENT TIME CONTEXT (CRITICAL for tool calling)
+Current time (UTC): ${nowISO}
+Current time (Bogotá, Colombia): ${nowBogota} (America/Bogota, UTC-5)
+
+When user says:
+- "en X minutos" → Add X minutes to current time
+- "en X horas" → Add X hours to current time
+- "mañana a las Xam/pm" → Tomorrow at specified time
+- "el [día] a las X" → Specified day at specified time
+
+ALWAYS use Colombia timezone (America/Bogota, UTC-5) for datetimeIso.
+Format: YYYY-MM-DDTHH:MM:SS-05:00`
+
+  return `${timeContext}\n\n${isShort ? SYSTEM_PROMPT_SHORT : SYSTEM_PROMPT_BASE}`
 }
 
 /**
@@ -125,7 +218,207 @@ function mapExpenseCategory(aiCategory: string): string {
 }
 
 /**
- * ProactiveAgent using Vercel AI SDK 6.0 generateText()
+ * Detects whether a user utterance likely requires internet lookup.
+ *
+ * This heuristic is intentionally broad because WhatsApp queries are usually short
+ * and implicit (for example "hoy", "últimas", "busca").
+ *
+ * @param text - Raw user message
+ * @returns `true` when the message should bias model selection/tool availability toward web search
+ */
+function looksLikeWebSearchQuery(text: string): boolean {
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  return /busca|investiga|internet|web|google|ultima|ultimas|hoy|reciente|noticia|tendencia|compar|vs|precio|cotizacion|benchmark|fuente|verifica/.test(normalized)
+}
+
+/**
+ * Extracts plain text from AI SDK `ModelMessage` content variants.
+ *
+ * @param message - AI SDK model message
+ * @returns Flattened text content or empty string when no text can be extracted
+ */
+function getModelMessageText(message: ModelMessage): string {
+  const content = (message as any)?.content
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => {
+        if (typeof part === 'string') return part
+        if (part && typeof part.text === 'string') return part.text
+        return ''
+      })
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+  }
+  return ''
+}
+
+/**
+ * Detects short confirmation replies used to request retry.
+ *
+ * @param text - User message
+ * @returns `true` when the text is a short affirmative retry signal (e.g., "si", "dale")
+ */
+function isRetryAffirmation(text: string): boolean {
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+  return /^(si|s|ok|dale|claro|hagamoslo|hazlo|de una|intentalo de nuevo|intentalo|otra vez|de nuevo)$/.test(normalized)
+}
+
+/**
+ * Resolves whether the current turn should retry a previous web search query.
+ *
+ * Strategy:
+ * 1) Detect a short affirmative user reply
+ * 2) Confirm the previous assistant message was a search-failure prompt
+ * 3) Recover the last user query that looked like a web-search request
+ *
+ * @param userMessage - Current user message
+ * @param history - Conversation history used to recover previous query context
+ * @returns Retry decision and recovered query (if available)
+ */
+function resolveWebSearchRetryContext(userMessage: string, history: ModelMessage[]): {
+  shouldRetrySearch: boolean
+  previousSearchQuery?: string
+} {
+  if (!isRetryAffirmation(userMessage)) {
+    return { shouldRetrySearch: false }
+  }
+
+  let sawSearchFailurePrompt = false
+  for (let index = history.length - 1; index >= 0; index--) {
+    const message = history[index] as any
+    const role = message?.role
+    const text = getModelMessageText(message)
+    const normalized = text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+
+    if (!sawSearchFailurePrompt && role === 'assistant') {
+      if (/hice la busqueda, pero no pude extraer resultados utiles|quieres que lo intente de nuevo/.test(normalized)) {
+        sawSearchFailurePrompt = true
+      }
+      continue
+    }
+
+    if (sawSearchFailurePrompt && role === 'user' && looksLikeWebSearchQuery(text)) {
+      return {
+        shouldRetrySearch: true,
+        previousSearchQuery: text.trim(),
+      }
+    }
+  }
+
+  return { shouldRetrySearch: false }
+}
+
+/**
+ * Extracts a user-safe text snippet from heterogeneous tool payloads.
+ *
+ * Supports nested objects/arrays and common fields (`answer`, `summary`, `snippet`, etc.).
+ * This is resilient to provider-specific shapes and AI SDK tool result envelopes.
+ *
+ * @param result - Raw tool result payload
+ * @returns First meaningful text fragment, or `null` if none can be extracted
+ */
+function extractToolResultText(result: unknown): string | null {
+  function deepPickText(value: unknown, depth = 0): string | null {
+    if (depth > 4 || value == null) return null
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      return trimmed.length > 0 ? trimmed : null
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = deepPickText(item, depth + 1)
+        if (found) return found
+      }
+      return null
+    }
+
+    if (typeof value === 'object') {
+      const obj = value as Record<string, unknown>
+      const priorityKeys = ['answer', 'summary', 'snippet', 'content', 'text', 'description', 'title']
+      for (const key of priorityKeys) {
+        if (key in obj) {
+          const found = deepPickText(obj[key], depth + 1)
+          if (found) return found
+        }
+      }
+      for (const key of Object.keys(obj)) {
+        const found = deepPickText(obj[key], depth + 1)
+        if (found) return found
+      }
+    }
+
+    return null
+  }
+
+  if (typeof result === 'string') {
+    const trimmed = result.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  if (!result || typeof result !== 'object') return null
+  const asRecord = result as Record<string, unknown>
+
+  const directCandidates = ['answer', 'summary', 'content', 'text']
+  for (const key of directCandidates) {
+    const value = asRecord[key]
+    const found = deepPickText(value)
+    if (found) return found
+  }
+
+  const results = asRecord.results
+  if (Array.isArray(results) && results.length > 0) {
+    const first = results[0]
+    if (first && typeof first === 'object') {
+      const firstRecord = first as Record<string, unknown>
+      const snippet = deepPickText(firstRecord)
+      if (snippet) return snippet
+    }
+  }
+
+  return deepPickText(result)
+}
+
+function addUsage(
+  base: { inputTokens: number; outputTokens: number; totalTokens: number },
+  extra:
+    | { inputTokens: number | undefined; outputTokens: number | undefined; totalTokens: number | undefined }
+    | undefined
+): { inputTokens: number; outputTokens: number; totalTokens: number } {
+  const inputTokens = base.inputTokens + (extra?.inputTokens ?? 0)
+  const outputTokens = base.outputTokens + (extra?.outputTokens ?? 0)
+  const totalTokens = base.totalTokens + (extra?.totalTokens ?? ((extra?.inputTokens ?? 0) + (extra?.outputTokens ?? 0)))
+  return { inputTokens, outputTokens, totalTokens }
+}
+
+/**
+ * Proactive agent turn executor using Vercel AI SDK `generateText`.
+ *
+ * Web-search flow specifics:
+ * - Exposes `web_search` only when runtime flag + governance policy allow it
+ * - Handles AI SDK tool result envelopes (`output` and backward-compatible `result`)
+ * - Forces LLM synthesis when tool calls end with empty assistant text
+ * - Retries once without tools if primary generation fails
+ *
+ * @param userMessage - Current inbound user message
+ * @param userId - Internal user identifier
+ * @param history - Prior model messages
+ * @param context - Turn metadata and policy context
+ * @returns Normalized assistant response plus usage/cost/tool-call metadata
  */
 export async function respond(
   userMessage: string,
@@ -151,13 +444,13 @@ export async function respond(
   const pathway = context?.pathway ?? 'default'
   const readPolicy = resolveMemoryReadPolicy(pathway)
   const toolsEnabled = context?.toolPolicy?.toolsEnabled ?? true
+  const webSearchEnabled = isWebSearchEnabled()
 
   const {
     containsPersonalFact,
     storeMemory,
     extractProfileUpdates,
     upsertMemoryProfile,
-    upsertSoulSignals,
   } = await import('../domain/memory')
 
   const memoryContext = context?.agentContext?.memoryContext ?? ''
@@ -165,39 +458,28 @@ export async function respond(
   const hasAnyContext = context?.agentContext?.hasAnyContext ?? history.length > 0
 
   const useShortPrompt = userMessage.length < 120
+  const webSearchRetryContext = resolveWebSearchRetryContext(userMessage, history)
+  const effectiveUserMessage = webSearchRetryContext.shouldRetrySearch && webSearchRetryContext.previousSearchQuery
+    ? `${userMessage}\n\nContexto: El usuario confirmó reintentar la búsqueda web previa sobre "${webSearchRetryContext.previousSearchQuery}". Debes ejecutar web_search y responder con hallazgos concretos.`
+    : userMessage
   const recallQuestion = isMemoryRecallQuestion(userMessage)
+  const recallGuard = recallQuestion
+    ? '\n\n# MEMORY CONTRACT\nSi el usuario pregunta por historial/memoria, responde con lo que sí tienes de conversación/perfil/memoria. No digas que no tienes acceso al historial cuando sí hay contexto.'
+    : ''
+  const systemPrompt = generateSystemPrompt(useShortPrompt) + memoryContext + recallGuard
+
   const trimmedHistory = context?.agentContext?.modelHistory ?? history.slice(-readPolicy.historyLimit)
-  const historySnippets = trimmedHistory
-    .map((message) => messageContentToText(message.content))
-    .filter((snippet) => snippet.trim().length > 0)
-    .slice(-8)
-  const localeStyle = resolveLocaleStyle({
-    userMessage,
-    historySnippets,
-  })
-  const now = new Date()
-  const systemPrompt = composeSoulSystemPrompt({
-    pathway,
-    userMessage,
-    useShortPrompt,
-    memoryContext,
-    recallQuestion,
-    profileSummary,
-    localeStyle,
-    nowIsoUtc: now.toISOString(),
-    nowBogotaText: BOGOTA_FORMATTER.format(now),
-  })
 
   const messages: ModelMessage[] = [
     { role: 'system', content: systemPrompt },
     ...trimmedHistory,
-    { role: 'user', content: userMessage },
+    { role: 'user', content: effectiveUserMessage },
   ]
 
   // Intelligent model selection
   const hasTools = toolsEnabled
-  const complexity = analyzeComplexity(userMessage, trimmedHistory.length, hasTools)
-  const estimatedTokenCount = estimateTokens(userMessage, trimmedHistory.length)
+  const complexity = analyzeComplexity(effectiveUserMessage, trimmedHistory.length, hasTools)
+  const estimatedTokenCount = estimateTokens(effectiveUserMessage, trimmedHistory.length)
   const budgetStatus = getBudgetStatus()
 
   const primarySelection = selectModel({
@@ -232,8 +514,14 @@ export async function respond(
     fallbackSelection.estimatedCost
   )
 
-  const primaryModel = primarySelection.modelName
-  const fallbackModel = fallbackSelection.modelName
+  const preferGeminiForWebSearch =
+    webSearchEnabled && (looksLikeWebSearchQuery(userMessage) || webSearchRetryContext.shouldRetrySearch)
+  const primaryModel = preferGeminiForWebSearch
+    ? models.gemini.primary
+    : primarySelection.modelName
+  const fallbackModel = preferGeminiForWebSearch
+    ? models.openai.primary
+    : fallbackSelection.modelName
   const policyContext: ToolPolicyContext = {
     userId,
     pathway,
@@ -242,6 +530,8 @@ export async function respond(
       : {}),
   }
   let lastToolOutcomeMessage: string | null = null
+
+  const webSearchPolicy = evaluateToolPolicy('web_search', policyContext)
 
   const toolsDefinition = toolsEnabled ? {
       create_reminder: tool({
@@ -370,6 +660,11 @@ export async function respond(
           return outcome
         },
       }),
+      ...(webSearchEnabled && webSearchPolicy.decision === 'allow'
+        ? {
+            web_search: gateway.tools.perplexitySearch(),
+          }
+        : {}),
   } : undefined
 
   const gatewayProviderOptions = budgetCheck.canAffordFallback
@@ -380,16 +675,39 @@ export async function respond(
       } as any)
     : undefined
 
-  const response = await generateText({
-    model: primaryModel,
-    messages,
-    ...(toolsDefinition ? { tools: toolsDefinition } : {}),
-    temperature: toolsEnabled ? 0.8 : 0.6,
-    ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
-  })
+  let response
+  try {
+    response = await generateText({
+      model: primaryModel,
+      messages,
+      ...(toolsDefinition ? { tools: toolsDefinition } : {}),
+      ...(toolsDefinition ? { maxSteps: 2 } : {}),
+      temperature: toolsEnabled ? 0.8 : 0.6,
+      ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
+    })
+  } catch (error: any) {
+    logger.warn('[ProactiveAgent] Primary generation failed, retrying without tools', {
+      metadata: {
+        ...context,
+        errorMessage: error?.message,
+        toolsEnabled,
+      },
+    })
+
+    response = await generateText({
+      model: primaryModel,
+      messages: [
+        { role: 'system', content: `${SYSTEM_PROMPT_SHORT}\nSi una herramienta falla o no está disponible, responde útilmente y ofrece reintentar.` },
+        ...trimmedHistory,
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.6,
+      ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
+    })
+  }
 
   let { text } = response
-  const usage = {
+  let usage = {
     inputTokens: response.usage.inputTokens ?? 0,
     outputTokens: response.usage.outputTokens ?? 0,
     totalTokens: response.usage.totalTokens ?? 0,
@@ -413,31 +731,70 @@ export async function respond(
   const outputCost = (outputTokens / 1_000_000) * providerConfig.costPer1MTokens.output
   const totalCost = inputCost + outputCost
 
-  // Enforce WhatsApp-friendly soft limit
-  if (text.length > WHATSAPP_TEXT_SOFT_LIMIT) {
-    text = text.slice(0, WHATSAPP_TEXT_SOFT_LIMIT - 3).trimEnd() + '...'
+  // Enforce WhatsApp-friendly length
+  if (text.length > 280) {
+    text = text.slice(0, 277).trimEnd() + '...'
   }
 
   // Count tool calls
   const toolCallCount = steps.filter((s) => s.toolCalls && s.toolCalls.length > 0).length
   const toolResults = steps
     .flatMap((s: any) => Array.isArray(s?.toolResults) ? s.toolResults : [])
-    .map((r: any) => r?.result)
-    .filter((r: unknown): r is string => typeof r === 'string' && r.trim().length > 0)
+    .map((r: any) => r?.output ?? r?.result)
+    .map(extractToolResultText)
+    .filter((r: string | null): r is string => typeof r === 'string' && r.trim().length > 0)
 
   // Some providers/flows finish with tool-calls and empty assistant text.
-  // Ensure we always return a non-empty user-facing confirmation.
+  // We force a second LLM synthesis pass so users never receive raw tool payloads.
   if (text.trim().length === 0 && toolCallCount > 0) {
-    const fallbackToolMessage = (
-      toolResults[toolResults.length - 1] ??
-      lastToolOutcomeMessage ??
-      buildHumanFallbackResponse(userMessage, toolCallCount)
-    ).trim()
-    text = await generateToolConfirmationMessage({
-      userMessage,
-      toolOutcome: fallbackToolMessage,
-      fallback: fallbackToolMessage,
-    })
+    const toolSummary = toolResults.slice(0, 3).join('\n- ')
+    try {
+      const synthesisResponse = await generateText({
+        model: primaryModel,
+        messages: [
+          {
+            role: 'system',
+            content: `${SYSTEM_PROMPT_SHORT}\nDebes sintetizar resultados de herramientas en lenguaje natural. Nunca devuelvas payload crudo.`,
+          },
+          {
+            role: 'user',
+            content: [
+              `Consulta del usuario: ${userMessage}`,
+              toolSummary.length > 0
+                ? `Resultados de herramienta:\n- ${toolSummary}`
+                : 'La herramienta no devolvió datos útiles.',
+              'Responde al usuario en 1-2 frases útiles.',
+            ].join('\n\n'),
+          },
+        ],
+        temperature: 0.4,
+        ...(gatewayProviderOptions ? { providerOptions: gatewayProviderOptions } : {}),
+      })
+
+      usage = addUsage(usage, synthesisResponse.usage)
+      const synthesized = (synthesisResponse.text ?? '').trim()
+      if (synthesized.length > 0) {
+        text = synthesized
+      }
+    } catch (error: any) {
+      logger.warn('[ProactiveAgent] Tool synthesis failed', {
+        metadata: {
+          ...context,
+          errorMessage: error?.message,
+          toolCallCount,
+          toolResultCount: toolResults.length,
+        },
+      })
+    }
+
+    if (text.trim().length === 0) {
+      text = (
+        lastToolOutcomeMessage ??
+        (looksLikeWebSearchQuery(userMessage) || webSearchRetryContext.shouldRetrySearch
+          ? 'Hice la búsqueda, pero no pude consolidar resultados confiables. ¿Quieres que lo intente de nuevo con otro enfoque?'
+          : 'Listo. Ya ejecuté tu solicitud.')
+      ).trim()
+    }
   }
 
   logger.info('[ProactiveAgent] Response generated', {
@@ -509,85 +866,15 @@ export async function respond(
     })
   }
 
-  emitSlaMetric(SLA_METRICS.SOUL_LOCALE_CONFIDENCE_AVG, {
-    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-    userId,
-    value: localeStyle.confidence,
-    messageType: 'text',
-    pathway,
-    extra: { city: localeStyle.city, variant: localeStyle.variant },
-  })
-  emitSlaMetric(SLA_METRICS.SOUL_LOCALE_DETECTION_HIT_RATIO, {
-    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-    userId,
-    value: localeStyle.city === 'unknown' ? 0 : 1,
-    messageType: 'text',
-    pathway,
-  })
-  emitSlaMetric(SLA_METRICS.SOUL_PERSONALIZATION_HIT_RATIO, {
-    ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-    userId,
-    value: (hasAnyContext || localeStyle.city !== 'unknown' || profileSummary.length > 0) ? 1 : 0,
-    messageType: 'text',
-    pathway,
-  })
-
-  if (localeStyle.city !== 'unknown' && localeStyle.confidence >= 0.72) {
-    void upsertSoulSignals(userId, {
-      city: localeStyle.city,
-      cityConfidence: localeStyle.confidence,
-      styleVariant: localeStyle.variant,
-    }).then(() => {
-      emitSlaMetric(SLA_METRICS.SOUL_PROFILE_UPDATES_COUNT, {
-        ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-        userId,
-        value: 1,
-        messageType: 'text',
-        pathway,
-        extra: { write_type: 'soul_locale' },
-      })
-    })
-  }
-
   if (recallQuestion) {
     text = sanitizeMemoryContractResponse(
       text,
       hasAnyContext,
       profileSummary ? `Lo que sé de ti: ${profileSummary}.` : ''
     )
-  }
-
-  if (isSoulEnabled()) {
-    if (isSoulStrictGuardrailsEnabled()) {
-      const rewritten = rewriteRoboticFallback(text)
-      if (rewritten !== text) {
-        emitSlaMetric(SLA_METRICS.SOUL_ROBOTIC_REWRITE_COUNT, {
-          ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-          userId,
-          value: 1,
-          messageType: 'text',
-          pathway,
-        })
-      }
-      text = rewritten
+    if (text.length > 280) {
+      text = text.slice(0, 277).trimEnd() + '...'
     }
-
-    const emojiLimit = resolveEmojiLimit(localeStyle.emojiPolicy)
-    const emojiCapped = enforceEmojiLimit(text, emojiLimit)
-    if (emojiCapped !== text) {
-      emitSlaMetric(SLA_METRICS.SOUL_EMOJI_USAGE_AVG, {
-        ...(context?.conversationId ? { conversationId: context.conversationId } : {}),
-        userId,
-        value: emojiLimit,
-        messageType: 'text',
-        pathway,
-      })
-    }
-    text = emojiCapped
-  }
-
-  if (text.length > WHATSAPP_TEXT_SOFT_LIMIT) {
-    text = text.slice(0, WHATSAPP_TEXT_SOFT_LIMIT - 3).trimEnd() + '...'
   }
 
   return {
