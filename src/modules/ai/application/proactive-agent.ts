@@ -4,7 +4,7 @@
  * @module lib/ai
  * @exports respond, createProactiveAgent
  * @date 2026-02-01 15:20
- * @updated 2026-02-01 15:20
+ * @updated 2026-02-13 11:05
  */
 
 import { gateway, generateText, tool } from 'ai'
@@ -217,6 +217,15 @@ function mapExpenseCategory(aiCategory: string): string {
   return 'Otros'
 }
 
+/**
+ * Detects whether a user utterance likely requires internet lookup.
+ *
+ * This heuristic is intentionally broad because WhatsApp queries are usually short
+ * and implicit (for example "hoy", "últimas", "busca").
+ *
+ * @param text - Raw user message
+ * @returns `true` when the message should bias model selection/tool availability toward web search
+ */
 function looksLikeWebSearchQuery(text: string): boolean {
   const normalized = text
     .toLowerCase()
@@ -226,6 +235,12 @@ function looksLikeWebSearchQuery(text: string): boolean {
   return /busca|investiga|internet|web|google|ultima|ultimas|hoy|reciente|noticia|tendencia|compar|vs|precio|cotizacion|benchmark|fuente|verifica/.test(normalized)
 }
 
+/**
+ * Extracts plain text from AI SDK `ModelMessage` content variants.
+ *
+ * @param message - AI SDK model message
+ * @returns Flattened text content or empty string when no text can be extracted
+ */
 function getModelMessageText(message: ModelMessage): string {
   const content = (message as any)?.content
   if (typeof content === 'string') return content
@@ -243,6 +258,12 @@ function getModelMessageText(message: ModelMessage): string {
   return ''
 }
 
+/**
+ * Detects short confirmation replies used to request retry.
+ *
+ * @param text - User message
+ * @returns `true` when the text is a short affirmative retry signal (e.g., "si", "dale")
+ */
 function isRetryAffirmation(text: string): boolean {
   const normalized = text
     .toLowerCase()
@@ -252,6 +273,18 @@ function isRetryAffirmation(text: string): boolean {
   return /^(si|s|ok|dale|claro|hagamoslo|hazlo|de una|intentalo de nuevo|intentalo|otra vez|de nuevo)$/.test(normalized)
 }
 
+/**
+ * Resolves whether the current turn should retry a previous web search query.
+ *
+ * Strategy:
+ * 1) Detect a short affirmative user reply
+ * 2) Confirm the previous assistant message was a search-failure prompt
+ * 3) Recover the last user query that looked like a web-search request
+ *
+ * @param userMessage - Current user message
+ * @param history - Conversation history used to recover previous query context
+ * @returns Retry decision and recovered query (if available)
+ */
 function resolveWebSearchRetryContext(userMessage: string, history: ModelMessage[]): {
   shouldRetrySearch: boolean
   previousSearchQuery?: string
@@ -288,6 +321,15 @@ function resolveWebSearchRetryContext(userMessage: string, history: ModelMessage
   return { shouldRetrySearch: false }
 }
 
+/**
+ * Extracts a user-safe text snippet from heterogeneous tool payloads.
+ *
+ * Supports nested objects/arrays and common fields (`answer`, `summary`, `snippet`, etc.).
+ * This is resilient to provider-specific shapes and AI SDK tool result envelopes.
+ *
+ * @param result - Raw tool result payload
+ * @returns First meaningful text fragment, or `null` if none can be extracted
+ */
 function extractToolResultText(result: unknown): string | null {
   function deepPickText(value: unknown, depth = 0): string | null {
     if (depth > 4 || value == null) return null
@@ -364,7 +406,19 @@ function addUsage(
 }
 
 /**
- * ProactiveAgent using Vercel AI SDK 6.0 generateText()
+ * Proactive agent turn executor using Vercel AI SDK `generateText`.
+ *
+ * Web-search flow specifics:
+ * - Exposes `web_search` only when runtime flag + governance policy allow it
+ * - Handles AI SDK tool result envelopes (`output` and backward-compatible `result`)
+ * - Forces LLM synthesis when tool calls end with empty assistant text
+ * - Retries once without tools if primary generation fails
+ *
+ * @param userMessage - Current inbound user message
+ * @param userId - Internal user identifier
+ * @param history - Prior model messages
+ * @param context - Turn metadata and policy context
+ * @returns Normalized assistant response plus usage/cost/tool-call metadata
  */
 export async function respond(
   userMessage: string,

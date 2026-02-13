@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 13:02"
+updated: "2026-02-13 11:08"
 scope: "project"
 ---
 # CHANGELOG
@@ -15,13 +15,11 @@ scope: "project"
 - Added retry-context handling so confirmations like `"si"` reattempt prior web-search topic instead of generic fallback.
 - Fixed SDK result parsing for gateway tools by reading `toolResults[].output` shape.
 - Enforced post-tool LLM synthesis and resilient no-tools retry fallback so users never receive raw tool payloads or generic transport errors.
+- Added detailed JSDoc headers for web-search helper paths in `proactive-agent` to improve long-term maintainability.
 
 ### Changed - Tracking Governance
 - Added `/docs/tracking-best-practices.md` with session lifecycle, source-of-truth contract, evidence standard, and close checklist.
 - Updated `CLAUDE.md`/`AGENTS.md`, `just` continuity commands, master tracker generation, PR template, and CI/pre-commit guardrails.
-
-### Fixed - Typecheck Hygiene
-- Resolved stale generated type error by clearing `tsconfig.tsbuildinfo` and re-running `npm run typecheck`.
 
 ### Changed - Multimodal Image/Document Pipeline
 - Replaced `tesseract.js` OCR flow with new `vision-pipeline` in `src/modules/ai/application/vision-pipeline.ts`.

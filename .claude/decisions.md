@@ -4,7 +4,7 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 08:48"
+updated: "2026-02-13 02:03"
 ---
 
 # Architecture Decisions
@@ -235,3 +235,7 @@ Tracking files in `.claude` were within hard limits but too accumulative for fas
 ## Maintenance Rule
 
 When ADR count approaches the guardrail, collapse older full ADRs into this historical summary block.
+
+## 2026-02-13 Operational Note
+
+- No new architecture decision. This change only strengthens inline JSDoc/headers in `proactive-agent` for maintainability.

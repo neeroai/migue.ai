@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 08:48"
+updated: "2026-02-13 02:03"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -20,6 +20,7 @@ scope: "Tracking and process notes"
 - Strengthened prompt instructions for `web_search` and added deep text extraction fallback for nested tool payloads.
 - Added retry-context handling for short confirmations (e.g. "si") after failed `web_search`.
 - Fixed root cause in SDK parsing: tool outputs for gateway searches are read from `toolResults[].output` (not only `result`).
+- Added JSDoc headers for web-search detection/retry/result-extraction/synthesis helpers in `proactive-agent` to improve maintainability and handoff clarity.
 
 ### Changed - 2026-02-12 09:10
 
