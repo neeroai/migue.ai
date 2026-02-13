@@ -4,7 +4,7 @@
 - Semáforo: `YELLOW`
 - Fase: `in_progress`
 - Next Step: Ejecutar validación e2e conversacional en producción y ajustar umbrales de estilo local por ciudad.
-- Updated: 2026-02-13 00:00
+- Updated: 2026-02-12 20:42
 - Fuente de verdad: `architecture.md`
 - Owner técnico: `src/modules/ai/application/soul-composer.ts`
 
@@ -16,6 +16,7 @@ Humanizar migue.ai con una capa SOUL que personalice tono y estilo por usuario, 
 - Componer prompt dinámico con memoria, perfil y estilo local.
 - Aprender señales de personalización y persistirlas en `memory_profile`.
 - Aplicar guardrails anti-robot y límite de emojis.
+- Forzar fallback humano determinístico para turnos con texto vacío o respuesta genérica.
 
 ## Contratos clave
 - Entrada normalizada.

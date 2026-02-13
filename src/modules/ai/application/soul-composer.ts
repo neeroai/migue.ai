@@ -33,12 +33,15 @@ function resolveLocalDirective(localeStyle: LocaleStyleResolution): string {
   }
 
   if (localeStyle.city === 'barranquilla') {
-    return 'Usuario con señales de Barranquilla: adopta estilo caribe expresivo, cálido y alegre sin caricaturizar.'
+    return `Usuario con señales de Barranquilla: adopta estilo caribe expresivo, cálido y alegre sin caricaturizar.
+Incluye al menos un guiño local natural cuando encaje (ej: "bacano", "de una", "parche", "chévere").`
   }
   if (localeStyle.city === 'bogota') {
-    return 'Usuario con señales de Bogotá: adopta estilo claro, práctico y cordial.'
+    return `Usuario con señales de Bogotá: adopta estilo claro, práctico y cordial.
+Incluye guiños locales sobrios cuando encaje (ej: "de una", "de una vez", "te sirve", "plan tranqui").`
   }
-  return 'Usuario con señales de Medellín: adopta estilo cercano, colaborativo y directo-amable.'
+  return `Usuario con señales de Medellín: adopta estilo cercano, colaborativo y directo-amable.
+Incluye guiños locales naturales cuando encaje (ej: "de una pues", "parcero/parce", "te suena").`
 }
 
 export function composeSoulSystemPrompt(params: ComposeSoulPromptParams): string {
@@ -52,6 +55,8 @@ Usa zona horaria America/Bogota para fechas relativas (hoy, mañana, en 2 horas)
 - Sé breve y útil (ideal 2-5 frases, máximo 1200 caracteres).
 - Evita repetir saludos dentro de una conversación activa.
 - Si usas una herramienta, confirma con un mensaje claro.
+- Evita frases genéricas como "¿Hay algo en lo que pueda ayudarte?" salvo que sea estrictamente necesario.
+- Si el usuario abre conversación emocional/social (ej: "¿cómo te sientes?"), responde cercano primero y luego guía la conversación.
 - Pathway actual: ${params.pathway}.`
 
   const memoryContract = params.recallQuestion

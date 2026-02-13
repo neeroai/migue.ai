@@ -1,7 +1,7 @@
 ---
 title: "Internal Tracking Changelog"
 date: "2026-02-03 06:00"
-updated: "2026-02-12 20:11"
+updated: "2026-02-12 20:43"
 version: "1.1"
 scope: "Tracking and process notes"
 ---
@@ -9,6 +9,21 @@ scope: "Tracking and process notes"
 # .claude CHANGELOG
 
 ## [Unreleased]
+
+### Changed - 2026-02-12 20:42
+
+- Added `buildHumanFallbackResponse` in `src/modules/ai/application/soul-policy.ts` to avoid robotic empty fallbacks.
+- Replaced static "Listo..." fallbacks in:
+  - `src/modules/ai/application/agent-turn-orchestrator.ts`
+  - `src/modules/ai/application/proactive-agent.ts`
+- Strengthened SOUL prompt policy in `src/modules/ai/application/soul-composer.ts`:
+  - explicit anti-generic guidance
+  - explicit handling for social/emotional openers
+  - stronger local cues by city.
+- Added/updated tests:
+  - `tests/unit/soul-policy.test.ts`
+  - `tests/unit/agent-turn-orchestrator.test.ts`
+  - validated `tests/unit/soul-composer.test.ts`.
 
 ### Changed - 2026-02-12 20:10
 

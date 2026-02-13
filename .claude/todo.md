@@ -1,7 +1,7 @@
 ---
 title: "Task List"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 20:11"
+updated: "2026-02-12 20:43"
 ---
 
 # Task List
@@ -25,6 +25,7 @@ updated: "2026-02-12 20:11"
 - [x] Aislar tests de WhatsApp Flows (`test:unit:flows`) y agregar fallback de respuesta cuando `sendFlow` falla/lanza excepción (2026-02-12 18:51)
 - [x] Aislar modo de comandos Flow en runtime normal con feature flag opt-in (`FLOW_TEST_MODE_ENABLED`) (2026-02-12 18:56)
 - [x] Implementar capa SOUL + personalización local por ciudad (Barranquilla/Bogotá/Medellín) con guardrails anti-robot (2026-02-12 20:10)
+- [x] Endurecer fallback SOUL para aperturas sociales y respuestas vacías (`buildHumanFallbackResponse`) (2026-02-12 20:42)
 
 - [x] Implement keyword-triggered Flow QA mode (`flow test <name>`) with mock payloads in webhook pipeline (2026-02-12 11:20)
 - [x] Add real Meta Flow JSON validation/publish CLI (`scripts/wa-flows-validate.mjs`) plus docs/commands (2026-02-12 12:10)
@@ -41,7 +42,6 @@ updated: "2026-02-12 20:11"
 - [x] Replace local OCR with multimodal vision pipeline (`vision-pipeline`) (2026-02-07 16:41)
 - [x] Add SDD spec `specs/17-general-image-processing.md` (2026-02-07 16:36)
 - [x] Remove `tesseract.js` dependency (2026-02-07 16:40)
-- [x] Close v24 runtime migration task as not planned (keep runtime in v23) (2026-02-07 15:49)
 
 ## Blocked
 

@@ -37,6 +37,7 @@ import { generateToolConfirmationMessage } from '../../../shared/infra/ai/agenti
 import { composeSoulSystemPrompt } from './soul-composer'
 import { resolveLocaleStyle } from './locale-style-resolver'
 import {
+  buildHumanFallbackResponse,
   enforceEmojiLimit,
   isSoulEnabled,
   isSoulStrictGuardrailsEnabled,
@@ -430,7 +431,7 @@ export async function respond(
     const fallbackToolMessage = (
       toolResults[toolResults.length - 1] ??
       lastToolOutcomeMessage ??
-      'Listo. Ya ejecuté tu solicitud.'
+      buildHumanFallbackResponse(userMessage, toolCallCount)
     ).trim()
     text = await generateToolConfirmationMessage({
       userMessage,

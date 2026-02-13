@@ -4,6 +4,7 @@ import { buildAgentContext } from './agent-context-builder'
 import type { TextPathway } from './memory-policy'
 import { hasToolIntent } from '../domain/intent'
 import { isLegacyRoutingEnabled } from './runtime-flags'
+import { buildHumanFallbackResponse } from './soul-policy'
 
 const proactiveAgent = createProactiveAgent()
 
@@ -81,7 +82,7 @@ export async function executeAgentTurn(
   )
 
   const responseText = (aiResponse.text ?? '').trim() ||
-    (aiResponse.toolCalls > 0 ? 'Listo. Ya ejecuté tu solicitud.' : 'Listo.')
+    buildHumanFallbackResponse(params.userMessage, aiResponse.toolCalls)
 
   return {
     responseText,

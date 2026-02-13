@@ -1,5 +1,9 @@
 import { describe, expect, it } from '@jest/globals'
-import { enforceEmojiLimit, rewriteRoboticFallback } from '../../src/modules/ai/application/soul-policy'
+import {
+  buildHumanFallbackResponse,
+  enforceEmojiLimit,
+  rewriteRoboticFallback,
+} from '../../src/modules/ai/application/soul-policy'
 
 describe('soul policy', () => {
   it('caps emojis to configured limit', () => {
@@ -13,5 +17,10 @@ describe('soul policy', () => {
     const rewritten = rewriteRoboticFallback('Estoy aqui para ayudarte. En que te puedo ayudar hoy?')
     expect(rewritten.toLowerCase()).not.toContain('estoy aqui para ayudarte')
     expect(rewritten.toLowerCase()).toContain('qué necesitas ahora mismo')
+  })
+
+  it('returns human fallback for social opener', () => {
+    const fallback = buildHumanFallbackResponse('como te sientes?', 0)
+    expect(fallback.toLowerCase()).toContain('tú cómo vas')
   })
 })

@@ -1,7 +1,7 @@
 ---
 title: "Project Status"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 20:10"
+updated: "2026-02-12 20:42"
 ---
 
 # Project Status
@@ -35,6 +35,7 @@ updated: "2026-02-12 20:10"
 - Endurecer manejo de errores en envío de Flow tests para evitar silencios al usuario.
 - Mantener modo normal por defecto: Flow test commands quedan aislados detrás de `FLOW_TEST_MODE_ENABLED=true`.
 - Rollout inmediato de capa SOUL + personalización local por ciudad para reducir tono robótico.
+- Endurecer fallback humano para evitar respuestas vacías/genéricas cuando el modelo no devuelve texto.
 
 ## Recent Milestones
 
@@ -43,6 +44,7 @@ updated: "2026-02-12 20:10"
 | 2026-02-12 06:23 | Onboarding + reminder delivery moved to LLM-first messaging with fallback | COMPLETE |
 | 2026-02-12 18:25 | Unit tests de Flows aislados en script dedicado + pre-deploy conserva cobertura completa | COMPLETE |
 | 2026-02-12 20:10 | SOUL architecture + local style resolver integrados en runtime de agente | COMPLETE |
+| 2026-02-12 20:42 | Fallback SOUL humanizado en respuestas vacías + refuerzo anti-frases genéricas | COMPLETE |
 | 2026-02-12 04:12 | `just` instalado y operativo para workflow de continuidad | COMPLETE |
 | 2026-02-12 03:59 | Session continuity system implemented (`just`, handoff, master tracker) | COMPLETE |
 | 2026-02-12 03:13 | CI tracking guardrail added for PRs on critical paths | COMPLETE |

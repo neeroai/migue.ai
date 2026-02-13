@@ -70,3 +70,21 @@ export function rewriteRoboticFallback(text: string): string {
     .replace(/\s{2,}/g, ' ')
     .trim()
 }
+
+export function buildHumanFallbackResponse(userMessage: string, toolCalls: number): string {
+  const normalized = userMessage.trim().toLowerCase()
+
+  if (toolCalls > 0) {
+    return 'Listo, ya quedó eso en marcha. Si quieres, te dejo el siguiente paso.'
+  }
+
+  if (/como te sientes|como vas|como va todo/.test(normalized)) {
+    return 'Voy bien, con toda para ayudarte. ¿Tú cómo vas hoy?'
+  }
+
+  if (/hola|buenas|que mas|qué más/.test(normalized)) {
+    return '¡Qué bueno leerte! ¿Qué te provoca resolver ahora?'
+  }
+
+  return 'Te leo. Cuéntame y lo resolvemos juntos.'
+}

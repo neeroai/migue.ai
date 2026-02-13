@@ -4,7 +4,7 @@ summary: "Granular changelog for code changes in lib/, app/api/, src/"
 description: "Keep a Changelog format tracking all notable changes to migue.ai WhatsApp AI assistant"
 version: "1.0"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 20:10"
+updated: "2026-02-12 20:42"
 scope: "project"
 ---
 
@@ -14,7 +14,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2026-02-12 20:10
+## [Unreleased] - 2026-02-12 20:42
+### Changed - SOUL Fallback Humanization
+- Added `buildHumanFallbackResponse(userMessage, toolCalls)` to generate warmer deterministic replies when AI text is empty.
+- Replaced static fallback text in `src/modules/ai/application/agent-turn-orchestrator.ts` and `src/modules/ai/application/proactive-agent.ts`.
+- Strengthened SOUL prompt contract in `src/modules/ai/application/soul-composer.ts` to avoid generic closers and respond more naturally to social/emotional openers.
+- Updated unit tests in `tests/unit/soul-policy.test.ts` and `tests/unit/agent-turn-orchestrator.test.ts`.
+
 ### Added - SOUL Personalization Runtime
 - Added `SOUL.md` + composable SOUL prompt runtime (`soul-composer`) with city-local adaptation (Barranquilla/Bogotá/Medellín), anti-robot guardrails, emoji caps, `soul.*` metrics, and persistence of SOUL signals in `memory_profile.goals.soul_v1` with unit coverage.
 
@@ -31,9 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added - Real Meta Flow JSON Validation
 - Added `scripts/wa-flows-validate.mjs` to validate WhatsApp Flow JSON against Meta Graph API (remote), not only local structure checks.
 - The command uploads the JSON asset to a target `FLOW_ID`, reads `validation_errors`, and optionally executes publish.
-- Added npm scripts:
-  - `flows:validate:meta`
-  - `flows:publish:meta`
+- Added npm scripts: `flows:validate:meta` and `flows:publish:meta`.
 - Added runbook `docs/whatsapp-flows-meta-validation.md` and updated `flows/README.md` with real validation workflow.
 - Updated `specs/13-whatsapp-flows.md` to include remote validation evidence before publish.
 
@@ -44,8 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed env dependency for test flow IDs/toggle; private QA mode now uses hardcoded flow mapping, and blocks `flow test signup`.
 ### Changed - Agentic Messaging (Onboarding + Reminders)
 - Added `src/shared/infra/ai/agentic-messaging.ts` to generate WhatsApp-ready copy with LLM-first behavior and safe fallback.
-- Updated onboarding gate messages in `src/modules/webhook/application/background-processor.ts`:
-  - `flow_sent`, `already_in_progress`, and `flow_send_failed` now use agentic messaging.
+- Updated onboarding gate messages in `src/modules/webhook/application/background-processor.ts` (`flow_sent`, `already_in_progress`, `flow_send_failed`) to use agentic messaging.
 - Updated post-signup welcome in `src/shared/infra/whatsapp/flows.ts` to use LLM-first personalized welcome text.
 - Updated reminder cron delivery text in `app/api/cron/check-reminders/route.ts` to use LLM-first reminder phrasing.
 
@@ -69,10 +72,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed - Tracking Policy
 - Tightened `check:tracking` size limits to enforce compact operational logs.
 - Added anti-accumulation checks in `scripts/check-tracking-files.mjs`:
-  - max detailed sessions in `.claude/session.md`
-  - max completed tasks in `.claude/todo.md`
-  - max full ADR blocks in `.claude/decisions.md`
-  - max detailed dated sections in `.claude/CHANGELOG.md`
+- Added anti-accumulation checks in `scripts/check-tracking-files.mjs` for max detailed sessions, completed tasks, ADR blocks, and internal changelog dated sections.
 - Updated `AGENTS.md` with explicit compact-first tracking rules and retention guidance.
 - Compacted `.claude` tracking files to prioritize resume context over historical accumulation.
 - Added `scripts/compact-tracking-files.mjs` and `npm run tracking:compact` to automate future compaction.

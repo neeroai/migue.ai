@@ -4,10 +4,33 @@ summary: "ADR log for architecture decisions with rationale and consequences"
 description: "Compact decision records for migue.ai"
 version: "1.1"
 date: "2026-02-06 23:30"
-updated: "2026-02-12 20:11"
+updated: "2026-02-12 20:43"
 ---
 
 # Architecture Decisions
+
+## ADR-023: Deterministic Human Fallback for Empty SOUL/Text Responses
+
+**Date**: 2026-02-12 20:42  
+**Status**: Approved  
+**Deciders**: User feedback (chat todavía suena robótico en aperturas sociales)
+
+### Decision
+
+- Add `buildHumanFallbackResponse(userMessage, toolCalls)` in `soul-policy`.
+- Replace static fallback (`Listo...`) in both:
+  - `agent-turn-orchestrator` response normalization
+  - `proactive-agent` empty-text tool confirmation fallback
+- Expand SOUL prompt policy to discourage generic closers and require warmer response for social openers.
+
+### Consequences
+
+**Positive**:
+- Reduces robotic outputs when model returns empty/low-signal text.
+- Better continuity with user tone in greetings and social prompts.
+
+**Tradeoff**:
+- Fallback copy now includes heuristics by regex; needs later calibration with real transcripts.
 
 ## ADR-022: SOUL Runtime + City-Local Style Inference
 
@@ -231,31 +254,6 @@ updated: "2026-02-12 20:11"
 
 **Tradeoff**:
 - PRs with critical changes now have stricter documentation expectations.
-
-## ADR-013: Tracking Governance Contract + PR Checklist
-
-**Date**: 2026-02-12 08:05  
-**Status**: Approved  
-**Deciders**: User request ("procedamos e implementemos")
-
-### Decision
-
-- Add central tracking operations guide: `docs/tracking-best-practices.md`.
-- Align `CLAUDE.md` and `AGENTS.md` with:
-  - single-source responsibility by tracking file
-  - session lifecycle (start/during/close)
-  - minimum evidence standard per entry
-- Add PR template checklist in `.github/pull_request_template.md` to enforce tracking updates in behavior-changing PRs.
-
-### Consequences
-
-**Positive**:
-- Better continuity between sessions.
-- Lower drift across tracking files.
-- Clearer review gate for operational documentation quality.
-
-**Tradeoff**:
-- Slightly higher PR overhead due to mandatory checklist updates.
 
 ## Historical ADR Summary (ADR-001 to ADR-008)
 

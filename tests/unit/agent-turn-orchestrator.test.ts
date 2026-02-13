@@ -161,7 +161,7 @@ describe('agent turn orchestrator', () => {
     expect(result.raw.toolCalls).toBe(0)
   })
 
-  it('falls back to default confirmation text on empty tool response', async () => {
+  it('falls back to human confirmation text on empty tool response', async () => {
     delete process.env.LEGACY_ROUTING_ENABLED
     ;(buildAgentContext as jest.Mock).mockResolvedValue({
       modelHistory: [],
@@ -186,7 +186,7 @@ describe('agent turn orchestrator', () => {
       pathway: 'tool_intent',
     })
 
-    expect(result.responseText).toContain('Listo')
+    expect(result.responseText).toContain('ya quedó')
     expect(result.raw.toolCalls).toBe(1)
   })
 })
